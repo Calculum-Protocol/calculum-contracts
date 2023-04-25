@@ -10,7 +10,7 @@ import {
 } from "../../src/CalculumVault.sol";
 import {USDC} from "../../src/USDC.sol";
 import {MockUpOracle} from "../../src/mock/MockUpOracle.sol";
-import {UUPSProxy} from "OZ-Upgradeable-Foundry/src/UpgradeUUPS.sol";
+import {UUPSProxy} from "OZ-Upgradeable-Foundry/UpgradeUUPS.sol";
 
 contract BasicTest is Test {
     CalculumVault public implementation;
@@ -21,7 +21,6 @@ contract BasicTest is Test {
     UUPSProxy public proxy;
 
     address public deployer;
-    address public traderBotAddress;
     address public transferBotWallet;
     address public transferBotRoleAddress;
     address public treasuryWallet;
@@ -34,29 +33,34 @@ contract BasicTest is Test {
     uint256 public constant EPOCH_DURATION = 1 weeks;
     uint256 public constant MAINT_TIME_BEFORE = 60 minutes;
     uint256 public constant MAINT_TIME_AFTER = 30 minutes;
-    uint256 public constant MIN_DEPOSIT_PER_ADDR = 300 * 10 ** 6;
-    uint256 public constant MAX_DEPOSIT_PER_ADDR = 10000 * 10 ** 6;
-    uint256 public constant TOKEN_MAX_TOTAL_DEPOSIT = 50000 ether;
+    uint256 public constant MIN_DEPOSIT_PER_ADDR = 30_000 * 10 ** 6;
+    uint256 public constant MAX_DEPOSIT_PER_ADDR = 250_000 * 10 ** 6;
+    uint256 public constant TOKEN_MAX_TOTAL_DEPOSIT = 1_000_000 ether;
+    uint256 public constant MIN_WALLET_BALANCE_USDC_TRANSFER_BOT = 500 * 10 ** 6;
+    uint256 public constant TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT = 1000 * 10 ** 6;
+    uint256 public constant MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = 0.5 ether;
 
-    uint256[4] public initialValues;
+    uint256[7] public initialValues;
 
     function setUp() public {
         deployer = makeAddr("deployer");
-        traderBotAddress = makeAddr("traderBotAddress");
-        transferBotWallet = makeAddr("transferBot");
-        transferBotRoleAddress = makeAddr("transferBotRole");
         treasuryWallet = makeAddr("treasury");
+        transferBotRoleAddress = makeAddr("transferBotRole");
+        transferBotWallet = makeAddr("transferBot");
 
         startTime = block.timestamp;
         initialValues[0] = startTime;
         initialValues[1] = MIN_DEPOSIT_PER_ADDR;
         initialValues[2] = MAX_DEPOSIT_PER_ADDR;
         initialValues[3] = TOKEN_MAX_TOTAL_DEPOSIT;
+        initialValues[4] = MIN_WALLET_BALANCE_ETH_TRANSFER_BOT;
+        initialValues[5] = TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT;
+        initialValues[6] = MIN_WALLET_BALANCE_USDC_TRANSFER_BOT;
 
         vm.startPrank(deployer);
         usdc = new USDC();
         IERC20MetadataUpgradeable iusdc = IERC20MetadataUpgradeable(address(usdc));
-        oracle = new MockUpOracle(traderBotAddress, iusdc);
+        oracle = new MockUpOracle(transferBotWallet, iusdc);
         implementation = new CalculumVault();
         proxy = new UUPSProxy(address(implementation), "");
         vault = CalculumVault(payable(address(proxy)));
@@ -75,14 +79,23 @@ contract BasicTest is Test {
         vm.stopPrank();
 
         hoax(transferBotRoleAddress);
-        usdc.approve(address(vault), _usdc(1000_000));
+        usdc.approve(address(vault), _usdc(100_000_000));
+
+        hoax(deployer);
+        usdc.mint(transferBotRoleAddress, _usdc(200));
 
         hoax(transferBotWallet);
-        usdc.approve(address(vault), _usdc(1000_000));
+        usdc.approve(address(vault), _usdc(100_000_000));
 
-        investors[0] = _setUpAccount("investor0");
-        investors[1] = _setUpAccount("investor1");
-        investors[2] = _setUpAccount("investor2");
+        for (uint256 i = 0; i < investors.length; ++i) {
+            investors[i] = _setUpAccount(string.concat("investor", string(abi.encode(i))));
+        }
+
+        vm.startPrank(deployer);
+        for (uint256 i = 0; i < investors.length; ++i) {
+            vault.addDropWhitelist(investors[i], true);
+        }
+        vm.stopPrank();
     }
 
     function testBasicValues() public {
@@ -120,64 +133,60 @@ contract BasicTest is Test {
     }
 
     function testEpochSequence() public {
-        uint256 timestamp = block.timestamp;
         uint256 currentTime;
         uint256 currentEpoch;
         vm.startPrank(deployer);
         vm.expectRevert(
-            abi.encodeWithSelector(Helpers.VaultInMaintenance.selector, deployer, timestamp)
+            abi.encodeWithSelector(Helpers.VaultInMaintenance.selector, deployer, block.timestamp)
         );
         vault.setEpochDuration(EPOCH_DURATION, MAINT_TIME_AFTER, MAINT_TIME_BEFORE);
         // check Epoch
         currentTime = vault.CurrentEpoch();
-        emit log_uint(timestamp);
         emit log_uint(currentEpoch);
         emit log_uint(currentTime);
+        emit log_uint(block.timestamp);
         assertEq(currentTime, vault.CurrentEpoch());
         assertEq(currentEpoch, vault.CURRENT_EPOCH());
         // Move to after the Maintenance Time Post Maintenance
-        vm.warp(timestamp + MAINT_TIME_AFTER);
+        vm.warp(block.timestamp + MAINT_TIME_AFTER);
         vault.setEpochDuration(EPOCH_DURATION, MAINT_TIME_AFTER, MAINT_TIME_BEFORE);
 
         // Move to after Finalize the Next Epoch (1st Epoch)
-        vm.warp(timestamp + EPOCH_DURATION);
-        timestamp = block.timestamp;
+        vm.warp(vault.getNextEpoch() + 1);
         currentTime = vault.CurrentEpoch();
         currentEpoch = 1;
-        emit log_uint(timestamp);
         emit log_uint(currentEpoch);
         emit log_uint(currentTime);
+        emit log_uint(block.timestamp);
         assertEq(currentTime, vault.CurrentEpoch());
         assertEq(currentEpoch, vault.CURRENT_EPOCH());
-        vm.warp(timestamp + EPOCH_DURATION / 4);
+        vm.warp(block.timestamp + EPOCH_DURATION / 4);
         assertEq(currentTime, vault.CurrentEpoch());
         assertEq(currentEpoch, vault.CURRENT_EPOCH());
-
+//
         // Move to after Finalize the Next Epoch (2nd Epoch)
-        vm.warp(timestamp + EPOCH_DURATION);
-        timestamp = block.timestamp;
+        vm.warp(vault.getNextEpoch() + 1);
         currentTime = vault.CurrentEpoch();
         currentEpoch = 2;
-        emit log_uint(timestamp);
         emit log_uint(currentEpoch);
         emit log_uint(currentTime);
+        emit log_uint(block.timestamp);
         assertEq(currentTime, vault.CurrentEpoch());
         assertEq(currentEpoch, vault.CURRENT_EPOCH());
-        vm.warp(timestamp + EPOCH_DURATION / 2);
+        vm.warp(block.timestamp + EPOCH_DURATION / 2);
         assertEq(currentTime, vault.CurrentEpoch());
         assertEq(currentEpoch, vault.CURRENT_EPOCH());
 
         // Move to after Finalize the Next Epoch (3rd Epoch)
-        vm.warp(timestamp + EPOCH_DURATION);
-        timestamp = block.timestamp;
+        vm.warp(vault.getNextEpoch() + 1);
         currentTime = vault.CurrentEpoch();
         currentEpoch = 3;
-        emit log_uint(timestamp);
         emit log_uint(currentEpoch);
         emit log_uint(currentTime);
+        emit log_uint(block.timestamp);
         assertEq(currentTime, vault.CurrentEpoch());
         assertEq(currentEpoch, vault.CURRENT_EPOCH());
-        vm.warp(timestamp + EPOCH_DURATION / 5);
+        vm.warp(block.timestamp + EPOCH_DURATION * 3 / 4);
         assertEq(currentTime, vault.CurrentEpoch());
         assertEq(currentEpoch, vault.CURRENT_EPOCH());
 
@@ -196,14 +205,26 @@ contract BasicTest is Test {
 
     function _setUpAccount(string memory accountName) internal returns (address account) {
         account = makeAddr(accountName);
-        uint256 amount = _usdc(1000_000);
+        uint256 amount = _usdc(1_000_000);
         hoax(deployer);
         usdc.mint(account, amount);
         hoax(account);
-        usdc.approve(address(vault), amount);
+        usdc.approve(address(vault), amount*100);
     }
 
     function _usdc(uint256 amount) internal pure returns (uint256) {
         return amount * 10 ** 6;
+    }
+
+    function goToNextEpoch() public returns (uint256) {
+        vm.warp(vault.getNextEpoch() + 1);
+        hoax(deployer);
+        vault.CurrentEpoch();
+        return vault.CURRENT_EPOCH();
+    }
+
+    function goToActiveEpochTime() public returns (uint256) {
+        vm.warp(vault.getCurrentEpoch() + MAINT_TIME_BEFORE + MAINT_TIME_AFTER);
+        return block.timestamp;
     }
 }

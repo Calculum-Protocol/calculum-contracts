@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/OZ-Upgradeable-Foundry" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/OZ-Upgradeable-Foundry/lib/forge-std" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/OZ-Upgradeable-Foundry/lib/forge-std/lib/ds-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/OZ-Upgradeable-Foundry/lib/openzeppelin-contracts" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/OZ-Upgradeable-Foundry/lib/openzeppelin-contracts-upgradeable" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/OZ-Upgradeable-Foundry/lib/prb-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/v2-periphery" vcs="Git" />
+  </component>
+</project>

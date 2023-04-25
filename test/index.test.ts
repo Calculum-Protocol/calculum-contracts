@@ -31,6 +31,7 @@ let deployer: SignerWithAddress;
 let treasuryWallet: SignerWithAddress;
 let dexWallet: SignerWithAddress;
 let openZeppelinDefenderWallet: SignerWithAddress;
+let david: SignerWithAddress;
 let alice: SignerWithAddress;
 let bob: SignerWithAddress;
 let carla: SignerWithAddress;
@@ -71,6 +72,7 @@ describe("Verification of Basic Value and Features", function () {
             treasuryWallet,
             dexWallet,
             openZeppelinDefenderWallet,
+            david,
             alice,
             bob,
             carla,
@@ -513,6 +515,7 @@ describe("Verification of Basic Value and Features", function () {
             treasuryWallet,
             dexWallet,
             openZeppelinDefenderWallet,
+            david,
             alice,
             bob,
             carla,
