@@ -472,26 +472,26 @@ describe("Verification of Basic Value and Features", function () {
                 (await Calculum.CURRENT_EPOCH()).toString()
             )}`
         );
-        await Calculum.CurrentEpoch();
+        await Calculum.currentEpoch();
         // Getting Current Epoch and Next Epoch
         console.log(
             `Number of Current Epoch After: ${parseInt(
                 (await Calculum.CURRENT_EPOCH()).toString()
             )}`
         );
-        await Calculum.CurrentEpoch();
+        await Calculum.currentEpoch();
         console.log(
             `Number of Current Epoch Second Time (Verification not Changes): ${parseInt(
                 (await Calculum.CURRENT_EPOCH()).toString()
             )}`
         );
-        await Calculum.CurrentEpoch();
+        await Calculum.currentEpoch();
         console.log(
             `Number of Current Epoch Third Time (Verification not Changes): ${parseInt(
                 (await Calculum.CURRENT_EPOCH()).toString()
             )}`
         );
-        await Calculum.CurrentEpoch();
+        await Calculum.currentEpoch();
         console.log(
             `Number of Current Epoch Forth Time (Verification not Changes): ${parseInt(
                 (await Calculum.CURRENT_EPOCH()).toString()
@@ -537,7 +537,7 @@ describe("Verification of Basic Value and Features", function () {
                 .utc(false)
                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
         );
-        await Calculum.CurrentEpoch();
+        await Calculum.currentEpoch();
         console.log(
             "Verification of Current Epoch (3rd): ",
             parseInt((await Calculum.CURRENT_EPOCH()).toString())
@@ -546,7 +546,7 @@ describe("Verification of Basic Value and Features", function () {
             parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
         );
         console.log("TimeStamp Current Epoch: ", currentEpoch.utc(false));
-        await Calculum.CurrentEpoch();
+        await Calculum.currentEpoch();
         console.log(
             "Verification of Current Epoch (3rd): (Verification not changes): ",
             parseInt((await Calculum.CURRENT_EPOCH()).toString())
@@ -555,7 +555,7 @@ describe("Verification of Basic Value and Features", function () {
             parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
         );
         console.log("TimeStamp Current Epoch: ", currentEpoch.utc(false));
-        await Calculum.CurrentEpoch();
+        await Calculum.currentEpoch();
         console.log(
             "Verification of Current Epoch (3rd): (Verification not changes): ",
             parseInt((await Calculum.CURRENT_EPOCH()).toString())
@@ -961,7 +961,7 @@ describe("Verification of Basic Value and Features", function () {
                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
         );
         // Getting Current Epoch and Next Epoch
-        await Calculum.CurrentEpoch();
+        await Calculum.currentEpoch();
         const Current_Epoch = parseInt((await Calculum.CURRENT_EPOCH()).toString());
         console.log(`Number of Current Epoch: ${Current_Epoch}`);
         expect(CURRENT_EPOCH).to.equal(Current_Epoch);
@@ -1213,7 +1213,7 @@ describe("Verification of Basic Value and Features", function () {
         ]);
         await network.provider.send("evm_mine", []);
         // Update Epoch
-        await Calculum.CurrentEpoch();
+        await Calculum.currentEpoch();
         expect(await Calculum.CURRENT_EPOCH()).to.equal(1);
     });
 
@@ -1506,7 +1506,7 @@ describe("Verification of Basic Value and Features", function () {
                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
         );
         // Getting Current Epoch and Next Epoch
-        await Calculum.connect(deployer).CurrentEpoch();
+        await Calculum.connect(deployer).currentEpoch();
         CURRENT_EPOCH = 2;
         const Current_Epoch = parseInt((await Calculum.CURRENT_EPOCH()).toString());
         console.log(`Number of Current Epoch: ${Current_Epoch}`);
@@ -1740,7 +1740,7 @@ describe("Verification of Basic Value and Features", function () {
                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
         );
         // Getting Current Epoch and Next Epoch
-        await Calculum.connect(deployer).CurrentEpoch();
+        await Calculum.connect(deployer).currentEpoch();
         CURRENT_EPOCH = 3;
         const Current_Epoch = parseInt((await Calculum.CURRENT_EPOCH()).toString());
         console.log(`Number of Current Epoch: ${Current_Epoch}`);
@@ -2043,7 +2043,7 @@ describe("Verification of Basic Value and Features", function () {
                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
         );
         // Getting Current Epoch and Next Epoch
-        await Calculum.connect(deployer).CurrentEpoch();
+        await Calculum.connect(deployer).currentEpoch();
         CURRENT_EPOCH = 4;
         const Current_Epoch = parseInt((await Calculum.CURRENT_EPOCH()).toString());
         console.log(`Number of Current Epoch: ${Current_Epoch}`);
@@ -2373,7 +2373,7 @@ describe("Verification of Basic Value and Features", function () {
                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
         );
         // Getting Current Epoch and Next Epoch
-        await Calculum.connect(deployer).CurrentEpoch();
+        await Calculum.connect(deployer).currentEpoch();
         CURRENT_EPOCH = 5;
         const Current_Epoch = parseInt((await Calculum.CURRENT_EPOCH()).toString());
         console.log(`Number of Current Epoch: ${Current_Epoch}`);
@@ -2639,7 +2639,7 @@ describe("Verification of Basic Value and Features", function () {
                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
         );
         // Getting Current Epoch and Next Epoch
-        await Calculum.connect(deployer).CurrentEpoch();
+        await Calculum.connect(deployer).currentEpoch();
         CURRENT_EPOCH = 6;
         const Current_Epoch = parseInt((await Calculum.CURRENT_EPOCH()).toString());
         console.log(`Number of Current Epoch: ${Current_Epoch}`);
@@ -2941,7 +2941,7 @@ describe("Verification of Basic Value and Features", function () {
                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
         );
         // Getting Current Epoch and Next Epoch
-        await Calculum.connect(deployer).CurrentEpoch();
+        await Calculum.connect(deployer).currentEpoch();
         CURRENT_EPOCH = 7;
         const Current_Epoch = parseInt((await Calculum.CURRENT_EPOCH()).toString());
         console.log(`Number of Current Epoch: ${Current_Epoch}`);
@@ -3219,7 +3219,7 @@ describe("Verification of Basic Value and Features", function () {
                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
         );
         // Getting Current Epoch and Next Epoch
-        await Calculum.connect(deployer).CurrentEpoch();
+        await Calculum.connect(deployer).currentEpoch();
         CURRENT_EPOCH = 8;
         const Current_Epoch = parseInt((await Calculum.CURRENT_EPOCH()).toString());
         console.log(`Number of Current Epoch: ${Current_Epoch}`);
@@ -3499,7 +3499,7 @@ describe("Verification of Basic Value and Features", function () {
                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
         );
         // Getting Current Epoch and Next Epoch
-        await Calculum.connect(deployer).CurrentEpoch();
+        await Calculum.connect(deployer).currentEpoch();
         CURRENT_EPOCH = 9;
         const Current_Epoch = parseInt((await Calculum.CURRENT_EPOCH()).toString());
         console.log(`Number of Current Epoch: ${Current_Epoch}`);
@@ -3858,7 +3858,7 @@ describe("Verification of Basic Value and Features", function () {
                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
         );
         // Getting Current Epoch and Next Epoch
-        await Calculum.connect(deployer).CurrentEpoch();
+        await Calculum.connect(deployer).currentEpoch();
         CURRENT_EPOCH = 10;
         const Current_Epoch = parseInt((await Calculum.CURRENT_EPOCH()).toString());
         console.log(`Number of Current Epoch: ${Current_Epoch}`);

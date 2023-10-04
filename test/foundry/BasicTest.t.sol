@@ -129,11 +129,11 @@ contract BasicTest is Test {
         );
         vault.setEpochDuration(EPOCH_DURATION, MAINT_TIME_AFTER, MAINT_TIME_BEFORE);
         // check Epoch
-        currentTime = vault.CurrentEpoch();
+        currentTime = vault.currentEpoch();
         emit log_uint(timestamp);
         emit log_uint(currentEpoch);
         emit log_uint(currentTime);
-        assertEq(currentTime, vault.CurrentEpoch());
+        assertEq(currentTime, vault.currentEpoch());
         assertEq(currentEpoch, vault.CURRENT_EPOCH());
         // Move to after the Maintenance Time Post Maintenance
         vm.warp(timestamp + MAINT_TIME_AFTER);
@@ -142,43 +142,43 @@ contract BasicTest is Test {
         // Move to after Finalize the Next Epoch (1st Epoch)
         vm.warp(timestamp + EPOCH_DURATION);
         timestamp = block.timestamp;
-        currentTime = vault.CurrentEpoch();
+        currentTime = vault.currentEpoch();
         currentEpoch = 1;
         emit log_uint(timestamp);
         emit log_uint(currentEpoch);
         emit log_uint(currentTime);
-        assertEq(currentTime, vault.CurrentEpoch());
+        assertEq(currentTime, vault.currentEpoch());
         assertEq(currentEpoch, vault.CURRENT_EPOCH());
         vm.warp(timestamp + EPOCH_DURATION / 4);
-        assertEq(currentTime, vault.CurrentEpoch());
+        assertEq(currentTime, vault.currentEpoch());
         assertEq(currentEpoch, vault.CURRENT_EPOCH());
 
         // Move to after Finalize the Next Epoch (2nd Epoch)
         vm.warp(timestamp + EPOCH_DURATION);
         timestamp = block.timestamp;
-        currentTime = vault.CurrentEpoch();
+        currentTime = vault.currentEpoch();
         currentEpoch = 2;
         emit log_uint(timestamp);
         emit log_uint(currentEpoch);
         emit log_uint(currentTime);
-        assertEq(currentTime, vault.CurrentEpoch());
+        assertEq(currentTime, vault.currentEpoch());
         assertEq(currentEpoch, vault.CURRENT_EPOCH());
         vm.warp(timestamp + EPOCH_DURATION / 2);
-        assertEq(currentTime, vault.CurrentEpoch());
+        assertEq(currentTime, vault.currentEpoch());
         assertEq(currentEpoch, vault.CURRENT_EPOCH());
 
         // Move to after Finalize the Next Epoch (3rd Epoch)
         vm.warp(timestamp + EPOCH_DURATION);
         timestamp = block.timestamp;
-        currentTime = vault.CurrentEpoch();
+        currentTime = vault.currentEpoch();
         currentEpoch = 3;
         emit log_uint(timestamp);
         emit log_uint(currentEpoch);
         emit log_uint(currentTime);
-        assertEq(currentTime, vault.CurrentEpoch());
+        assertEq(currentTime, vault.currentEpoch());
         assertEq(currentEpoch, vault.CURRENT_EPOCH());
         vm.warp(timestamp + EPOCH_DURATION / 5);
-        assertEq(currentTime, vault.CurrentEpoch());
+        assertEq(currentTime, vault.currentEpoch());
         assertEq(currentEpoch, vault.CURRENT_EPOCH());
 
         vm.stopPrank();

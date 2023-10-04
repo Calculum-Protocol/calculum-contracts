@@ -119,12 +119,36 @@ contract CalculumVault is
         _;
     }
 
+    modifier vaultInMaintenance() {
+        if (
+            (block.timestamp >
+                (getNextEpoch().sub(MAINTENANCE_PERIOD_PRE_START))) ||
+            (block.timestamp <
+                (getCurrentEpoch().add(MAINTENANCE_PERIOD_POST_START)))
+        ) {
+            revert Errors.VaultInMaintenance();
+        }
+        _;
+    }
+
+    modifier vaultOutMaintenance() {
+        if (
+            (block.timestamp <
+                (getNextEpoch().sub(MAINTENANCE_PERIOD_PRE_START))) ||
+            (block.timestamp > (getNextEpoch()))
+        ) {
+            revert Errors.VaultOutMaintenance();
+        }
+        _;
+    }
+
     function initialize(
         string memory _name,
         string memory _symbol,
         uint8 decimals_,
-        address[7] memory _initialAddress, // 0: Oracle, 1: Dex Wallet, 2: Treasury Wallet, 3: OpenZeppelin Defender Wallet, 4: Router, 5: USDCToken
-        uint256[7] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value
+        address[7] memory _initialAddress, // 0: Oracle, 1: Dex Wallet, 2: Treasury Wallet, 3: OpenZeppelin Defender Wallet, 4: Router, 5: USDCToken, 6: Kwenta Exchange
+        uint256[7] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value, 4: Minimal Wallet Ballance USDC in Transfer Bot,
+                                        // 5: Wallet Target Balance USDC in Transfer Bot, 6: Minimal Wallet Balance of ETH in Transfer Bot
     ) public reinitializer(1) {
         if (
             !_initialAddress[0].isContract() ||
@@ -155,7 +179,7 @@ contract CalculumVault is
         EPOCH_DURATION = 1 weeks; // 604800 seconds = 1 week
         MAINTENANCE_PERIOD_PRE_START = 60 minutes; // 60 minutes
         MAINTENANCE_PERIOD_POST_START = 30 minutes; // 30 minutes
-        CurrentEpoch();
+        currentEpoch();
         MANAGEMENT_FEE_PERCENTAGE = 1 ether / 100; // Represent 1%
         PERFORMANCE_FEE_PERCENTAGE = 15 ether / 100; // Represent 15%
 
@@ -196,7 +220,7 @@ contract CalculumVault is
     /**
      * Method to Update Next Epoch starting timestamp
      */
-    function NextEpoch() internal returns (uint256) {
+    function nextEpoch() internal returns (uint256) {
         if (
             block.timestamp >
             EPOCH_START + (EPOCH_DURATION * (CURRENT_EPOCH + 1))
@@ -209,8 +233,8 @@ contract CalculumVault is
     /**
      * @dev Method to Update Current Epoch starting timestamp
      */
-    function CurrentEpoch() public onlyOwner returns (uint256) {
-        return NextEpoch() - EPOCH_DURATION;
+    function currentEpoch() public onlyOwner returns (uint256) {
+        return nextEpoch() - EPOCH_DURATION;
     }
 
     function getCurrentEpoch() public view returns (uint256) {
@@ -241,9 +265,9 @@ contract CalculumVault is
         whitelisted(_msgSender(), _receiver)
         whenNotPaused
         nonReentrant
+        vaultInMaintenance
         returns (uint256)
     {
-        _checkVaultInMaintenance();
         address caller = _msgSender();
         DataTypes.Basics storage depositor = DEPOSITS[_receiver];
         if (_assets < MIN_DEPOSIT) {
@@ -324,11 +348,11 @@ contract CalculumVault is
         whitelisted(_msgSender(), _owner)
         whenNotPaused
         nonReentrant
+        vaultInMaintenance
         returns (uint256)
     {
-        _checkVaultInMaintenance();
         address caller = _msgSender();
-        if ((_owner != caller) || (_receiver != caller)) {
+        if (_receiver != caller) {
             revert Errors.CallerIsNotOwnerOrReceiver(caller, _owner, _receiver);
         }
         if (_assets == 0) revert Errors.AmountMustBeGreaterThanZero(caller);
@@ -369,9 +393,9 @@ contract CalculumVault is
         whitelisted(_msgSender(), _owner)
         whenNotPaused
         nonReentrant
+        vaultInMaintenance
         returns (uint256)
     {
-        _checkVaultInMaintenance();
         address caller = _msgSender();
         if ((_owner != caller) || (_receiver != caller)) {
             revert Errors.CallerIsNotOwnerOrReceiver(caller, _owner, _receiver);
@@ -458,8 +482,7 @@ contract CalculumVault is
      */
     function claimShares(
         address _owner
-    ) external whitelisted(_msgSender(), _owner) nonReentrant {
-        _checkVaultInMaintenance();
+    ) external whitelisted(_msgSender(), _owner) nonReentrant vaultInMaintenance {
         address caller = _msgSender();
         DataTypes.Basics storage depositor = DEPOSITS[_owner];
         if (!isClaimerMint(_owner))
@@ -483,8 +506,7 @@ contract CalculumVault is
     function claimAssets(
         address _receiver,
         address _owner
-    ) external whitelisted(_msgSender(), _owner) nonReentrant {
-        _checkVaultInMaintenance();
+    ) external whitelisted(_msgSender(), _owner) nonReentrant vaultInMaintenance {
         address caller = _msgSender();
         DataTypes.Basics storage withdrawer = WITHDRAWALS[_owner];
         if (!isClaimerWithdraw(_owner)) {
@@ -525,8 +547,7 @@ contract CalculumVault is
         uint256 _epochDuration,
         uint256 _maintTimeBefore,
         uint256 _maintTimeAfter
-    ) public onlyOwner {
-        _checkVaultInMaintenance();
+    ) public onlyOwner vaultInMaintenance {
         if (_epochDuration < 1 minutes || _epochDuration > 12 weeks) {
             revert Errors.WrongEpochDuration(_epochDuration);
         }
@@ -576,11 +597,10 @@ contract CalculumVault is
     /**
      * @dev Method to Finalize the Epoch, and Update all parameters and prepare for start the new Epoch
      */
-    function finalizeEpoch() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
+    function finalizeEpoch() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant vaultOutMaintenance {
         /**
          * Follow the Initial Vault Mechanics Define by Simplified Implementation
          */
-        _checkVaultOutMaintenance();
         DexWalletBalance();
         VAULT_TOKEN_PRICE[CURRENT_EPOCH] = convertToAssets(1 ether);
         // Update Value such Token Price Updated
@@ -737,9 +757,8 @@ contract CalculumVault is
         }
     }
 
-    function dexTransfer() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
+    function dexTransfer() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant vaultOutMaintenance {
         DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
-        _checkVaultOutMaintenance();
         if (actualTx.pending) {
             if (actualTx.direction) {
                 SafeERC20Upgradeable.safeTransfer(
@@ -780,8 +799,7 @@ contract CalculumVault is
     /**
      * @dev FeesTranfer per Epoch
      */
-    function feesTransfer() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
-        _checkVaultOutMaintenance();
+    function feesTransfer() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant vaultOutMaintenance {
         uint256 mgtFee = Utils.MgtFeePerVaultToken(address(this));
         uint256 perfFee = Utils.PerfFeePerVaultToken(
             address(this),
@@ -1033,26 +1051,26 @@ contract CalculumVault is
         return _decimals;
     }
 
-    function _checkVaultInMaintenance() private view {
-        if (
-            (block.timestamp >
-                (getNextEpoch().sub(MAINTENANCE_PERIOD_PRE_START))) ||
-            (block.timestamp <
-                (getCurrentEpoch().add(MAINTENANCE_PERIOD_POST_START)))
-        ) {
-            revert Errors.VaultInMaintenance();
-        }
-    }
+    // function _checkVaultInMaintenance() private view {
+    //     if (
+    //         (block.timestamp >
+    //             (getNextEpoch().sub(MAINTENANCE_PERIOD_PRE_START))) ||
+    //         (block.timestamp <
+    //             (getCurrentEpoch().add(MAINTENANCE_PERIOD_POST_START)))
+    //     ) {
+    //         revert Errors.VaultInMaintenance();
+    //     }
+    // }
 
-    function _checkVaultOutMaintenance() private view {
-        if (
-            (block.timestamp <
-                (getNextEpoch().sub(MAINTENANCE_PERIOD_PRE_START))) ||
-            (block.timestamp > (getNextEpoch()))
-        ) {
-            revert Errors.VaultOutMaintenance();
-        }
-    }
+    // function _checkVaultOutMaintenance() private view {
+    //     if (
+    //         (block.timestamp <
+    //             (getNextEpoch().sub(MAINTENANCE_PERIOD_PRE_START))) ||
+    //         (block.timestamp > (getNextEpoch()))
+    //     ) {
+    //         revert Errors.VaultOutMaintenance();
+    //     }
+    // }
 
     function _beforeTokenTransfer(
         address from,
