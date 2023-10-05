@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-interface IKwenta {
+import "./IAccount.sol";
+
+interface IKwenta is IAccount {
     // Mapping of Address is Delegate or not
     function delegates(address delegate) external view returns (bool);
 

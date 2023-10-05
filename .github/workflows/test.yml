@@ -44,21 +44,21 @@ jobs:
     name: Hardhat project
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
 
-      - name: Setup Node 16
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16.x'
-          cache: 'npm'
+    - name: Setup Node 16
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16.x'
+        cache: 'yarn'  # Change cache to yarn
 
-      - name: Install Node dependencies
-        run: |
-          npm ci
-        
-      - name: Run Hardhat tests
-        run: |
-          npm run test
+    - name: Install Node dependencies
+      run: |
+        yarn install  # Change from npm ci to yarn install
+            
+    - name: Run Hardhat tests
+      run: |
+        yarn test  # Change from npm run test to yarn test
         id: hardhat-test

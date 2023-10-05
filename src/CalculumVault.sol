@@ -648,12 +648,15 @@ contract CalculumVault is
     /**
      * @dev Method Manage Delegate in Kwenta
      */
-    function manageDelegate(address _delegate, bool add) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function manageDelegate(
+        address _delegate,
+        bool add
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_delegate != address(0), "Invalid delegate address");
-        
+
         // Check if the delegate is already a delegate.
         bool delegated = delegateManager.delegates(_delegate);
-        
+
         if (add && !delegated) {
             // If we're asked to add the delegate and it's not already a delegate, add it.
             delegateManager.addDelegate(_delegate);
@@ -665,21 +668,33 @@ contract CalculumVault is
 
     /**
      * @dev Method Modify Account Margin in Kwenta
+     * @dev for deposit is necessary to send a different amount to the amount to deposit
      */
-    function modifyAcctMargin(int256 addAmount) external nonReentrant {
-        require(
-            _msgSender() == dexWallet,
-            "Only DexWallet can call this function"
-        );
-        uint256 amount = _asset.balanceOf(_msgSender());
+    function modifyAcctMargin(
+        int256 addAmount
+    ) external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
+        // uint256 amount = _asset.balanceOf(dexWallet);
         // If is Withdraw, validate that the actual amount is less than the amount to withdraw
-        if ((amount - uint256(addAmount * -1) < 0 ) && (addAmount < 0)) {
-            revert Errors.NotEnoughBalance(uint256(addAmount * -1), amount);
+        // if ((uint256(addAmount * -1) > amount) && (addAmount < 0)) {
+        //     revert Errors.NotEnoughBalance(uint256(addAmount * -1), amount);
+        // }
+        if (addAmount > 0) {
+            _asset.approve(address(dexWallet), uint256(addAmount));
+            //     SafeERC20Upgradeable.safeTransferFrom(
+            //         _asset,
+            //         _msgSender(),
+            //         dexWallet,
+            //         uint256(addAmount) - amount
+            //     );
         }
-        Utils.transferDexWallet(address(_asset), dexWallet, addAmount);
+        IKwenta.Command[] memory commands = new IAccount.Command[](1);
+        commands[0] = IAccount.Command.ACCOUNT_MODIFY_MARGIN;
+        bytes[] memory inputs = new bytes[](1);
+        inputs[0] = abi.encode(addAmount);
+        delegateManager.execute(commands, inputs);
     }
 
-    function isDelegate (address account) public view returns (bool) {
+    function isDelegate(address account) public view returns (bool) {
         return delegateManager.delegates(account);
     }
 
