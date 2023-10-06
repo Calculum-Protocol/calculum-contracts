@@ -1197,11 +1197,6 @@ describe("Verification of Basic Value and Features", function () {
         console.log("Balance USDc of Calculum Vault: ", (await USDc.balanceOf(Calculum.address)).div(ethers.BigNumber.from(10).pow(18)).toString());
         console.log("Balance USDc of Open Zeppellin Wallet: ", (await USDc.balanceOf(openZeppelinDefenderWallet.address)).div(ethers.BigNumber.from(10).pow(18)).toString());
         console.log("Balance USDc of Deployer: ", (await USDc.balanceOf(deployer.address)).div(ethers.BigNumber.from(10).pow(18)).toString());
-        // Transfer 15K USDc from deployer to Calculum Vault
-        await USDc.connect(deployer).transfer(Calculum.address, ethers.utils.parseEther("150000"));
-        // Modify the Account Margin of Dex Wallet
-        await Calculum.connect(deployer).modifyAcctMargin(ethers.utils.parseEther("150000"));
-
         // Validate the USDc into the Vautl (the minimal amount of Vault)
         expect(
             (await USDc.balanceOf(openZeppelinDefenderWallet.address)).div(ethers.BigNumber.from(10).pow(18))
@@ -1384,7 +1379,7 @@ describe("Verification of Basic Value and Features", function () {
         await Calculum.connect(deployer).modifyAcctMargin(sub.mul(-1));
         // TODO: need to fix the smart contract of the vault, to handle the transfer to the dex wallet (deposit or withdraw)
         console.log("Adjust Balance of Dex Wallet to Real Value: ", ethers.utils.parseEther("150000").sub(ethers.utils.parseEther("146250")).div(ethers.BigNumber.from(10).pow(18)).toString());
-        expect((await USDc.balanceOf(dexWallet.address)).div(ethers.BigNumber.from(10).pow(18))).to.equal(146250+150000);
+        expect((await USDc.balanceOf(dexWallet.address)).div(ethers.BigNumber.from(10).pow(18))).to.equal(146250);
         // Finalize the Epoch
         await Calculum.connect(openZeppelinDefenderWallet).finalizeEpoch();
         console.log("Finalize the First Epoch Successfully");

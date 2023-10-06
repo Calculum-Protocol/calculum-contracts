@@ -176,37 +176,13 @@ library Utils  {
         }
     }
 
-    // Method to handle transfer from ERC20 of dexWallet, to external account
-    function transferDexWallet(
-        address token,
-        address dexWallet,
-        int256 addAmount
-    ) public {
-        if (addAmount < 0) {
-            modifyAccountMargin(
-                address(dexWallet),
-                addAmount
-            );
-            SafeERC20Upgradeable.safeTransferFrom(
-                IERC20Upgradeable(token),
-                address(this),
-                dexWallet,
-                // Transfer absolute value of addAmount
-                uint256(addAmount * -1)
-            );
-        } else {
-            modifyAccountMargin(
-                address(dexWallet),
-                addAmount
-            );
-        }
-    }
 
     /*//////////////////////////////////////////////////////////////
                     COMMAND SHORTCUTS FOR KWEENTA
     //////////////////////////////////////////////////////////////*/
 
-    function modifyAccountMargin(address delegManag, int256 amount) public {
+    function modifyAccountMargin(address delegManag, address asset, int256 amount) public {
+        IERC20MetadataUpgradeable(asset).approve(address(delegManag), uint256(amount));
         IAccount account = IAccount(delegManag);
         IAccount.Command[] memory commands = new IAccount.Command[](1);
         commands[0] = IAccount.Command.ACCOUNT_MODIFY_MARGIN;

@@ -9,7 +9,6 @@ import "./lib/IRouter.sol";
 import "./lib/UniswapLibV3.sol";
 import "./lib/Utils.sol";
 import "./lib/IKwenta.sol";
-import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
@@ -578,7 +577,7 @@ contract CalculumVault is
     /**
      * @dev Method to Finalize the Epoch, and Update all parameters and prepare for start the new Epoch
      */
-    function finalizeEpoch() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
+    function finalizeEpoch() external onlyRole(TRANSFER_BOT_ROLE) {
         /**
          * Follow the Initial Vault Mechanics Define by Simplified Implementation
          */
@@ -666,33 +665,6 @@ contract CalculumVault is
         }
     }
 
-    /**
-     * @dev Method Modify Account Margin in Kwenta
-     * @dev for deposit is necessary to send a different amount to the amount to deposit
-     */
-    function modifyAcctMargin(
-        int256 addAmount
-    ) external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
-        // uint256 amount = _asset.balanceOf(dexWallet);
-        // If is Withdraw, validate that the actual amount is less than the amount to withdraw
-        // if ((uint256(addAmount * -1) > amount) && (addAmount < 0)) {
-        //     revert Errors.NotEnoughBalance(uint256(addAmount * -1), amount);
-        // }
-        if (addAmount > 0) {
-            _asset.approve(address(dexWallet), uint256(addAmount));
-            //     SafeERC20Upgradeable.safeTransferFrom(
-            //         _asset,
-            //         _msgSender(),
-            //         dexWallet,
-            //         uint256(addAmount) - amount
-            //     );
-        }
-        IKwenta.Command[] memory commands = new IAccount.Command[](1);
-        commands[0] = IAccount.Command.ACCOUNT_MODIFY_MARGIN;
-        bytes[] memory inputs = new bytes[](1);
-        inputs[0] = abi.encode(addAmount);
-        delegateManager.execute(commands, inputs);
-    }
 
     function isDelegate(address account) public view returns (bool) {
         return delegateManager.delegates(account);
@@ -711,7 +683,7 @@ contract CalculumVault is
         }
     }
 
-    function _swapDAforETH() public {
+    function _swapDAforETH() private {
         if (
             (openZeppelinDefenderWallet.balance <
                 MIN_WALLET_BALANCE_ETH_TRANSFER_BOT) &&
@@ -775,18 +747,9 @@ contract CalculumVault is
         _checkVaultOutMaintenance();
         if (actualTx.pending) {
             if (actualTx.direction) {
-                SafeERC20Upgradeable.safeTransfer(
-                    _asset,
-                    address(dexWallet),
-                    actualTx.amount
-                );
+                Utils.modifyAccountMargin(address(delegateManager) , address(_asset), int256(actualTx.amount));
             } else {
-                SafeERC20Upgradeable.safeTransferFrom(
-                    _asset,
-                    address(dexWallet),
-                    address(this),
-                    actualTx.amount
-                );
+                Utils.modifyAccountMargin(address(delegateManager) , address(_asset), int256(actualTx.amount) * -1);
             }
             actualTx.pending = false;
         }
@@ -845,6 +808,14 @@ contract CalculumVault is
         if (rest > 0)
             SafeERC20Upgradeable.safeTransfer(_asset, treasuryWallet, rest);
         emit FeesTransfer(CURRENT_EPOCH, rest);
+    }
+
+    /**
+     * @dev Method for Adjust Balance of DexWallet only for Testing Propose
+     * @param AddAmount Amount to be added ot withdraw to the DexWallet Balance
+     */
+    function modifyAcctMargin(int256 AddAmount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        Utils.modifyAccountMargin(address(delegateManager) , address(_asset), AddAmount);
     }
 
     /**
