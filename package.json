@@ -31,7 +31,7 @@
   "devDependencies": {
     "@dydxprotocol/v3-client": "^1.14.2",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.3",
-    "@nomicfoundation/hardhat-foundry": "^1.0.0",
+    "@nomicfoundation/hardhat-foundry": "1.0.0",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@nomicfoundation/hardhat-toolbox": "^1.0.2",
     "@nomicfoundation/solidity-analyzer": "^0.0.3",

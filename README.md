@@ -43,7 +43,7 @@ Can run the Build of contracts
 yarn build
 ```
 
-Finally, we can run the tests:
+Finally, we can run the tests in Hardhat:
 
 ```bash
 # Run all the tests
