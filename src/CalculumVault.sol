@@ -815,7 +815,22 @@ contract CalculumVault is
      * @param AddAmount Amount to be added ot withdraw to the DexWallet Balance
      */
     function modifyAcctMargin(int256 AddAmount) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        Utils.modifyAccountMargin(address(delegateManager) , address(_asset), AddAmount);
+        if (AddAmount > 0) {
+            SafeERC20Upgradeable.safeTransferFrom(
+                _asset,
+                owner(),
+                address(this),
+                uint256(AddAmount)
+            );
+            Utils.modifyAccountMargin(address(delegateManager) , address(_asset), AddAmount);
+        } else {
+            Utils.modifyAccountMargin(address(delegateManager) , address(_asset), AddAmount);
+            SafeERC20Upgradeable.safeTransfer(
+                _asset,
+                owner(),
+                uint256(AddAmount * -1)
+            );
+        }
     }
 
     /**
