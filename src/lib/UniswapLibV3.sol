@@ -123,7 +123,7 @@ library UniswapLibV3 {
             .ExactInputSingleParams({
                 tokenIn: tokenAddress,
                 tokenOut: address(router.WETH9()),
-                fee: 500,
+                fee: 3000,
                 recipient: address(this),
                 amountIn: tokenAmount,
                 amountOutMinimum: expectedAmount.mulDiv(0.95 ether, 1 ether), // 10% slippage
