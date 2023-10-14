@@ -1974,8 +1974,8 @@ describe("Verification of Basic Value and Features", function () {
             parseInt((await USDc.balanceOf(Calculum.address)).div(ethers.BigNumber.from(10).pow(13)).toString()) / 100000
         );
         expect(
-            parseInt((await USDc.balanceOf(Calculum.address)).div(ethers.BigNumber.from(10).pow(13)).toString()) / 100000
-        ).to.equal(45342862 / 100000);
+            parseInt((await USDc.balanceOf(Calculum.address)).toString())
+        ).to.equal(45342862);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
