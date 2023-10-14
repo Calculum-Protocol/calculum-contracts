@@ -10,33 +10,6 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-#   foundry:
-#     strategy:
-#       fail-fast: true
-
-#     name: Foundry project
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v3
-#         with:
-#           submodules: recursive
-
-#       - name: Install Foundry
-#         uses: foundry-rs/foundry-toolchain@v1
-#         with:
-#           version: nightly
-
-#       - name: Run Forge build
-#         run: |
-#           forge --version
-#           forge build --sizes
-#         id: build
-
-#       - name: Run Forge tests
-#         run: |
-#           forge test -vvv
-#         id: forge-test
-
     hardhat:
         strategy:
             fail-fast: true
@@ -63,6 +36,15 @@ jobs:
                 key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
                 restore-keys: |
                    ${{ runner.os }}-yarn-
+            
+            - name: Install dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y python3 python3-distutils g++ make
+
+            - name: Install node-gyp
+              run: |
+                  npm install -g node-gyp
 
             - name: Install dependencies using Yarn
               run: |
@@ -72,3 +54,30 @@ jobs:
               run: |
                   yarn test
               id: hardhat-test
+
+#   foundry:
+#     strategy:
+#       fail-fast: true
+
+#     name: Foundry project
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v3
+#         with:
+#           submodules: recursive
+
+#       - name: Install Foundry
+#         uses: foundry-rs/foundry-toolchain@v1
+#         with:
+#           version: nightly
+
+#       - name: Run Forge build
+#         run: |
+#           forge --version
+#           forge build --sizes
+#         id: build
+
+#       - name: Run Forge tests
+#         run: |
+#           forge test -vvv
+#         id: forge-test
