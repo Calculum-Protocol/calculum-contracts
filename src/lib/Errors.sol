@@ -22,6 +22,8 @@ library Errors {
     error CallerIsNotOwner(address _caller, address _owner);
     /// The Caller  require amount of assets `_assets` more than Max amount of assets Avaliable `_amountMax`
     error NotEnoughBalance(uint256 _assests, uint256 _amountMax);
+    /// The Caller  require real amount of assets `_assets` is not correct with expected amount of assets Avaliable `_amountMax`
+    error NotCorrectBalance(uint256 _real, uint256 _expected);
     /// The Caller `_receiver` Try to Deposit a Value  over the Max Amount Permitted `_amountMax`
     error DepositExceededMax(address _receiver, uint256 _amountMax);
     /// The Caller `_receiver` Try to Deposit a Value  over the Max Amount Total Supply Permitted `_amountMax`

@@ -8,57 +8,88 @@ on:
 
 env:
   FOUNDRY_PROFILE: ci
+  MNEMONIC: ${{ secrets.MNEMONIC }}
+  INFURAKEY: ${{ secrets.INFURAKEY }}
+  ACCOUNTS: ${{ secrets.ACCOUNTS }}
+  COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
+  OPTIMISM_API_KEY: ${{ secrets.OPTIMISM_API_KEY }}
+  ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+  POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
 
 jobs:
-  foundry:
-    strategy:
-      fail-fast: true
+    hardhat:
+        strategy:
+            fail-fast: true
 
-    name: Foundry project
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
+        name: Hardhat project
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+              with:
+                submodules: recursive
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
+            - name: Install Foundry
+              uses: foundry-rs/foundry-toolchain@v1
+              with:
+                version: nightly
 
-      - name: Run Forge build
-        run: |
-          forge --version
-          forge build --sizes
-        id: build
+            - name: Install nvm and use Node version from .nvmrc
+              run: |
+                curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
+                . ~/.nvm/nvm.sh
+                nvm install
+                nvm use
 
-      - name: Run Forge tests
-        run: |
-          forge test -vvv
-        id: forge-test
+            - name: Setup Yarn cache
+              uses: actions/cache@v2
+              with:
+                path: ~/.cache/yarn
+                key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+                restore-keys: |
+                   ${{ runner.os }}-yarn-
+            
+            - name: Install dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y python3 python3-distutils g++ make
 
-  hardhat:
-    strategy:
-      fail-fast: true
+            - name: Install node-gyp
+              run: |
+                  npm install -g node-gyp
 
-    name: Hardhat project
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
+            - name: Install dependencies using Yarn
+              run: |
+                yarn install
+                        
+            - name: Run Hardhat tests with Yarn
+              run: |
+                  yarn test
+              id: hardhat-test
 
-      - name: Setup Node 16
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16.x'
-          cache: 'npm'
+#   foundry:
+#     strategy:
+#       fail-fast: true
 
-      - name: Install Node dependencies
-        run: |
-          npm ci
-        
-      - name: Run Hardhat tests
-        run: |
-          npm run test
-        id: hardhat-test
+#     name: Foundry project
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v3
+#         with:
+#           submodules: recursive
+
+#       - name: Install Foundry
+#         uses: foundry-rs/foundry-toolchain@v1
+#         with:
+#           version: nightly
+
+#       - name: Run Forge build
+#         run: |
+#           forge --version
+#           forge build --sizes
+#         id: build
+
+#       - name: Run Forge tests
+#         run: |
+#           forge test -vvv
+#         id: forge-test

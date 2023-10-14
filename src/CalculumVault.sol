@@ -9,7 +9,6 @@ import "./lib/IRouter.sol";
 import "./lib/UniswapLibV3.sol";
 import "./lib/Utils.sol";
 import "./lib/IKwenta.sol";
-import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
@@ -46,7 +45,7 @@ contract CalculumVault is
     // Transfer Bot Wallet in DEX
     address payable private openZeppelinDefenderWallet;
     // Trader Bot Wallet in DEX
-    address payable private dexWallet;
+    address payable public dexWallet;
     // Treasury Wallet of Calculum
     address public treasuryWallet;
     // Management Fee percentage , e.g. 1% = 1 / 100
@@ -161,8 +160,10 @@ contract CalculumVault is
 
         // Set the initial Delegate Manager
         delegateManager = IKwenta(kwenta.newAccount());
-        // Add DexWallet as Delegate
+        // Add DexWallet as Delegate in Kwenta
         delegateManager.addDelegate(address(dexWallet));
+        // Assign like DexWallet the address of the Delegate Manager in Kwenta
+        dexWallet = payable(address(delegateManager));
     }
 
     /**
@@ -576,7 +577,7 @@ contract CalculumVault is
     /**
      * @dev Method to Finalize the Epoch, and Update all parameters and prepare for start the new Epoch
      */
-    function finalizeEpoch() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
+    function finalizeEpoch() external onlyRole(TRANSFER_BOT_ROLE) {
         /**
          * Follow the Initial Vault Mechanics Define by Simplified Implementation
          */
@@ -646,12 +647,15 @@ contract CalculumVault is
     /**
      * @dev Method Manage Delegate in Kwenta
      */
-    function manageDelegate(address _delegate, bool add) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function manageDelegate(
+        address _delegate,
+        bool add
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_delegate != address(0), "Invalid delegate address");
-        
+
         // Check if the delegate is already a delegate.
         bool delegated = delegateManager.delegates(_delegate);
-        
+
         if (add && !delegated) {
             // If we're asked to add the delegate and it's not already a delegate, add it.
             delegateManager.addDelegate(_delegate);
@@ -661,7 +665,8 @@ contract CalculumVault is
         }
     }
 
-    function isDelegate (address account) public view returns (bool) {
+
+    function isDelegate(address account) public view returns (bool) {
         return delegateManager.delegates(account);
     }
 
@@ -678,7 +683,7 @@ contract CalculumVault is
         }
     }
 
-    function _swapDAforETH() public {
+    function _swapDAforETH() private {
         if (
             (openZeppelinDefenderWallet.balance <
                 MIN_WALLET_BALANCE_ETH_TRANSFER_BOT) &&
@@ -742,18 +747,9 @@ contract CalculumVault is
         _checkVaultOutMaintenance();
         if (actualTx.pending) {
             if (actualTx.direction) {
-                SafeERC20Upgradeable.safeTransfer(
-                    _asset,
-                    address(dexWallet),
-                    actualTx.amount
-                );
+                Utils.modifyAccountMargin(address(delegateManager) , address(_asset), int256(actualTx.amount));
             } else {
-                SafeERC20Upgradeable.safeTransferFrom(
-                    _asset,
-                    address(dexWallet),
-                    address(this),
-                    actualTx.amount
-                );
+                Utils.modifyAccountMargin(address(delegateManager) , address(_asset), int256(actualTx.amount) * -1);
             }
             actualTx.pending = false;
         }
@@ -812,6 +808,29 @@ contract CalculumVault is
         if (rest > 0)
             SafeERC20Upgradeable.safeTransfer(_asset, treasuryWallet, rest);
         emit FeesTransfer(CURRENT_EPOCH, rest);
+    }
+
+    /**
+     * @dev Method for Adjust Balance of DexWallet only for Testing Propose
+     * @param AddAmount Amount to be added ot withdraw to the DexWallet Balance
+     */
+    function modifyAcctMargin(int256 AddAmount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (AddAmount > 0) {
+            SafeERC20Upgradeable.safeTransferFrom(
+                _asset,
+                owner(),
+                address(this),
+                uint256(AddAmount)
+            );
+            Utils.modifyAccountMargin(address(delegateManager) , address(_asset), AddAmount);
+        } else {
+            Utils.modifyAccountMargin(address(delegateManager) , address(_asset), AddAmount);
+            SafeERC20Upgradeable.safeTransfer(
+                _asset,
+                owner(),
+                uint256(AddAmount * -1)
+            );
+        }
     }
 
     /**

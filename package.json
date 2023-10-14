@@ -4,7 +4,7 @@
   "description": "Draft Vault based on ERC4626",
   "main": "hardhat.config.ts",
   "scripts": {
-    "test": "rm -rf docs/ && npx hardhat clean && npx hardhat compile && npx hardhat docgen && npx hardhat test ./test/index.test.ts --network hardhat",
+    "test": "yarn build && npx hardhat test ./test/index.test.ts --network hardhat",
     "test-local": "npx hardhat test --network local",
     "lint": "prettier --list-different 'contracts/**/*.sol'",
     "build": "rm -rf docs/ && npx hardhat clean && npx hardhat compile && npx hardhat docgen",
@@ -31,7 +31,7 @@
   "devDependencies": {
     "@dydxprotocol/v3-client": "^1.14.2",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.3",
-    "@nomicfoundation/hardhat-foundry": "^1.0.0",
+    "@nomicfoundation/hardhat-foundry": "1.0.0",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@nomicfoundation/hardhat-toolbox": "^1.0.2",
     "@nomicfoundation/solidity-analyzer": "^0.0.3",
