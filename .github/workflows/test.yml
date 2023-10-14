@@ -8,6 +8,13 @@ on:
 
 env:
   FOUNDRY_PROFILE: ci
+  MNEMONIC: ${{ secrets.MNEMONIC }}
+  INFURAKEY: ${{ secrets.INFURAKEY }}
+  ACCOUNTS: ${{ secrets.ACCOUNTS }}
+  COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
+  OPTIMISM_API_KEY: ${{ secrets.OPTIMISM_API_KEY }}
+  ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+  POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
 
 jobs:
     hardhat:
