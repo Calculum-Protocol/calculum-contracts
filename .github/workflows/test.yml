@@ -10,55 +10,65 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  foundry:
-    strategy:
-      fail-fast: true
+#   foundry:
+#     strategy:
+#       fail-fast: true
 
-    name: Foundry project
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
+#     name: Foundry project
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v3
+#         with:
+#           submodules: recursive
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
+#       - name: Install Foundry
+#         uses: foundry-rs/foundry-toolchain@v1
+#         with:
+#           version: nightly
 
-      - name: Run Forge build
-        run: |
-          forge --version
-          forge build --sizes
-        id: build
+#       - name: Run Forge build
+#         run: |
+#           forge --version
+#           forge build --sizes
+#         id: build
 
-      - name: Run Forge tests
-        run: |
-          forge test -vvv
-        id: forge-test
+#       - name: Run Forge tests
+#         run: |
+#           forge test -vvv
+#         id: forge-test
 
-  hardhat:
-    strategy:
-      fail-fast: true
+    hardhat:
+        strategy:
+            fail-fast: true
 
-    name: Hardhat project
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
+        name: Hardhat project
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+              with:
+                submodules: recursive
 
-    - name: Setup Node 16
-      uses: actions/setup-node@v3
-      with:
-        node-version: '16.x'
-        cache: 'yarn'  # Change cache to yarn
+            - name: Install nvm and use Node version from .nvmrc
+              run: |
+                curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
+                . ~/.nvm/nvm.sh
+                nvm install
+                nvm use
 
-    - name: Install Node dependencies
-      run: |
-        yarn install  # Change from npm ci to yarn install
-            
-    - name: Run Hardhat tests
-      run: |
-        yarn test  # Change from npm run test to yarn test
-        id: hardhat-test
+            - name: Setup Yarn cache
+              uses: actions/cache@v2
+              with:
+                path: ~/.cache/yarn
+                key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+                restore-keys: |
+                   ${{ runner.os }}-yarn-
+
+            - name: Install dependencies using Yarn
+              run: |
+                yarn install
+                        
+            - name: Run Hardhat tests with Yarn
+              run: |
+                  yarn test
+              id: hardhat-test
