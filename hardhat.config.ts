@@ -71,6 +71,13 @@ module.exports = {
                 mnemonic: MNEMONIC,
             },
         },
+        optimism: {
+            chainId: 10,
+            url: `https://optimism-mainnet.infura.io/v3/${API_KEY}`,
+            accounts: {
+                mnemonic: MNEMONIC,
+            },
+        },
         goerli: {
             url: `https://goerli.infura.io/v3/${API_KEY}`,
             accounts: {

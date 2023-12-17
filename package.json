@@ -12,7 +12,8 @@
     "deploy": "npx hardhat run ./scripts/deploy.ts",
     "coverage": "npx hardhat coverage",
     "deploy:testnet": "npx hardhat run ./scripts/deploy.ts --network goerli",
-    "deploy:sepolia": "npx hardhat run ./scripts/deploy.ts --network sepolia"
+    "deploy:sepolia": "npx hardhat run ./scripts/deploy.ts --network sepolia",
+    "deploy:optimism": "npx hardhat run ./scripts/deploy.ts --network optimism"
   },
   "importSort": {
     ".js, .jsx, .ts, .tsx": {
