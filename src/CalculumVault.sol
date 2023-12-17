@@ -158,12 +158,12 @@ contract CalculumVault is
         MANAGEMENT_FEE_PERCENTAGE = 1 ether / 100; // Represent 1%
         PERFORMANCE_FEE_PERCENTAGE = 15 ether / 100; // Represent 15%
 
-        // Set the initial Delegate Manager
-        delegateManager = IKwenta(kwenta.newAccount());
-        // Add DexWallet as Delegate in Kwenta
-        delegateManager.addDelegate(address(dexWallet));
-        // Assign like DexWallet the address of the Delegate Manager in Kwenta
-        dexWallet = payable(address(delegateManager));
+        // // Set the initial Delegate Manager
+        // delegateManager = IKwenta(kwenta.newAccount());
+        // // Add DexWallet as Delegate in Kwenta
+        // delegateManager.addDelegate(address(dexWallet));
+        // // Assign like DexWallet the address of the Delegate Manager in Kwenta
+        // dexWallet = payable(address(delegateManager));
     }
 
     /**
