@@ -38,11 +38,11 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 module.exports = {
     networks: {
         hardhat: {
-            chainId: 10,
+            chainId: 42161,
             throwOnTransactionFailures: true,
             throwOnCallFailures: true,
             forking: {
-                url: `https://optimism-mainnet.infura.io/v3/${API_KEY}`,
+                url: `https://arbitrum-mainnet.infura.io/v3/${API_KEY}`,
             },
             accounts: {
                 mnemonic: MNEMONIC,
