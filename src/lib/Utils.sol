@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "./ICalculumVault.sol";
+import "./DataTypes.sol";
 import "./IEndpoint.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/utils/math/SafeMathUpgradeable.sol";
@@ -216,10 +217,10 @@ library Utils {
         LinkSigner memory linkSigner = LinkSigner(
             contractSubaccount,
             externalSubaccount,
-            0
+            IEndpoint(vertexEndpoint).getNonce(externalAccount)
         );
         bytes memory txs = abi.encodePacked(
-            uint256(19),
+            uint8(DataTypes.TransactionType.LinkSigner),
             abi.encode(linkSigner)
         );
         IEndpoint(vertexEndpoint).submitSlowModeTransaction(txs);
@@ -255,7 +256,7 @@ library Utils {
             amount,
             IEndpoint(vertexEndpoint).getNonce(sender)
         );
-        bytes memory txs = abi.encodePacked(uint256(2), abi.encode(withdrawal));
+        bytes memory txs = abi.encodePacked(uint8(DataTypes.TransactionType.WithdrawCollateral), abi.encode(withdrawal));
         IEndpoint(vertexEndpoint).submitSlowModeTransaction(txs);
     }
 }

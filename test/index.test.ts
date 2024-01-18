@@ -135,27 +135,27 @@ describe("Verification of Basic Value and Features", function () {
         await expect(
             USDc.connect(polygonBridge).transfer(
                 deployer.address,
-                ethers.utils.parseEther("600000")
+                ethers.utils.parseUnits("1000000000000", "wei")
             )
         )
             .to.emit(USDc, "Transfer")
             .withArgs(
                 USDCe_ARB_BIG_HOLDER,
                 deployer.address,
-                ethers.utils.parseEther("600000")
+                ethers.utils.parseUnits("1000000000000", "wei")
             );
         expect(await USDc.balanceOf(deployer.address)).to.be.equal(
-            ethers.utils.parseEther("600000").add(initialBalance)
+            ethers.utils.parseUnits("1000000000000", "wei").add(initialBalance)
         );
 
         // eslint-disable-next-line no-unused-expressions
         expect(USDc.address).to.properAddress;
         console.log(`USDC Address: ${USDc.address}`);
         // Mint 100 K Stable coin to deployer, user1, user2, user3
-        console.log("Deployer UDC Balance: ", (await USDc.balanceOf(deployer.address)).div(ethers.BigNumber.from(10).pow(18)).toString());
-        await USDc.transfer(alice.address, ethers.utils.parseEther("250000"));
-        await USDc.transfer(bob.address, ethers.utils.parseEther("100000"));
-        await USDc.transfer(carla.address, ethers.utils.parseEther("30000"));
+        console.log("Deployer UDC Balance: ", parseInt((await USDc.balanceOf(deployer.address)).toString()) / 10 ** 6);
+        await USDc.transfer(alice.address, 250000 * 10 ** 6);
+        await USDc.transfer(bob.address, 100000 * 10 ** 6);
+        await USDc.transfer(carla.address, 30000 * 10 ** 6);
         // Deploy Mockup Oracle
         OracleFactory = (await ethers.getContractFactory(
             "MockUpOracle",
@@ -171,14 +171,6 @@ describe("Verification of Basic Value and Features", function () {
         expect(Oracle.address).to.properAddress;
         console.log(`Oracle Address: ${Oracle.address}`);
         // Deploy all Libraries of Calculum , with not upgradeable version
-        ConstantsFactory = (await ethers.getContractFactory(
-            "Constants",
-            deployer
-        )) as Constants__factory;
-        Constants = (await ConstantsFactory.deploy()) as Constants;
-        // eslint-disable-next-line no-unused-expressions
-        expect(Constants.address).to.properAddress;
-        console.log(`Constants Address: ${Constants.address}`);
         DataTypesFactory = (await ethers.getContractFactory(
             "DataTypes",
             deployer
@@ -236,7 +228,6 @@ describe("Verification of Basic Value and Features", function () {
             }
         }
         )) as CalculumVault__factory;
-        console.log(`Dex Wallet Address, before: ${dexWallet.address}`);
         // Deploy Calculum Vault
         Calculum = (await upgrades.deployProxy(CalculumFactory, [
             name,
@@ -264,19 +255,18 @@ describe("Verification of Basic Value and Features", function () {
         // eslint-disable-next-line no-unused-expressions
         expect(Calculum.address).to.properAddress;
         console.log(`Calculum Address: ${Calculum.address}`);
-        console.log(`Dex Wallet Address, after: ${await Calculum.dexWallet()}`);
         // Allowance the Contract in Stable Coin
-        await USDc.connect(deployer).approve(Calculum.address, ethers.utils.parseEther("100000"));
-        await USDc.connect(alice).approve(Calculum.address, ethers.utils.parseEther("250000"));
-        await USDc.connect(bob).approve(Calculum.address, ethers.utils.parseEther("100000"));
-        await USDc.connect(carla).approve(Calculum.address, ethers.utils.parseEther("30000"));
+        await USDc.connect(deployer).approve(Calculum.address, 100000 * 10 ** 6);
+        await USDc.connect(alice).approve(Calculum.address, 250000 * 10 ** 6);
+        await USDc.connect(bob).approve(Calculum.address, 100000 * 10 ** 6);
+        await USDc.connect(carla).approve(Calculum.address, 30000 * 10 ** 6);
         await USDc.connect(openZeppelinDefenderWallet).approve(
             Calculum.address,
-            ethers.utils.parseEther("2000000")
+            2000000 * 10 ** 6
         );
         await USDc.connect(dexWallet).approve(
             Calculum.address,
-            ethers.utils.parseEther("2000000")
+            2000000 * 10 ** 6
         );
         // Add deployer, alice, bob and carla wallet in the whitelist
         await Calculum.connect(deployer).addDropWhitelist(deployer.address, true);
@@ -286,7 +276,7 @@ describe("Verification of Basic Value and Features", function () {
         // Mint 200 USDc to the Transfer Bot Role  Wallet
         await USDc.connect(deployer).transfer(
             openZeppelinDefenderWallet.address,
-            ethers.utils.parseEther("200")
+            200 * 10 ** 6
         );
         // Transfer 0.5 ETh from deployer to Contract Vault Address
         await openZeppelinDefenderWallet.sendTransaction({
@@ -386,14 +376,14 @@ describe("Verification of Basic Value and Features", function () {
         expect(await Calculum.router()).to.equal(UNISWAP_ARB_ROUTER3);
         // Verify Balance of ERC20 USDc of the Contract Vault
         expect(await USDc.balanceOf(openZeppelinDefenderWallet.address)).to.equal(
-            ethers.utils.parseEther("200")
+            200 * 10 ** 6
         );
         // Verify Balance in USDc of alice
-        expect(await USDc.balanceOf(alice.address)).to.equal(ethers.utils.parseEther("250000"));
+        expect(await USDc.balanceOf(alice.address)).to.equal(250000 * 10 ** 6);
         // Verify Balance in USDc of bob
-        expect(await USDc.balanceOf(bob.address)).to.equal(ethers.utils.parseEther("100000"));
+        expect(await USDc.balanceOf(bob.address)).to.equal(100000 * 10 ** 6);
         // Verify Balance in USDc of carla
-        expect(await USDc.balanceOf(carla.address)).to.equal(ethers.utils.parseEther("30000"));
+        expect(await USDc.balanceOf(carla.address)).to.equal(30000 * 10 ** 6);
         // Verify Balance of 0.5 ETH in ethereum of Contract Vault
         expect(
             await ethers.provider.getBalance(openZeppelinDefenderWallet.address)

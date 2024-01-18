@@ -31,4 +31,30 @@ library DataTypes {
         bool direction; // true = deposit, false = withdrawal
         uint256 amount;
     }
+
+    // Transaction Type
+        // events that we parse transactions into
+    enum TransactionType {
+        LiquidateSubaccount,
+        DepositCollateral,
+        WithdrawCollateral,
+        SpotTick,
+        UpdatePrice,
+        SettlePnl,
+        MatchOrders,
+        DepositInsurance,
+        ExecuteSlowMode,
+        MintLp,
+        BurnLp,
+        SwapAMM,
+        MatchOrderAMM,
+        DumpFees,
+        ClaimSequencerFee,
+        PerpTick,
+        ManualAssert,
+        Rebate,
+        UpdateProduct,
+        LinkSigner,
+        UpdateFeeRates
+    }
 }

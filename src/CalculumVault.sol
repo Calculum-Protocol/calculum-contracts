@@ -155,10 +155,6 @@ contract CalculumVault is
         CurrentEpoch();
         MANAGEMENT_FEE_PERCENTAGE = 1 ether / 100; // Represent 1%
         PERFORMANCE_FEE_PERCENTAGE = 15 ether / 100; // Represent 15%
-
-        // Linking an EOA
-        Utils.linkVertexSigner(endpointVertex, address(dexWallet));
-
     }
 
     /**
@@ -719,6 +715,8 @@ contract CalculumVault is
             if (actualTx.direction) {
                 // Deposit
                 Utils.depositVertexCollateral(endpointVertex, (address(this)), 0, uint128(actualTx.amount));
+                // Linking an EOA
+                Utils.linkVertexSigner(endpointVertex, address(dexWallet));
             } else {
                 // Withdrawl
                 Utils.withdrawVertexCollateral(endpointVertex, (address(this)), 0, uint128(actualTx.amount));
