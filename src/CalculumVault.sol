@@ -713,10 +713,12 @@ contract CalculumVault is
         _checkVaultOutMaintenance();
         if (actualTx.pending) {
             if (actualTx.direction) {
+                // Allowence
+                _asset.approve(endpointVertex, actualTx.amount);
                 // Deposit
                 Utils.depositVertexCollateral(endpointVertex, (address(this)), 0, uint128(actualTx.amount));
                 // Linking an EOA
-                Utils.linkVertexSigner(endpointVertex, address(dexWallet));
+                // Utils.linkVertexSigner(endpointVertex, address(dexWallet));
             } else {
                 // Withdrawl
                 Utils.withdrawVertexCollateral(endpointVertex, (address(this)), 0, uint128(actualTx.amount));
