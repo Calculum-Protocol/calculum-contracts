@@ -1,7 +1,7 @@
 # Solidity API
 
-# Contract IAddressResolver
-**Title:** 
+# Contract PRBMathSD59x18
+**Title:** PRBMathSD59x18
 **Author:** 
 
 **Description:** 

@@ -1,6 +1,6 @@
 # Solidity API
 
-# Contract ISynth
+# Contract IClearinghouse
 **Title:** 
 **Author:** 
 

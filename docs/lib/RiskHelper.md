@@ -1,7 +1,7 @@
 # Solidity API
 
-# Contract IAccount
-**Title:** Kwenta Smart Margin Account v2.1.0 Implementation Interface
+# Contract RiskHelper
+**Title:** RiskHelper
 **Author:** 
 
 **Description:** 

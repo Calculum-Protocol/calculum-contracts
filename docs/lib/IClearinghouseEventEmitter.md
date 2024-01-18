@@ -1,6 +1,6 @@
 # Solidity API
 
-# Contract IKwenta
+# Contract IClearinghouseEventEmitter
 **Title:** 
 **Author:** 
 

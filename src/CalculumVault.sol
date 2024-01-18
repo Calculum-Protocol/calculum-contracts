@@ -8,7 +8,7 @@ import "./lib/Errors.sol";
 import "./lib/IRouter.sol";
 import "./lib/UniswapLibV3.sol";
 import "./lib/Utils.sol";
-import "./lib/IKwenta.sol";
+import "./lib/IEndpoint.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
@@ -46,6 +46,8 @@ contract CalculumVault is
     address payable private openZeppelinDefenderWallet;
     // Trader Bot Wallet in DEX
     address payable public dexWallet;
+    // Address of Vertex Endpoint
+    address private endpointVertex;
     // Treasury Wallet of Calculum
     address public treasuryWallet;
     // Management Fee percentage , e.g. 1% = 1 / 100
@@ -56,12 +58,8 @@ contract CalculumVault is
     mapping(uint256 => uint256) public VAULT_TOKEN_PRICE;
     // Total Supply per EPOCH
     mapping(uint256 => uint256) public TOTAL_VAULT_TOKEN_SUPPLY;
-    /// @dev Address of Uniswap v2 router to swap whitelisted ERC20 tokens to router.WETH()
+    /// @dev Address of Uniswap v3 router to swap whitelisted ERC20 tokens to router.WETH()
     IRouter public router;
-    /// @dev Address of Kwenta Dex
-    IKwenta public kwenta;
-    /// @dev Kwenta Delegate Manager
-    IKwenta public delegateManager;
     // Interface for Oracle
     Oracle public oracle;
     // Period
@@ -140,7 +138,7 @@ contract CalculumVault is
         _decimals = decimals_;
         oracle = Oracle(_initialAddress[0]);
         router = IRouter(_initialAddress[4]);
-        kwenta = IKwenta(_initialAddress[6]);
+        endpointVertex = _initialAddress[6];
         dexWallet = payable(_initialAddress[1]);
         openZeppelinDefenderWallet = payable(_initialAddress[3]);
         treasuryWallet = _initialAddress[2];
@@ -158,12 +156,9 @@ contract CalculumVault is
         MANAGEMENT_FEE_PERCENTAGE = 1 ether / 100; // Represent 1%
         PERFORMANCE_FEE_PERCENTAGE = 15 ether / 100; // Represent 15%
 
-        // Set the initial Delegate Manager
-        delegateManager = IKwenta(kwenta.newAccount());
-        // Add DexWallet as Delegate in Kwenta
-        delegateManager.addDelegate(address(dexWallet));
-        // Assign like DexWallet the address of the Delegate Manager in Kwenta
-        dexWallet = payable(address(delegateManager));
+        // Linking an EOA
+        Utils.linkVertexSigner(endpointVertex, address(dexWallet));
+
     }
 
     /**
@@ -644,31 +639,6 @@ contract CalculumVault is
         _swapDAforETH();
     }
 
-    /**
-     * @dev Method Manage Delegate in Kwenta
-     */
-    function manageDelegate(
-        address _delegate,
-        bool add
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(_delegate != address(0), "Invalid delegate address");
-
-        // Check if the delegate is already a delegate.
-        bool delegated = delegateManager.delegates(_delegate);
-
-        if (add && !delegated) {
-            // If we're asked to add the delegate and it's not already a delegate, add it.
-            delegateManager.addDelegate(_delegate);
-        } else if (!add && delegated) {
-            // If we're asked to remove the delegate and it's currently a delegate, remove it.
-            delegateManager.removeDelegate(_delegate);
-        }
-    }
-
-
-    function isDelegate(address account) public view returns (bool) {
-        return delegateManager.delegates(account);
-    }
 
     /**
      * @dev  Method for Update Total Supply
@@ -747,9 +717,11 @@ contract CalculumVault is
         _checkVaultOutMaintenance();
         if (actualTx.pending) {
             if (actualTx.direction) {
-                Utils.modifyAccountMargin(address(delegateManager) , address(_asset), int256(actualTx.amount));
+                // Deposit
+                Utils.depositVertexCollateral(endpointVertex, (address(this)), 0, uint128(actualTx.amount));
             } else {
-                Utils.modifyAccountMargin(address(delegateManager) , address(_asset), int256(actualTx.amount) * -1);
+                // Withdrawl
+                Utils.withdrawVertexCollateral(endpointVertex, (address(this)), 0, uint128(actualTx.amount));
             }
             actualTx.pending = false;
         }
@@ -808,29 +780,6 @@ contract CalculumVault is
         if (rest > 0)
             SafeERC20Upgradeable.safeTransfer(_asset, treasuryWallet, rest);
         emit FeesTransfer(CURRENT_EPOCH, rest);
-    }
-
-    /**
-     * @dev Method for Adjust Balance of DexWallet only for Testing Propose
-     * @param AddAmount Amount to be added ot withdraw to the DexWallet Balance
-     */
-    function modifyAcctMargin(int256 AddAmount) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (AddAmount > 0) {
-            SafeERC20Upgradeable.safeTransferFrom(
-                _asset,
-                owner(),
-                address(this),
-                uint256(AddAmount)
-            );
-            Utils.modifyAccountMargin(address(delegateManager) , address(_asset), AddAmount);
-        } else {
-            Utils.modifyAccountMargin(address(delegateManager) , address(_asset), AddAmount);
-            SafeERC20Upgradeable.safeTransfer(
-                _asset,
-                owner(),
-                uint256(AddAmount * -1)
-            );
-        }
     }
 
     /**

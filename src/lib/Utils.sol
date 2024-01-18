@@ -2,15 +2,13 @@
 pragma solidity ^0.8.19;
 
 import "./ICalculumVault.sol";
-import {IAccount} from "src/lib/IAccount.sol";
-import {IAddressResolver} from "src/lib/IAddressResolver.sol";
-import {ISynth} from "src/lib/ISynth.sol";
+import "./IEndpoint.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/utils/math/MathUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-library Utils  {
+library Utils {
     using SafeMathUpgradeable for uint256;
     using MathUpgradeable for uint256;
 
@@ -176,52 +174,88 @@ library Utils  {
         }
     }
 
-
     /*//////////////////////////////////////////////////////////////
-                    COMMAND SHORTCUTS FOR KWEENTA
+                    COMMAND SHORTCUTS FOR VERTEX
     //////////////////////////////////////////////////////////////*/
 
-    function modifyAccountMargin(address delegManag, address asset, int256 amount) public {
-        IERC20MetadataUpgradeable(asset).approve(address(delegManag), uint256(amount));
-        IAccount account = IAccount(delegManag);
-        IAccount.Command[] memory commands = new IAccount.Command[](1);
-        commands[0] = IAccount.Command.ACCOUNT_MODIFY_MARGIN;
-        bytes[] memory inputs = new bytes[](1);
-        inputs[0] = abi.encode(amount);
-        account.execute(commands, inputs);
+    struct LinkSigner {
+        bytes32 sender;
+        bytes32 signer;
+        uint64 nonce;
     }
 
-    function withdrawEth(address delegManag, uint256 amount) public {
-        IAccount account = IAccount(delegManag);
-        IAccount.Command[] memory commands = new IAccount.Command[](1);
-        commands[0] = IAccount.Command.ACCOUNT_WITHDRAW_ETH;
-        bytes[] memory inputs = new bytes[](1);
-        inputs[0] = abi.encode(amount);
-        account.execute(commands, inputs);
+    struct DepositCollateral {
+        // last 12 bytes of the subaccount bytes32
+        bytes12 subaccountName;
+        uint32 productId;
+        // raw amount of the ERC20 contract; i.e. 
+        // if USDC has 6 decimals and you want to deposit 1 USDC
+        // provide 1e6; if wETH has 18 decimals and you want to
+        // deposit 1 wETH, provide 1e18
+        uint128 amount;
     }
 
-    function modifyMarketMargin(
-        address delegManag,
-        address market,
-        int256 amount
-    ) public {
-        IAccount account = IAccount(delegManag);
-        IAccount.Command[] memory commands = new IAccount.Command[](1);
-        commands[0] = IAccount.Command.PERPS_V2_MODIFY_MARGIN;
-        bytes[] memory inputs = new bytes[](1);
-        inputs[0] = abi.encode(market, amount);
-        account.execute(commands, inputs);
+    struct WithdrawCollateral {
+        bytes32 sender;
+        uint32 productId;
+        uint128 amount;
+        uint64 nonce;
     }
 
-    function withdrawAllMarketMargin(
-        address delegManag,
-        address market
-    ) public {
-        IAccount account = IAccount(delegManag);
-        IAccount.Command[] memory commands = new IAccount.Command[](1);
-        commands[0] = IAccount.Command.PERPS_V2_WITHDRAW_ALL_MARGIN;
-        bytes[] memory inputs = new bytes[](1);
-        inputs[0] = abi.encode(market);
-        account.execute(commands, inputs);
+    function linkVertexSigner(
+        address vertexEndpoint,
+        address externalAccount
+    ) internal {
+        bytes12 defaultSubaccountName = bytes12(abi.encodePacked("default"));
+        bytes32 contractSubaccount = bytes32(
+            abi.encodePacked(uint160(address(this)), defaultSubaccountName)
+        );
+        bytes32 externalSubaccount = bytes32(
+            uint256(uint160(externalAccount)) << 96
+        );
+        LinkSigner memory linkSigner = LinkSigner(
+            contractSubaccount,
+            externalSubaccount,
+            0
+        );
+        bytes memory txs = abi.encodePacked(
+            uint256(19),
+            abi.encode(linkSigner)
+        );
+        IEndpoint(vertexEndpoint).submitSlowModeTransaction(txs);
+    }
+
+    // TODO: need to add deposit method for Vertex
+    function depositVertexCollateral(
+        address vertexEndpoint,
+        address subaccount,
+        uint32 productId,
+        uint128 amount
+    ) internal {
+        bytes32 addrBytes32 = bytes32(uint256(uint160(subaccount)));
+        bytes12 result;
+        assembly {
+            mstore(result, addrBytes32)
+        }
+        IEndpoint(vertexEndpoint).depositCollateral(
+            result,
+            productId,
+            amount);
+    }
+
+    function withdrawVertexCollateral(
+        address vertexEndpoint,
+        address sender,
+        uint32 productId,
+        uint128 amount
+    ) internal {
+        WithdrawCollateral memory withdrawal = WithdrawCollateral(
+            bytes32(uint256(uint160(sender)) << 96),
+            productId,
+            amount,
+            IEndpoint(vertexEndpoint).getNonce(sender)
+        );
+        bytes memory txs = abi.encodePacked(uint256(2), abi.encode(withdrawal));
+        IEndpoint(vertexEndpoint).submitSlowModeTransaction(txs);
     }
 }

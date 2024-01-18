@@ -33,9 +33,7 @@ import {
     Utils__factory,
 } from "../typechain-types";
 import { USDC_ABI } from "../files/USDC.json";
-import { sUSD_ABI } from "../files/sUSD.json";
 import { BigNumber } from "ethers";
-import { parse } from "path";
 
 dotenv.config();
 
@@ -93,523 +91,512 @@ const VERTEX_ENDPOINT = "0xbbEE07B3e8121227AfCFe1E2B82772246226128e";
 
 const snooze = (ms: any) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// describe("Verification of Basic Value and Features", function () {
-//     const EPOCH_TIME: moment.Moment = moment();
-//     const EPOCH_START = EPOCH_TIME.utc(false).unix();
-//     let currentEpoch: moment.Moment;
-//     let nextEpoch: moment.Moment;
-//     before(async () => {
-//         [
-//             deployer,
-//             treasuryWallet,
-//             dexWallet,
-//             openZeppelinDefenderWallet,
-//             alice,
-//             bob,
-//             carla,
-//             lastdeployer,
-//         ] = await ethers.getSigners();
-//         await run("compile");
-//         // Getting from command Line de Contract Name
-//         const contractName: string = "CalculumVault";
+describe("Verification of Basic Value and Features", function () {
+    const EPOCH_TIME: moment.Moment = moment();
+    const EPOCH_START = EPOCH_TIME.utc(false).unix();
+    let currentEpoch: moment.Moment;
+    let nextEpoch: moment.Moment;
+    before(async () => {
+        [
+            deployer,
+            treasuryWallet,
+            dexWallet,
+            openZeppelinDefenderWallet,
+            alice,
+            bob,
+            carla,
+            lastdeployer,
+        ] = await ethers.getSigners();
+        await run("compile");
+        // Getting from command Line de Contract Name
+        const contractName: string = "CalculumVault";
 
-//         console.log(`Contract Name: ${contractName}`);
-//         const accounts = await ethers.getSigners();
+        console.log(`Contract Name: ${contractName}`);
+        const accounts = await ethers.getSigners();
 
-//         // Deploy USDC in real World
-//         // Impersonate USDC Account of Polygon Bridge and Transfer USDC to Owner
-//         await impersonateAccount(sUSD_BIG_HOLDER);
-//         const polygonBridge: SignerWithAddress = await ethers.getSigner(
-//             sUSD_BIG_HOLDER
-//         );
-//         await setBalance(sUSD_BIG_HOLDER, "0x56bc75e2d63100000");
+        // Deploy USDC in real World
+        // Impersonate USDC Account of Polygon Bridge and Transfer USDC to Owner
+        await impersonateAccount(USDCe_ARB_BIG_HOLDER);
+        const polygonBridge: SignerWithAddress = await ethers.getSigner(
+            USDCe_ARB_BIG_HOLDER
+        );
+        await setBalance(USDCe_ARB_BIG_HOLDER, "0x56bc75e2d63100000");
 
-//         // Create Instance of USDC
-//         USDc = await ethers.getContractAt(sUSD_ABI, sUSD_ADDRESS);
-//         expect(USDc.address).to.be.properAddress;
-//         expect(USDc.address).to.be.equal(sUSD_ADDRESS);
-//         expect(await USDc.decimals()).to.be.equal(18);
-//         console.log("Deployer Address: ", deployer.address);
-//         console.log("OpenZeppelin Address: ", openZeppelinDefenderWallet.address);
-//         const initialBalance = await USDc.balanceOf(deployer.address);
+        // Create Instance of USDC
+        USDc = await ethers.getContractAt(USDC_ABI, USDCe_ARB_ADDRESS);
+        expect(USDc.address).to.be.properAddress;
+        expect(USDc.address).to.be.equal(USDCe_ARB_ADDRESS);
+        expect(await USDc.decimals()).to.be.equal(6);
+        console.log("Deployer Address: ", deployer.address);
+        console.log("OpenZeppelin Address: ", openZeppelinDefenderWallet.address);
+        const initialBalance = await USDc.balanceOf(deployer.address);
 
-//         // Transfer USDC to Owner
-//         await expect(
-//             USDc.connect(polygonBridge).transfer(
-//                 deployer.address,
-//                 ethers.utils.parseEther("600000")
-//             )
-//         )
-//             .to.emit(USDc, "Transfer")
-//             .withArgs(
-//                 sUSD_BIG_HOLDER,
-//                 deployer.address,
-//                 ethers.utils.parseEther("600000")
-//             );
-//         expect(await USDc.balanceOf(deployer.address)).to.be.equal(
-//             ethers.utils.parseEther("600000").add(initialBalance)
-//         );
+        // Transfer USDC to Owner
+        await expect(
+            USDc.connect(polygonBridge).transfer(
+                deployer.address,
+                ethers.utils.parseEther("600000")
+            )
+        )
+            .to.emit(USDc, "Transfer")
+            .withArgs(
+                USDCe_ARB_BIG_HOLDER,
+                deployer.address,
+                ethers.utils.parseEther("600000")
+            );
+        expect(await USDc.balanceOf(deployer.address)).to.be.equal(
+            ethers.utils.parseEther("600000").add(initialBalance)
+        );
 
-//         // eslint-disable-next-line no-unused-expressions
-//         expect(USDc.address).to.properAddress;
-//         console.log(`USDC Address: ${USDc.address}`);
-//         // Mint 100 K Stable coin to deployer, user1, user2, user3
-//         console.log("Deployer UDC Balance: ", (await USDc.balanceOf(deployer.address)).div(ethers.BigNumber.from(10).pow(18)).toString());
-//         await USDc.transfer(alice.address, ethers.utils.parseEther("250000"));
-//         await USDc.transfer(bob.address, ethers.utils.parseEther("100000"));
-//         await USDc.transfer(carla.address, ethers.utils.parseEther("30000"));
-//         // Deploy Mockup Oracle
-//         OracleFactory = (await ethers.getContractFactory(
-//             "MockUpOracle",
-//             deployer
-//         )) as MockUpOracle__factory;
-//         // Deploy Oracle
-//         const Balance = await USDc.balanceOf(dexWallet.address);
-//         Oracle = (await OracleFactory.deploy(
-//             dexWallet.address,
-//             Balance
-//         )) as MockUpOracle;
-//         // eslint-disable-next-line no-unused-expressions
-//         expect(Oracle.address).to.properAddress;
-//         console.log(`Oracle Address: ${Oracle.address}`);
-//         // Deploy all Libraries of Calculum , with not upgradeable version
-//         ConstantsFactory = (await ethers.getContractFactory(
-//             "Constants",
-//             deployer
-//         )) as Constants__factory;
-//         Constants = (await ConstantsFactory.deploy()) as Constants;
-//         // eslint-disable-next-line no-unused-expressions
-//         expect(Constants.address).to.properAddress;
-//         console.log(`Constants Address: ${Constants.address}`);
-//         DataTypesFactory = (await ethers.getContractFactory(
-//             "DataTypes",
-//             deployer
-//         )) as DataTypes__factory;
-//         DataTypes = (await DataTypesFactory.deploy()) as DataTypes;
-//         // eslint-disable-next-line no-unused-expressions
-//         expect(DataTypes.address).to.properAddress;
-//         console.log(`DataTypes Address: ${DataTypes.address}`);
-//         ErrorsFactory = (await ethers.getContractFactory(
-//             "Errors",
-//             deployer
-//         )) as Errors__factory;
-//         Errors = (await ErrorsFactory.deploy()) as Errors;
-//         // eslint-disable-next-line no-unused-expressions
-//         expect(Errors.address).to.properAddress;
-//         console.log(`Errors Address: ${Errors.address}`);
-//         FullMathFactory = (await ethers.getContractFactory(
-//             "FullMath",
-//             deployer
-//         )) as FullMath__factory;
-//         FullMath = (await FullMathFactory.deploy()) as FullMath;
-//         // eslint-disable-next-line no-unused-expressions
-//         expect(FullMath.address).to.properAddress;
-//         console.log(`FullMath Address: ${FullMath.address}`);
-//         TickMathFactory = (await ethers.getContractFactory(
-//             "TickMath",
-//             deployer
-//         )) as TickMath__factory;
-//         TickMath = (await TickMathFactory.deploy()) as TickMath;
-//         // eslint-disable-next-line no-unused-expressions
-//         expect(TickMath.address).to.properAddress;
-//         console.log(`TickMath Address: ${TickMath.address}`);
-//         UniswapLibV3Factory = (await ethers.getContractFactory(
-//             "UniswapLibV3",
-//             deployer
-//         )) as UniswapLibV3__factory;
-//         UniswapLibV3 = (await UniswapLibV3Factory.deploy()) as UniswapLibV3;
-//         // eslint-disable-next-line no-unused-expressions
-//         expect(UniswapLibV3.address).to.properAddress;
-//         console.log(`UniswapLibV3 Address: ${UniswapLibV3.address}`);
-//         UtilsFactory = (await ethers.getContractFactory(
-//             "Utils",
-//             deployer
-//         )) as Utils__factory;
-//         Utils = (await UtilsFactory.deploy()) as Utils;
-//         // eslint-disable-next-line no-unused-expressions
-//         expect(Utils.address).to.properAddress;
-//         console.log(`Utils Address: ${Utils.address}`);
-//         // Calculum Vault Deployer
-//         CalculumFactory = (await ethers.getContractFactory(
-//             contractName, {
-//             libraries: {
-//                 UniswapLibV3: UniswapLibV3.address,
-//                 Utils: Utils.address,
-//             }
-//         }
-//         )) as CalculumVault__factory;
-//         console.log(`Dex Wallet Address, before: ${dexWallet.address}`);
-//         // Deploy Calculum Vault
-//         Calculum = (await upgrades.deployProxy(CalculumFactory, [
-//             name,
-//             symbol,
-//             decimals,
-//             [
-//                 Oracle.address,
-//                 dexWallet.address,
-//                 treasuryWallet.address,
-//                 openZeppelinDefenderWallet.address,
-//                 UNISWAP_ROUTER2,
-//                 USDc.address,
-//                 KWENTA_ADDRESS
-//             ],
-//             [
-//                 EPOCH_START,
-//                 MIN_DEPOSIT,
-//                 MAX_DEPOSIT,
-//                 MAX_TOTAL_DEPOSIT,
-//                 MIN_WALLET_BALANCE_USDC_TRANSFER_BOT,
-//                 TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT,
-//                 MIN_WALLET_BALANCE_ETH_TRANSFER_BOT,
-//             ],
-//         ])) as CalculumVault;
-//         // eslint-disable-next-line no-unused-expressions
-//         expect(Calculum.address).to.properAddress;
-//         console.log(`Calculum Address: ${Calculum.address}`);
-//         console.log(`Dex Wallet Address, after: ${await Calculum.dexWallet()}`);
-//         // Allowance the Contract in Stable Coin
-//         await USDc.connect(deployer).approve(Calculum.address, ethers.utils.parseEther("100000"));
-//         await USDc.connect(alice).approve(Calculum.address, ethers.utils.parseEther("250000"));
-//         await USDc.connect(bob).approve(Calculum.address, ethers.utils.parseEther("100000"));
-//         await USDc.connect(carla).approve(Calculum.address, ethers.utils.parseEther("30000"));
-//         await USDc.connect(openZeppelinDefenderWallet).approve(
-//             Calculum.address,
-//             ethers.utils.parseEther("2000000")
-//         );
-//         await USDc.connect(dexWallet).approve(
-//             Calculum.address,
-//             ethers.utils.parseEther("2000000")
-//         );
-//         // Add deployer, alice, bob and carla wallet in the whitelist
-//         await Calculum.connect(deployer).addDropWhitelist(deployer.address, true);
-//         await Calculum.connect(deployer).addDropWhitelist(alice.address, true);
-//         await Calculum.connect(deployer).addDropWhitelist(bob.address, true);
-//         await Calculum.connect(deployer).addDropWhitelist(carla.address, true);
-//         // Mint 200 USDc to the Transfer Bot Role  Wallet
-//         await USDc.connect(deployer).transfer(
-//             openZeppelinDefenderWallet.address,
-//             ethers.utils.parseEther("200")
-//         );
-//         // Transfer 0.5 ETh from deployer to Contract Vault Address
-//         await openZeppelinDefenderWallet.sendTransaction({
-//             to: deployer.address,
-//             value: (
-//                 await openZeppelinDefenderWallet.getBalance()
-//             ).sub(ethers.utils.parseEther("0.5")),
-//         });
-//         console.log(`EPOCH_START : ${EPOCH_START}`);
-//         console.log(
-//             "Epoch Start Full Date: " +
-//             moment(EPOCH_TIME.utc(false).unix() * 1000)
-//                 .utc(false)
-//                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
-//         );
-//     });
+        // eslint-disable-next-line no-unused-expressions
+        expect(USDc.address).to.properAddress;
+        console.log(`USDC Address: ${USDc.address}`);
+        // Mint 100 K Stable coin to deployer, user1, user2, user3
+        console.log("Deployer UDC Balance: ", (await USDc.balanceOf(deployer.address)).div(ethers.BigNumber.from(10).pow(18)).toString());
+        await USDc.transfer(alice.address, ethers.utils.parseEther("250000"));
+        await USDc.transfer(bob.address, ethers.utils.parseEther("100000"));
+        await USDc.transfer(carla.address, ethers.utils.parseEther("30000"));
+        // Deploy Mockup Oracle
+        OracleFactory = (await ethers.getContractFactory(
+            "MockUpOracle",
+            deployer
+        )) as MockUpOracle__factory;
+        // Deploy Oracle
+        const Balance = await USDc.balanceOf(dexWallet.address);
+        Oracle = (await OracleFactory.deploy(
+            dexWallet.address,
+            Balance
+        )) as MockUpOracle;
+        // eslint-disable-next-line no-unused-expressions
+        expect(Oracle.address).to.properAddress;
+        console.log(`Oracle Address: ${Oracle.address}`);
+        // Deploy all Libraries of Calculum , with not upgradeable version
+        ConstantsFactory = (await ethers.getContractFactory(
+            "Constants",
+            deployer
+        )) as Constants__factory;
+        Constants = (await ConstantsFactory.deploy()) as Constants;
+        // eslint-disable-next-line no-unused-expressions
+        expect(Constants.address).to.properAddress;
+        console.log(`Constants Address: ${Constants.address}`);
+        DataTypesFactory = (await ethers.getContractFactory(
+            "DataTypes",
+            deployer
+        )) as DataTypes__factory;
+        DataTypes = (await DataTypesFactory.deploy()) as DataTypes;
+        // eslint-disable-next-line no-unused-expressions
+        expect(DataTypes.address).to.properAddress;
+        console.log(`DataTypes Address: ${DataTypes.address}`);
+        ErrorsFactory = (await ethers.getContractFactory(
+            "Errors",
+            deployer
+        )) as Errors__factory;
+        Errors = (await ErrorsFactory.deploy()) as Errors;
+        // eslint-disable-next-line no-unused-expressions
+        expect(Errors.address).to.properAddress;
+        console.log(`Errors Address: ${Errors.address}`);
+        FullMathFactory = (await ethers.getContractFactory(
+            "FullMath",
+            deployer
+        )) as FullMath__factory;
+        FullMath = (await FullMathFactory.deploy()) as FullMath;
+        // eslint-disable-next-line no-unused-expressions
+        expect(FullMath.address).to.properAddress;
+        console.log(`FullMath Address: ${FullMath.address}`);
+        TickMathFactory = (await ethers.getContractFactory(
+            "TickMath",
+            deployer
+        )) as TickMath__factory;
+        TickMath = (await TickMathFactory.deploy()) as TickMath;
+        // eslint-disable-next-line no-unused-expressions
+        expect(TickMath.address).to.properAddress;
+        console.log(`TickMath Address: ${TickMath.address}`);
+        UniswapLibV3Factory = (await ethers.getContractFactory(
+            "UniswapLibV3",
+            deployer
+        )) as UniswapLibV3__factory;
+        UniswapLibV3 = (await UniswapLibV3Factory.deploy()) as UniswapLibV3;
+        // eslint-disable-next-line no-unused-expressions
+        expect(UniswapLibV3.address).to.properAddress;
+        console.log(`UniswapLibV3 Address: ${UniswapLibV3.address}`);
+        UtilsFactory = (await ethers.getContractFactory(
+            "Utils",
+            deployer
+        )) as Utils__factory;
+        Utils = (await UtilsFactory.deploy()) as Utils;
+        // eslint-disable-next-line no-unused-expressions
+        expect(Utils.address).to.properAddress;
+        console.log(`Utils Address: ${Utils.address}`);
+        // Calculum Vault Deployer
+        CalculumFactory = (await ethers.getContractFactory(
+            contractName, {
+            libraries: {
+                UniswapLibV3: UniswapLibV3.address,
+                Utils: Utils.address,
+            }
+        }
+        )) as CalculumVault__factory;
+        console.log(`Dex Wallet Address, before: ${dexWallet.address}`);
+        // Deploy Calculum Vault
+        Calculum = (await upgrades.deployProxy(CalculumFactory, [
+            name,
+            symbol,
+            decimals,
+            [
+                Oracle.address,
+                dexWallet.address,
+                treasuryWallet.address,
+                openZeppelinDefenderWallet.address,
+                UNISWAP_ARB_ROUTER3,
+                USDc.address,
+                VERTEX_ENDPOINT
+            ],
+            [
+                EPOCH_START,
+                MIN_DEPOSIT,
+                MAX_DEPOSIT,
+                MAX_TOTAL_DEPOSIT,
+                MIN_WALLET_BALANCE_USDC_TRANSFER_BOT,
+                TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT,
+                MIN_WALLET_BALANCE_ETH_TRANSFER_BOT,
+            ],
+        ])) as CalculumVault;
+        // eslint-disable-next-line no-unused-expressions
+        expect(Calculum.address).to.properAddress;
+        console.log(`Calculum Address: ${Calculum.address}`);
+        console.log(`Dex Wallet Address, after: ${await Calculum.dexWallet()}`);
+        // Allowance the Contract in Stable Coin
+        await USDc.connect(deployer).approve(Calculum.address, ethers.utils.parseEther("100000"));
+        await USDc.connect(alice).approve(Calculum.address, ethers.utils.parseEther("250000"));
+        await USDc.connect(bob).approve(Calculum.address, ethers.utils.parseEther("100000"));
+        await USDc.connect(carla).approve(Calculum.address, ethers.utils.parseEther("30000"));
+        await USDc.connect(openZeppelinDefenderWallet).approve(
+            Calculum.address,
+            ethers.utils.parseEther("2000000")
+        );
+        await USDc.connect(dexWallet).approve(
+            Calculum.address,
+            ethers.utils.parseEther("2000000")
+        );
+        // Add deployer, alice, bob and carla wallet in the whitelist
+        await Calculum.connect(deployer).addDropWhitelist(deployer.address, true);
+        await Calculum.connect(deployer).addDropWhitelist(alice.address, true);
+        await Calculum.connect(deployer).addDropWhitelist(bob.address, true);
+        await Calculum.connect(deployer).addDropWhitelist(carla.address, true);
+        // Mint 200 USDc to the Transfer Bot Role  Wallet
+        await USDc.connect(deployer).transfer(
+            openZeppelinDefenderWallet.address,
+            ethers.utils.parseEther("200")
+        );
+        // Transfer 0.5 ETh from deployer to Contract Vault Address
+        await openZeppelinDefenderWallet.sendTransaction({
+            to: deployer.address,
+            value: (
+                await openZeppelinDefenderWallet.getBalance()
+            ).sub(ethers.utils.parseEther("0.5")),
+        });
+        console.log(`EPOCH_START : ${EPOCH_START}`);
+        console.log(
+            "Epoch Start Full Date: " +
+            moment(EPOCH_TIME.utc(false).unix() * 1000)
+                .utc(false)
+                .format("dddd, MMMM Do YYYY, h:mm:ss a")
+        );
+    });
 
-//     beforeEach(async () => {
-//         const time = Math.floor(
-//             (await ethers.provider.getBlock("latest")).timestamp
-//         );
-//         console.log(
-//             "Verify TimeStamp: ",
-//             time,
-//             " Full Date: ",
-//             moment(time * 1000)
-//                 .utc(false)
-//                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
-//         );
-//         currentEpoch = moment(
-//             parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
-//         );
-//         console.log("TimeStamp Current Epoch: ", currentEpoch.utc(false));
-//         nextEpoch = moment(
-//             parseInt((await Calculum.getNextEpoch()).toString()) * 1000
-//         );
-//     });
+    beforeEach(async () => {
+        const time = Math.floor(
+            (await ethers.provider.getBlock("latest")).timestamp
+        );
+        console.log(
+            "Verify TimeStamp: ",
+            time,
+            " Full Date: ",
+            moment(time * 1000)
+                .utc(false)
+                .format("dddd, MMMM Do YYYY, h:mm:ss a")
+        );
+        currentEpoch = moment(
+            parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
+        );
+        console.log("TimeStamp Current Epoch: ", currentEpoch.utc(false));
+        nextEpoch = moment(
+            parseInt((await Calculum.getNextEpoch()).toString()) * 1000
+        );
+    });
 
-//     //   ** Validate Initial Value */
-//     //   ** 1. Validate Initial Value */
-//     //   ** t1. Validate Initial Value*/
-//     it("1.- Validate Initial Value", async () => {
-//         console.log("Validate Initial Values");
-//         // Verify Owner
-//         expect(await Calculum.owner()).to.equal(deployer.address);
-//         // Verify name ERC Vault
-//         expect(await Calculum.name()).to.equal(name);
-//         // Verify symbol ERC Vault
-//         expect(await Calculum.symbol()).to.equal(symbol);
-//         // Verify decimals ERC Vault
-//         expect(await Calculum.decimals()).to.equal(decimals);
-//         // Verify assets of Vault
-//         expect(await Calculum.asset()).to.equal(USDc.address);
-//         // Verify Treasury Address
-//         expect(await Calculum.treasuryWallet()).to.equal(treasuryWallet.address);
-//         // Verify Oracle Address
-//         expect(await Calculum.oracle()).to.equal(Oracle.address);
-//         // Verify Initial Value of Percentage Maintenance Fee
-//         expect(await Calculum.MANAGEMENT_FEE_PERCENTAGE()).to.equal(
-//             ethers.utils.parseEther("0.01")
-//         );
-//         // Verify Initial Value of Percentage Performance Fee
-//         expect(await Calculum.PERFORMANCE_FEE_PERCENTAGE()).to.equal(
-//             ethers.utils.parseEther("0.15")
-//         );
-//         // Verify Epoch Start
-//         expect(await Calculum.EPOCH_START()).to.equal(EPOCH_START);
-//         // Verify Epoch Duration
-//         expect(await Calculum.EPOCH_DURATION()).to.equal(epochDuration);
-//         // Verify Maint Time Before
-//         expect(await Calculum.MAINTENANCE_PERIOD_PRE_START()).to.equal(
-//             maintTimeBefore
-//         );
-//         // Verify Maint Time After
-//         expect(await Calculum.MAINTENANCE_PERIOD_POST_START()).to.equal(
-//             maintTimeAfter
-//         );
-//         // Verify Min Deposit
-//         expect(await Calculum.MIN_DEPOSIT()).to.equal(MIN_DEPOSIT);
-//         // Verify Max Deposit
-//         expect(await Calculum.MAX_DEPOSIT()).to.equal(MAX_DEPOSIT);
-//         // Verify Max Total Deposit into Vault
-//         expect(await Calculum.MAX_TOTAL_DEPOSIT()).to.equal(MAX_TOTAL_DEPOSIT);
-//         // Verify Min USDC in Vault
-//         expect(await Calculum.MIN_WALLET_BALANCE_USDC_TRANSFER_BOT()).to.equal(
-//             MIN_WALLET_BALANCE_USDC_TRANSFER_BOT
-//         );
-//         // Verify Target USDC in Vault
-//         expect(await Calculum.TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT()).to.equal(
-//             TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT
-//         );
-//         // Verify Min ETH in Vault
-//         expect(await Calculum.MIN_WALLET_BALANCE_ETH_TRANSFER_BOT()).to.equal(
-//             MIN_WALLET_BALANCE_ETH_TRANSFER_BOT
-//         );
-//         // Verify router address Uniswap V2
-//         expect(await Calculum.router()).to.equal(UNISWAP_ROUTER2);
-//         // Verify Balance of ERC20 USDc of the Contract Vault
-//         expect(await USDc.balanceOf(openZeppelinDefenderWallet.address)).to.equal(
-//             ethers.utils.parseEther("200")
-//         );
-//         // Verify Balance in USDc of alice
-//         expect(await USDc.balanceOf(alice.address)).to.equal(ethers.utils.parseEther("250000"));
-//         // Verify Balance in USDc of bob
-//         expect(await USDc.balanceOf(bob.address)).to.equal(ethers.utils.parseEther("100000"));
-//         // Verify Balance in USDc of carla
-//         expect(await USDc.balanceOf(carla.address)).to.equal(ethers.utils.parseEther("30000"));
-//         // Verify Balance of 0.5 ETH in ethereum of Contract Vault
-//         expect(
-//             await ethers.provider.getBalance(openZeppelinDefenderWallet.address)
-//         ).to.lessThanOrEqual(ethers.utils.parseEther("0.5"));
-//         // Verifi is DexWallet is a Delegate in Kwenta Dex
-//         expect(await Calculum.isDelegate(dexWallet.address)).to.equal(true);
-//     });
+    //   ** Validate Initial Value */
+    //   ** 1. Validate Initial Value */
+    //   ** t1. Validate Initial Value*/
+    it("1.- Validate Initial Value", async () => {
+        console.log("Validate Initial Values");
+        // Verify Owner
+        expect(await Calculum.owner()).to.equal(deployer.address);
+        // Verify name ERC Vault
+        expect(await Calculum.name()).to.equal(name);
+        // Verify symbol ERC Vault
+        expect(await Calculum.symbol()).to.equal(symbol);
+        // Verify decimals ERC Vault
+        expect(await Calculum.decimals()).to.equal(decimals);
+        // Verify assets of Vault
+        expect(await Calculum.asset()).to.equal(USDc.address);
+        // Verify Treasury Address
+        expect(await Calculum.treasuryWallet()).to.equal(treasuryWallet.address);
+        // Verify Oracle Address
+        expect(await Calculum.oracle()).to.equal(Oracle.address);
+        // Verify Initial Value of Percentage Maintenance Fee
+        expect(await Calculum.MANAGEMENT_FEE_PERCENTAGE()).to.equal(
+            ethers.utils.parseEther("0.01")
+        );
+        // Verify Initial Value of Percentage Performance Fee
+        expect(await Calculum.PERFORMANCE_FEE_PERCENTAGE()).to.equal(
+            ethers.utils.parseEther("0.15")
+        );
+        // Verify Epoch Start
+        expect(await Calculum.EPOCH_START()).to.equal(EPOCH_START);
+        // Verify Epoch Duration
+        expect(await Calculum.EPOCH_DURATION()).to.equal(epochDuration);
+        // Verify Maint Time Before
+        expect(await Calculum.MAINTENANCE_PERIOD_PRE_START()).to.equal(
+            maintTimeBefore
+        );
+        // Verify Maint Time After
+        expect(await Calculum.MAINTENANCE_PERIOD_POST_START()).to.equal(
+            maintTimeAfter
+        );
+        // Verify Min Deposit
+        expect(await Calculum.MIN_DEPOSIT()).to.equal(MIN_DEPOSIT);
+        // Verify Max Deposit
+        expect(await Calculum.MAX_DEPOSIT()).to.equal(MAX_DEPOSIT);
+        // Verify Max Total Deposit into Vault
+        expect(await Calculum.MAX_TOTAL_DEPOSIT()).to.equal(MAX_TOTAL_DEPOSIT);
+        // Verify Min USDC in Vault
+        expect(await Calculum.MIN_WALLET_BALANCE_USDC_TRANSFER_BOT()).to.equal(
+            MIN_WALLET_BALANCE_USDC_TRANSFER_BOT
+        );
+        // Verify Target USDC in Vault
+        expect(await Calculum.TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT()).to.equal(
+            TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT
+        );
+        // Verify Min ETH in Vault
+        expect(await Calculum.MIN_WALLET_BALANCE_ETH_TRANSFER_BOT()).to.equal(
+            MIN_WALLET_BALANCE_ETH_TRANSFER_BOT
+        );
+        // Verify router address Uniswap V2
+        expect(await Calculum.router()).to.equal(UNISWAP_ARB_ROUTER3);
+        // Verify Balance of ERC20 USDc of the Contract Vault
+        expect(await USDc.balanceOf(openZeppelinDefenderWallet.address)).to.equal(
+            ethers.utils.parseEther("200")
+        );
+        // Verify Balance in USDc of alice
+        expect(await USDc.balanceOf(alice.address)).to.equal(ethers.utils.parseEther("250000"));
+        // Verify Balance in USDc of bob
+        expect(await USDc.balanceOf(bob.address)).to.equal(ethers.utils.parseEther("100000"));
+        // Verify Balance in USDc of carla
+        expect(await USDc.balanceOf(carla.address)).to.equal(ethers.utils.parseEther("30000"));
+        // Verify Balance of 0.5 ETH in ethereum of Contract Vault
+        expect(
+            await ethers.provider.getBalance(openZeppelinDefenderWallet.address)
+        ).to.lessThanOrEqual(ethers.utils.parseEther("0.5"));
+    });
 
-//     //   ** Verification of Sequence of Epoch */
-//     //   ** 2. Verification of Sequence of Epoch */
-//     //   ** t1. Verification of Sequence of Epoch*/
-//     it("2.- Verification of Sequence of Epoch", async () => {
-//         const timestamp: number = Math.floor(
-//             (await ethers.provider.getBlock("latest")).timestamp
-//         );
-//         await expect(
-//             Calculum.connect(deployer).setEpochDuration(
-//                 epochDuration,
-//                 maintTimeBefore,
-//                 maintTimeAfter
-//             )
-//         )
-//             .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
-//         // Move to after the Maintenance Time Post Maintenance
-//         const move1: moment.Moment = moment(
-//             Math.floor((await ethers.provider.getBlock("latest")).timestamp) * 1000
-//         );
-//         await network.provider.send("evm_setNextBlockTimestamp", [
-//             parseInt(move1.add(maintTimeAfter + 60, "s").format("X")),
-//         ]);
-//         await network.provider.send("evm_mine", []);
-//         console.log(
-//             `Verify TimeStamp after Add ${maintTimeAfter} seconds for Maintenance Window: `,
-//             moment(move1.unix() * 1000).utc(false),
-//             " Full Date: ",
-//             moment(move1.unix() * 1000)
-//                 .utc(false)
-//                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
-//         );
-//         // Getting Current Epoch and Next Epoch
-//         console.log(
-//             `Number of Current Epoch: ${parseInt(
-//                 (await Calculum.CURRENT_EPOCH()).toString()
-//             )}`
-//         );
-//         let currentEpoch: moment.Moment = moment(
-//             parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
-//         );
-//         console.log("TimeStamp Current Epoch: ", currentEpoch.utc(false));
-//         let nextEpoch: moment.Moment = moment(
-//             parseInt((await Calculum.getNextEpoch()).toString()) * 1000
-//         );
-//         console.log("TimeStamp Next Epoch: ", nextEpoch.utc(false));
-//         // Setting the Value of Epoch Duration and Maintenance Time Before and After
-//         await Calculum.connect(deployer).setEpochDuration(
-//             epochDuration,
-//             maintTimeBefore,
-//             maintTimeAfter
-//         );
-//         console.log("Epoch time Before to Move 2nd Epoch: ", EPOCH_TIME.utc(false));
-//         // Move to after Finalize the Next Epoch (2nd Epoch)
-//         // EPoch Time changes when adding the Epoch Duration
-//         await network.provider.send("evm_setNextBlockTimestamp", [
-//             parseInt(EPOCH_TIME.utc(false).add(epochDuration, "s").format("X")),
-//         ]);
-//         await network.provider.send("evm_mine", []);
-//         const move2: moment.Moment = moment(
-//             Math.floor((await ethers.provider.getBlock("latest")).timestamp) * 1000
-//         );
-//         console.log(
-//             `Verify TimeStamp after Add ${epochDuration} seconds for Next Epoch: `,
-//             moment(move2.unix() * 1000).utc(false),
-//             " Full Date: ",
-//             moment(move2.unix() * 1000)
-//                 .utc(false)
-//                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
-//         );
-//         console.log(
-//             `Number of Current Epoch Before: ${parseInt(
-//                 (await Calculum.CURRENT_EPOCH()).toString()
-//             )}`
-//         );
-//         await Calculum.CurrentEpoch();
-//         // Getting Current Epoch and Next Epoch
-//         console.log(
-//             `Number of Current Epoch After: ${parseInt(
-//                 (await Calculum.CURRENT_EPOCH()).toString()
-//             )}`
-//         );
-//         await Calculum.CurrentEpoch();
-//         console.log(
-//             `Number of Current Epoch Second Time (Verification not Changes): ${parseInt(
-//                 (await Calculum.CURRENT_EPOCH()).toString()
-//             )}`
-//         );
-//         await Calculum.CurrentEpoch();
-//         console.log(
-//             `Number of Current Epoch Third Time (Verification not Changes): ${parseInt(
-//                 (await Calculum.CURRENT_EPOCH()).toString()
-//             )}`
-//         );
-//         await Calculum.CurrentEpoch();
-//         console.log(
-//             `Number of Current Epoch Forth Time (Verification not Changes): ${parseInt(
-//                 (await Calculum.CURRENT_EPOCH()).toString()
-//             )}`
-//         );
-//         currentEpoch = moment(
-//             parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
-//         );
-//         console.log(
-//             "TimeStamp Current Epoch (2nd): ",
-//             currentEpoch,
-//             "Number Epoch:",
-//             parseInt((await Calculum.CURRENT_EPOCH()).toString())
-//         );
-//         nextEpoch = moment(
-//             parseInt((await Calculum.getNextEpoch()).toString()) * 1000
-//         );
-//         console.log(
-//             "TimeStamp Next Epoch (3rd): ",
-//             nextEpoch,
-//             "Number Epoch:",
-//             parseInt((await Calculum.CURRENT_EPOCH()).toString()) + 1
-//         );
-//         console.log("Epoch time Before to Move 3rd Epoch: ", EPOCH_TIME.utc(false));
-//         // Move to after Finalize the Next Epoch (3rd Epoch)
-//         // EPoch Time changes when adding the Epoch Duration
-//         await network.provider.send("evm_setNextBlockTimestamp", [
-//             parseInt(
-//                 EPOCH_TIME.utc(false)
-//                     .add(epochDuration + 30, "s")
-//                     .format("X")
-//             ),
-//         ]);
-//         await network.provider.send("evm_mine", []);
-//         const move3: moment.Moment = moment(
-//             Math.floor((await ethers.provider.getBlock("latest")).timestamp) * 1000
-//         );
-//         console.log(
-//             `Verify TimeStamp after Add ${epochDuration} seconds: `,
-//             moment(move3.unix() * 1000).utc(false),
-//             " Full Date: ",
-//             moment(move3.unix() * 1000)
-//                 .utc(false)
-//                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
-//         );
-//         await Calculum.CurrentEpoch();
-//         console.log(
-//             "Verification of Current Epoch (3rd): ",
-//             parseInt((await Calculum.CURRENT_EPOCH()).toString())
-//         );
-//         currentEpoch = moment(
-//             parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
-//         );
-//         console.log("TimeStamp Current Epoch: ", currentEpoch.utc(false));
-//         await Calculum.CurrentEpoch();
-//         console.log(
-//             "Verification of Current Epoch (3rd): (Verification not changes): ",
-//             parseInt((await Calculum.CURRENT_EPOCH()).toString())
-//         );
-//         currentEpoch = moment(
-//             parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
-//         );
-//         console.log("TimeStamp Current Epoch: ", currentEpoch.utc(false));
-//         await Calculum.CurrentEpoch();
-//         console.log(
-//             "Verification of Current Epoch (3rd): (Verification not changes): ",
-//             parseInt((await Calculum.CURRENT_EPOCH()).toString())
-//         );
-//         currentEpoch = moment(
-//             parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
-//         );
-//         console.log("TimeStamp Current Epoch: ", currentEpoch.utc(false));
-//         nextEpoch = moment(
-//             parseInt((await Calculum.getNextEpoch()).toString()) * 1000
-//         );
-//         console.log("TimeStamp Next Epoch: ", nextEpoch.utc(false));
-//     });
+    //   ** Verification of Sequence of Epoch */
+    //   ** 2. Verification of Sequence of Epoch */
+    //   ** t1. Verification of Sequence of Epoch*/
+    it("2.- Verification of Sequence of Epoch", async () => {
+        const timestamp: number = Math.floor(
+            (await ethers.provider.getBlock("latest")).timestamp
+        );
+        await expect(
+            Calculum.connect(deployer).setEpochDuration(
+                epochDuration,
+                maintTimeBefore,
+                maintTimeAfter
+            )
+        )
+            .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
+        // Move to after the Maintenance Time Post Maintenance
+        const move1: moment.Moment = moment(
+            Math.floor((await ethers.provider.getBlock("latest")).timestamp) * 1000
+        );
+        await network.provider.send("evm_setNextBlockTimestamp", [
+            parseInt(move1.add(maintTimeAfter + 60, "s").format("X")),
+        ]);
+        await network.provider.send("evm_mine", []);
+        console.log(
+            `Verify TimeStamp after Add ${maintTimeAfter} seconds for Maintenance Window: `,
+            moment(move1.unix() * 1000).utc(false),
+            " Full Date: ",
+            moment(move1.unix() * 1000)
+                .utc(false)
+                .format("dddd, MMMM Do YYYY, h:mm:ss a")
+        );
+        // Getting Current Epoch and Next Epoch
+        console.log(
+            `Number of Current Epoch: ${parseInt(
+                (await Calculum.CURRENT_EPOCH()).toString()
+            )}`
+        );
+        let currentEpoch: moment.Moment = moment(
+            parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
+        );
+        console.log("TimeStamp Current Epoch: ", currentEpoch.utc(false));
+        let nextEpoch: moment.Moment = moment(
+            parseInt((await Calculum.getNextEpoch()).toString()) * 1000
+        );
+        console.log("TimeStamp Next Epoch: ", nextEpoch.utc(false));
+        // Setting the Value of Epoch Duration and Maintenance Time Before and After
+        await Calculum.connect(deployer).setEpochDuration(
+            epochDuration,
+            maintTimeBefore,
+            maintTimeAfter
+        );
+        console.log("Epoch time Before to Move 2nd Epoch: ", EPOCH_TIME.utc(false));
+        // Move to after Finalize the Next Epoch (2nd Epoch)
+        // EPoch Time changes when adding the Epoch Duration
+        await network.provider.send("evm_setNextBlockTimestamp", [
+            parseInt(EPOCH_TIME.utc(false).add(epochDuration, "s").format("X")),
+        ]);
+        await network.provider.send("evm_mine", []);
+        const move2: moment.Moment = moment(
+            Math.floor((await ethers.provider.getBlock("latest")).timestamp) * 1000
+        );
+        console.log(
+            `Verify TimeStamp after Add ${epochDuration} seconds for Next Epoch: `,
+            moment(move2.unix() * 1000).utc(false),
+            " Full Date: ",
+            moment(move2.unix() * 1000)
+                .utc(false)
+                .format("dddd, MMMM Do YYYY, h:mm:ss a")
+        );
+        console.log(
+            `Number of Current Epoch Before: ${parseInt(
+                (await Calculum.CURRENT_EPOCH()).toString()
+            )}`
+        );
+        await Calculum.CurrentEpoch();
+        // Getting Current Epoch and Next Epoch
+        console.log(
+            `Number of Current Epoch After: ${parseInt(
+                (await Calculum.CURRENT_EPOCH()).toString()
+            )}`
+        );
+        await Calculum.CurrentEpoch();
+        console.log(
+            `Number of Current Epoch Second Time (Verification not Changes): ${parseInt(
+                (await Calculum.CURRENT_EPOCH()).toString()
+            )}`
+        );
+        await Calculum.CurrentEpoch();
+        console.log(
+            `Number of Current Epoch Third Time (Verification not Changes): ${parseInt(
+                (await Calculum.CURRENT_EPOCH()).toString()
+            )}`
+        );
+        await Calculum.CurrentEpoch();
+        console.log(
+            `Number of Current Epoch Forth Time (Verification not Changes): ${parseInt(
+                (await Calculum.CURRENT_EPOCH()).toString()
+            )}`
+        );
+        currentEpoch = moment(
+            parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
+        );
+        console.log(
+            "TimeStamp Current Epoch (2nd): ",
+            currentEpoch,
+            "Number Epoch:",
+            parseInt((await Calculum.CURRENT_EPOCH()).toString())
+        );
+        nextEpoch = moment(
+            parseInt((await Calculum.getNextEpoch()).toString()) * 1000
+        );
+        console.log(
+            "TimeStamp Next Epoch (3rd): ",
+            nextEpoch,
+            "Number Epoch:",
+            parseInt((await Calculum.CURRENT_EPOCH()).toString()) + 1
+        );
+        console.log("Epoch time Before to Move 3rd Epoch: ", EPOCH_TIME.utc(false));
+        // Move to after Finalize the Next Epoch (3rd Epoch)
+        // EPoch Time changes when adding the Epoch Duration
+        await network.provider.send("evm_setNextBlockTimestamp", [
+            parseInt(
+                EPOCH_TIME.utc(false)
+                    .add(epochDuration + 30, "s")
+                    .format("X")
+            ),
+        ]);
+        await network.provider.send("evm_mine", []);
+        const move3: moment.Moment = moment(
+            Math.floor((await ethers.provider.getBlock("latest")).timestamp) * 1000
+        );
+        console.log(
+            `Verify TimeStamp after Add ${epochDuration} seconds: `,
+            moment(move3.unix() * 1000).utc(false),
+            " Full Date: ",
+            moment(move3.unix() * 1000)
+                .utc(false)
+                .format("dddd, MMMM Do YYYY, h:mm:ss a")
+        );
+        await Calculum.CurrentEpoch();
+        console.log(
+            "Verification of Current Epoch (3rd): ",
+            parseInt((await Calculum.CURRENT_EPOCH()).toString())
+        );
+        currentEpoch = moment(
+            parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
+        );
+        console.log("TimeStamp Current Epoch: ", currentEpoch.utc(false));
+        await Calculum.CurrentEpoch();
+        console.log(
+            "Verification of Current Epoch (3rd): (Verification not changes): ",
+            parseInt((await Calculum.CURRENT_EPOCH()).toString())
+        );
+        currentEpoch = moment(
+            parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
+        );
+        console.log("TimeStamp Current Epoch: ", currentEpoch.utc(false));
+        await Calculum.CurrentEpoch();
+        console.log(
+            "Verification of Current Epoch (3rd): (Verification not changes): ",
+            parseInt((await Calculum.CURRENT_EPOCH()).toString())
+        );
+        currentEpoch = moment(
+            parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
+        );
+        console.log("TimeStamp Current Epoch: ", currentEpoch.utc(false));
+        nextEpoch = moment(
+            parseInt((await Calculum.getNextEpoch()).toString()) * 1000
+        );
+        console.log("TimeStamp Next Epoch: ", nextEpoch.utc(false));
+    });
 
-//     //   ** Transfer / Renounce OwnerShip */
-//     //   ** 3. Transfer / Renounce OwnerShip */
-//     //   ** t1. Transfer / Renounce OwnerShip */
-//     it("3.- Transfer / Renounce OwnerShip", async () => {
-//         await Calculum.connect(deployer).transferOwnership(lastdeployer.address);
-//         expect(await Calculum.owner()).to.equal(lastdeployer.address);
-//         await Calculum.connect(lastdeployer).renounceOwnership();
-//         expect(await Calculum.owner()).to.equal(ZERO_ADDRESS);
-//     });
+    //   ** Transfer / Renounce OwnerShip */
+    //   ** 3. Transfer / Renounce OwnerShip */
+    //   ** t1. Transfer / Renounce OwnerShip */
+    it("3.- Transfer / Renounce OwnerShip", async () => {
+        await Calculum.connect(deployer).transferOwnership(lastdeployer.address);
+        expect(await Calculum.owner()).to.equal(lastdeployer.address);
+        await Calculum.connect(lastdeployer).renounceOwnership();
+        expect(await Calculum.owner()).to.equal(ZERO_ADDRESS);
+    });
 
-//     //   ** 4. Manage Delegates */
-//     //   ** t1. Manage Delegates / Add / Remove */
-//     it("4.- Manage Delegates", async () => {
-//         await Calculum.connect(deployer).manageDelegate(lastdeployer.address, true);
-//         expect(await Calculum.isDelegate(lastdeployer.address)).to.equal(true);
-//         await Calculum.connect(deployer).manageDelegate(lastdeployer.address, false);
-//         expect(await Calculum.isDelegate(lastdeployer.address)).to.equal(false);
-//     });
-
-//     after(async () => {
-//         await network.provider.send("evm_mine", []);
-//         const time = Math.floor(
-//             (await ethers.provider.getBlock("latest")).timestamp
-//         );
-//         console.log(
-//             "Verify TimeStamp: ",
-//             time,
-//             " Full Date: ",
-//             moment(time * 1000)
-//                 .utc(false)
-//                 .format("dddd, MMMM Do YYYY, h:mm:ss a")
-//         );
-//     });
-// });
+    after(async () => {
+        await network.provider.send("evm_mine", []);
+        const time = Math.floor(
+            (await ethers.provider.getBlock("latest")).timestamp
+        );
+        console.log(
+            "Verify TimeStamp: ",
+            time,
+            " Full Date: ",
+            moment(time * 1000)
+                .utc(false)
+                .format("dddd, MMMM Do YYYY, h:mm:ss a")
+        );
+    });
+});
 
 describe("Verification of Basic Value and Features", function () {
     let EPOCH_START: number;
@@ -643,17 +630,17 @@ describe("Verification of Basic Value and Features", function () {
 
         // Deploy USDC in real World
         // Impersonate USDC Account of Polygon Bridge and Transfer USDC to Owner
-        await impersonateAccount(sUSD_BIG_HOLDER);
+        await impersonateAccount(USDCe_ARB_BIG_HOLDER);
         const polygonBridge: SignerWithAddress = await ethers.getSigner(
-            sUSD_BIG_HOLDER
+            USDCe_ARB_BIG_HOLDER
         );
-        await setBalance(sUSD_BIG_HOLDER, "0x56bc75e2d63100000");
+        await setBalance(USDCe_ARB_BIG_HOLDER, "0x56bc75e2d63100000");
 
         // Create Instance of USDC
-        USDc = await ethers.getContractAt(sUSD_ABI, sUSD_ADDRESS);
+        USDc = await ethers.getContractAt(USDC_ABI, USDCe_ARB_ADDRESS);
         expect(USDc.address).to.be.properAddress;
-        expect(USDc.address).to.be.equal(sUSD_ADDRESS);
-        expect(await USDc.decimals()).to.be.equal(18);
+        expect(USDc.address).to.be.equal(USDCe_ARB_ADDRESS);
+        expect(await USDc.decimals()).to.be.equal(6);
         console.log("Deployer Address: ", deployer.address);
         console.log("OpenZeppelin Address: ", openZeppelinDefenderWallet.address);
         const initialBalance = await USDc.balanceOf(deployer.address);
@@ -667,7 +654,7 @@ describe("Verification of Basic Value and Features", function () {
         )
             .to.emit(USDc, "Transfer")
             .withArgs(
-                sUSD_BIG_HOLDER,
+                USDCe_ARB_BIG_HOLDER,
                 deployer.address,
                 ethers.utils.parseEther("800000")
             );
@@ -774,9 +761,9 @@ describe("Verification of Basic Value and Features", function () {
                 dexWallet.address,
                 treasuryWallet.address,
                 openZeppelinDefenderWallet.address,
-                UNISWAP_ROUTER2,
+                UNISWAP_ARB_ROUTER3,
                 USDc.address,
-                KWENTA_ADDRESS
+                VERTEX_ENDPOINT
             ],
             [
                 EPOCH_START,
@@ -802,7 +789,7 @@ describe("Verification of Basic Value and Features", function () {
             ethers.utils.parseEther("2000000")
         );
         await USDc.connect(openZeppelinDefenderWallet).approve(
-            UNISWAP_ROUTER2,
+            UNISWAP_ARB_ROUTER3,
             ethers.utils.parseEther("2000000")
         );
         await USDc.connect(dexWallet).approve(
@@ -913,7 +900,7 @@ describe("Verification of Basic Value and Features", function () {
             MIN_WALLET_BALANCE_ETH_TRANSFER_BOT
         );
         // Verify router address Uniswap V2
-        expect(await Calculum.router()).to.equal(UNISWAP_ROUTER2);
+        expect(await Calculum.router()).to.equal(UNISWAP_ARB_ROUTER3);
         // Verify Balance of ERC20 USDc of the Contract Vault
         expect(await USDc.balanceOf(openZeppelinDefenderWallet.address)).to.equal(
             ethers.utils.parseEther("200")
@@ -935,8 +922,6 @@ describe("Verification of Basic Value and Features", function () {
         expect(
             await ethers.provider.getBalance(openZeppelinDefenderWallet.address)
         ).to.lessThanOrEqual(ethers.utils.parseEther("0.5"));
-        // Verifi is DexWallet is a Delegate in Kwenta Dex
-        expect(await Calculum.isDelegate(dexWallet.address)).to.equal(true);
     });
 
     //   ** Verification of Sequence of Epoch based on Excel */
@@ -2187,7 +2172,7 @@ describe("Verification of Basic Value and Features", function () {
         const asset: string = (await Calculum.asset()).toString();
         console.log("Address of ERC20 Asset: ", asset);
         const getPriceInPaymentToken = (
-            await UniswapLibV3.getPriceInPaymentToken(asset, UNISWAP_ROUTER2)
+            await UniswapLibV3.getPriceInPaymentToken(asset, UNISWAP_ARB_ROUTER3)
         ).toString();
         console.log(
             "Value of getPriceInPaymentToken: ",
@@ -2465,7 +2450,7 @@ describe("Verification of Basic Value and Features", function () {
         const asset: string = (await Calculum.asset()).toString();
         console.log("Address of ERC20 Asset: ", asset);
         const getPriceInPaymentToken = (
-            await UniswapLibV3.getPriceInPaymentToken(asset, UNISWAP_ROUTER2)
+            await UniswapLibV3.getPriceInPaymentToken(asset, UNISWAP_ARB_ROUTER3)
         ).toString();
         console.log(
             "Value of getPriceInPaymentToken: ",
@@ -2760,7 +2745,7 @@ describe("Verification of Basic Value and Features", function () {
         const asset: string = (await Calculum.asset()).toString();
         console.log("Address of ERC20 Asset: ", asset);
         const getPriceInPaymentToken = (
-            await UniswapLibV3.getPriceInPaymentToken(asset, UNISWAP_ROUTER2)
+            await UniswapLibV3.getPriceInPaymentToken(asset, UNISWAP_ARB_ROUTER3)
         ).toString();
         console.log(
             "Value of getPriceInPaymentToken: ",
@@ -3029,7 +3014,7 @@ describe("Verification of Basic Value and Features", function () {
         const asset: string = (await Calculum.asset()).toString();
         console.log("Address of ERC20 Asset: ", asset);
         const getPriceInPaymentToken = (
-            await UniswapLibV3.getPriceInPaymentToken(asset, UNISWAP_ROUTER2)
+            await UniswapLibV3.getPriceInPaymentToken(asset, UNISWAP_ARB_ROUTER3)
         ).toString();
         console.log(
             "Value of getPriceInPaymentToken: ",
@@ -3300,7 +3285,7 @@ describe("Verification of Basic Value and Features", function () {
         const asset: string = (await Calculum.asset()).toString();
         console.log("Address of ERC20 Asset: ", asset);
         const getPriceInPaymentToken = (
-            await UniswapLibV3.getPriceInPaymentToken(asset, UNISWAP_ROUTER2)
+            await UniswapLibV3.getPriceInPaymentToken(asset, UNISWAP_ARB_ROUTER3)
         ).toString();
         console.log(
             "Value of getPriceInPaymentToken: ",
@@ -3651,7 +3636,7 @@ describe("Verification of Basic Value and Features", function () {
         const asset: string = (await Calculum.asset()).toString();
         console.log("Address of ERC20 Asset: ", asset);
         const getPriceInPaymentToken = (
-            await UniswapLibV3.getPriceInPaymentToken(asset, UNISWAP_ROUTER2)
+            await UniswapLibV3.getPriceInPaymentToken(asset, UNISWAP_ARB_ROUTER3)
         ).toString();
         console.log(
             "Value of getPriceInPaymentToken: ",
@@ -3913,7 +3898,7 @@ describe("Verification of Basic Value and Features", function () {
         const asset: string = (await Calculum.asset()).toString();
         console.log("Address of ERC20 Asset: ", asset);
         const getPriceInPaymentToken = (
-            await UniswapLibV3.getPriceInPaymentToken(asset, UNISWAP_ROUTER2)
+            await UniswapLibV3.getPriceInPaymentToken(asset, UNISWAP_ARB_ROUTER3)
         ).toString();
         console.log(
             "Value of getPriceInPaymentToken: ",
