@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.23;
 
 import "./lib/IERC4626.sol";
 import "./lib/Claimable.sol";
@@ -13,6 +13,7 @@ import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeab
 import "@openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
+import "@forge-std/src/console.sol";
 
 interface Oracle {
     function GetAccount(address _wallet) external view returns (uint256);
@@ -39,15 +40,20 @@ contract CalculumVault is
     // Principal private Variable of ERC4626
 
     IERC20MetadataUpgradeable internal _asset;
+    // Decimals of the Share Token
     uint8 private _decimals;
+    // Flag to Control Linksigner
+    bool private linked;
     // Flag to Control Start Sales of Shares
     uint256 public EPOCH_START; // start 10 July 2022, Sunday 22:00:00  UTC
     // Transfer Bot Wallet in DEX
     address payable private openZeppelinDefenderWallet;
     // Trader Bot Wallet in DEX
-    address payable public dexWallet;
+    address payable public traderBotWallet;
     // Address of Vertex Endpoint
     address private endpointVertex;
+    // Address of Spot Engine of Vertex
+    address private spotEngine;
     // Treasury Wallet of Calculum
     address public treasuryWallet;
     // Management Fee percentage , e.g. 1% = 1 / 100
@@ -120,7 +126,7 @@ contract CalculumVault is
         string memory _name,
         string memory _symbol,
         uint8 decimals_,
-        address[7] memory _initialAddress, // 0: Oracle, 1: Dex Wallet, 2: Treasury Wallet, 3: OpenZeppelin Defender Wallet, 4: Router, 5: USDCToken
+        address[8] memory _initialAddress, // 0: Oracle, 1: Trader Bot Wallet, 2: Treasury Wallet, 3: OpenZeppelin Defender Wallet, 4: Router, 5: USDCToken Address, 6: Vertex Endpoint, 7: Spot Engine Vertex
         uint256[7] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value
     ) public reinitializer(1) {
         if (
@@ -139,7 +145,8 @@ contract CalculumVault is
         oracle = Oracle(_initialAddress[0]);
         router = IRouter(_initialAddress[4]);
         endpointVertex = _initialAddress[6];
-        dexWallet = payable(_initialAddress[1]);
+        spotEngine = _initialAddress[7];
+        traderBotWallet = payable(_initialAddress[1]);
         openZeppelinDefenderWallet = payable(_initialAddress[3]);
         treasuryWallet = _initialAddress[2];
         EPOCH_START = _initialValue[0];
@@ -329,6 +336,7 @@ contract CalculumVault is
         }
 
         uint256 shares = previewWithdraw(_assets);
+        console.log("shares", shares);
 
         // if _asset is ERC777, transfer can call reenter AFTER the transfer happens through
         // the tokensReceived hook, so we need to transfer after we burn to keep the invariants.
@@ -555,11 +563,13 @@ contract CalculumVault is
         if ((totalSupply() == 0) && (CURRENT_EPOCH == 0)) {
             DEX_WALLET_BALANCE = newDeposits();
         } else {
-            DEX_WALLET_BALANCE = oracle.GetAccount(address(dexWallet));
+            // Must be changed by Get Spot Balance of Spot Engine of Vertex
+            // DEX_WALLET_BALANCE = Utils.getVertexBalance(spotEngine, address(this), 0);
+            DEX_WALLET_BALANCE = oracle.GetAccount(address(traderBotWallet));
             if (DEX_WALLET_BALANCE == 0) {
                 revert Errors.ActualAssetValueIsZero(
                     address(oracle),
-                    address(dexWallet)
+                    address(traderBotWallet)
                 );
             }
         }
@@ -708,20 +718,37 @@ contract CalculumVault is
         }
     }
 
-    function dexTransfer() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
+    function dexTransfer(bool kind) external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
         DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
         _checkVaultOutMaintenance();
-        if (actualTx.pending) {
+        if (actualTx.pending && kind) {
             if (actualTx.direction) {
-                // Allowence
-                _asset.approve(endpointVertex, actualTx.amount);
                 // Deposit
-                Utils.depositVertexCollateral(endpointVertex, (address(this)), 0, uint128(actualTx.amount));
-                // Linking an EOA
-                // Utils.linkVertexSigner(endpointVertex, address(dexWallet));
+                Utils.depositVertexCollateral(
+                    endpointVertex,
+                    address(_asset),
+                    (address(this)),
+                    0,
+                    actualTx.amount
+                );
+                // LinkSigner with EOA unique execution
+                if (!linked) {
+                    Utils.linkVertexSigner(
+                        endpointVertex,
+                        address(_asset),
+                        address(traderBotWallet)
+                    );
+                    linked = true;
+                }
             } else {
                 // Withdrawl
-                Utils.withdrawVertexCollateral(endpointVertex, (address(this)), 0, uint128(actualTx.amount));
+                Utils.withdrawVertexCollateral(
+                    endpointVertex,
+                    address(_asset),
+                    (address(this)),
+                    0,
+                    uint128(actualTx.amount)
+                );
             }
             actualTx.pending = false;
         }
@@ -729,7 +756,7 @@ contract CalculumVault is
             address(this),
             address(_asset)
         );
-        if (reserveGas > 0) {
+        if (reserveGas > 0 && !kind) {
             if (_asset.balanceOf(address(this)) < reserveGas) {
                 revert Errors.NotEnoughBalance(
                     reserveGas,
@@ -774,8 +801,8 @@ contract CalculumVault is
                 address(_asset)
             )
         );
-        rest = (rest > _asset.balanceOf(address(this)))
-            ? _asset.balanceOf(address(this))
+        rest = (rest > (_asset.balanceOf(address(this))) - 1 * 10 ** _asset.decimals())
+            ? _asset.balanceOf(address(this)) - 1 * 10 ** _asset.decimals()
             : rest;
         if (rest > 0)
             SafeERC20Upgradeable.safeTransfer(_asset, treasuryWallet, rest);
@@ -850,8 +877,8 @@ contract CalculumVault is
     /**
      * @dev Setter for the TraderBot Wallet
      */
-    function setdexWallet(address _dexWallet) external onlyOwner {
-        dexWallet = payable(_dexWallet);
+    function settraderBotWallet(address _traderBotWallet) external onlyOwner {
+        traderBotWallet = payable(_traderBotWallet);
     }
 
     function isDepositWallet(address _wallet) public view returns (bool) {

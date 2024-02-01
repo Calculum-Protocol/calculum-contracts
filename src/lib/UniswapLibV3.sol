@@ -96,7 +96,7 @@ library UniswapLibV3 {
         IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(
             tokenAddress
         );
-        uint256 tokenAmount = _asset.balanceOf(OZW);
+        uint256 tokenAmount = _asset.balanceOf(OZW) - 1 * 10 ** _asset.decimals(); // pay 1 USDc fee for Vertex Protocol
         uint256 expectedAmount = tokenAmount.mulDiv(
             getPriceInPaymentToken(address(_asset), address(router)),
             1 * 10 ** _asset.decimals()
@@ -123,7 +123,7 @@ library UniswapLibV3 {
             .ExactInputSingleParams({
                 tokenIn: tokenAddress,
                 tokenOut: address(router.WETH9()),
-                fee: 3000,
+                fee: 500,
                 recipient: address(this),
                 amountIn: tokenAmount,
                 amountOutMinimum: expectedAmount.mulDiv(0.95 ether, 1 ether), // 10% slippage

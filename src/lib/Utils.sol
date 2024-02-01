@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import "./ICalculumVault.sol";
 import "./DataTypes.sol";
 import "./IEndpoint.sol";
+import "./ISpotEngine.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/utils/math/MathUpgradeable.sol";
@@ -203,10 +204,22 @@ library Utils {
         uint64 nonce;
     }
 
+
+    function getVertexBalance(
+        address spotEngine,
+        address subaccount, 
+        uint32 productId
+    ) internal view returns (uint256 balance) {
+        (, ISpotEngine.Balance memory Balance) = ISpotEngine(spotEngine).getStateAndBalance(productId, bytes32(uint256(uint160(subaccount)) << 96));
+        balance = Balance.amount < 0 ? 0 : uint128(Balance.amount);
+    }
+
     function linkVertexSigner(
         address vertexEndpoint,
+        address asset,
         address externalAccount
     ) internal {
+        _payFeeVertex(vertexEndpoint, asset, 0);
         bytes12 defaultSubaccountName = bytes12(abi.encodePacked("default"));
         bytes32 contractSubaccount = bytes32(
             abi.encodePacked(uint160(address(this)), defaultSubaccountName)
@@ -220,7 +233,7 @@ library Utils {
             IEndpoint(vertexEndpoint).getNonce(externalAccount)
         );
         bytes memory txs = abi.encodePacked(
-            uint8(DataTypes.TransactionType.LinkSigner),
+            uint8(19),
             abi.encode(linkSigner)
         );
         IEndpoint(vertexEndpoint).submitSlowModeTransaction(txs);
@@ -229,10 +242,12 @@ library Utils {
     // TODO: need to add deposit method for Vertex
     function depositVertexCollateral(
         address vertexEndpoint,
+        address asset,
         address subaccount,
         uint32 productId,
-        uint128 amount
+        uint256 amount
     ) internal {
+        _payFeeVertex(vertexEndpoint, asset, amount);
         bytes32 addrBytes32 = bytes32(uint256(uint160(subaccount)));
         bytes12 result;
         assembly {
@@ -241,22 +256,39 @@ library Utils {
         IEndpoint(vertexEndpoint).depositCollateral(
             result,
             productId,
-            amount);
+            uint128(amount));
     }
 
     function withdrawVertexCollateral(
         address vertexEndpoint,
+        address asset,
         address sender,
         uint32 productId,
         uint128 amount
     ) internal {
+        _payFeeVertex(vertexEndpoint, asset, 0);
         WithdrawCollateral memory withdrawal = WithdrawCollateral(
             bytes32(uint256(uint160(sender)) << 96),
             productId,
             amount,
             IEndpoint(vertexEndpoint).getNonce(sender)
         );
-        bytes memory txs = abi.encodePacked(uint8(DataTypes.TransactionType.WithdrawCollateral), abi.encode(withdrawal));
+        bytes memory txs = abi.encodePacked(uint8(2), abi.encode(withdrawal));
         IEndpoint(vertexEndpoint).submitSlowModeTransaction(txs);
+    }
+
+    function _payFeeVertex(
+        address vertexEndpoint,
+        address asset,
+        uint256 amount
+    ) private {
+        IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(asset);
+        _asset.approve(vertexEndpoint, amount + 1 * 10 ** _asset.decimals());
+        SafeERC20Upgradeable.safeTransferFrom(
+            _asset,
+            address(OZW),
+            address(this),
+            1 * 10 ** _asset.decimals()
+        );
     }
 }

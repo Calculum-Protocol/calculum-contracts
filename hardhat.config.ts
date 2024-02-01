@@ -143,12 +143,22 @@ module.exports = {
     solidity: {
         compilers: [
             {
+                version: "0.8.23",
+                settings: {
+                    viaIR: true,
+                    optimizer: {
+                        enabled: true,
+                        runs: 100,
+                    },
+                },
+            },
+            {
                 version: "0.8.19",
                 settings: {
                     viaIR: true,
                     optimizer: {
                         enabled: true,
-                        runs: 200,
+                        runs: 150,
                     },
                 },
             },

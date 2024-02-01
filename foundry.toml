@@ -23,7 +23,7 @@ optimizer = true
 optimizer_runs = 200
 
 # Fixed Version
-solc_version = '0.8.19'
+solc_version = '0.8.23'
 ffi = true
 via-ir = true
 

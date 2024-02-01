@@ -270,6 +270,8 @@ interface IEndpoint is IVersion {
 
     function submitSlowModeTransaction(bytes calldata transaction) external;
 
+    function executeSlowModeTransaction() external;
+
     function getPriceX18(uint32 productId) external view returns (int128);
 
     function getPricesX18(uint32 healthGroup)
