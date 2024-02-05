@@ -802,10 +802,10 @@ contract CalculumVault is
             )
         );
         rest = (rest > (_asset.balanceOf(address(this))) - 1 * 10 ** _asset.decimals())
-            ? _asset.balanceOf(address(this)) - 1 * 10 ** _asset.decimals()
-            : rest;
+            ? _asset.balanceOf(address(this)) 
+            : (rest > 1 * 10 ** _asset.decimals()) ? rest : 0;
         if (rest > 0)
-            SafeERC20Upgradeable.safeTransfer(_asset, treasuryWallet, rest);
+            SafeERC20Upgradeable.safeTransfer(_asset, treasuryWallet, rest - 1 * 10 ** _asset.decimals());
         emit FeesTransfer(CURRENT_EPOCH, rest);
     }
 
