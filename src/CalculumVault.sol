@@ -15,9 +15,9 @@ import "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgrad
 import "@openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
 import "@forge-std/src/console.sol";
 
-interface Oracle {
-    function GetAccount(address _wallet) external view returns (uint256);
-}
+// interface Oracle {
+//     function GetAccount(address _wallet) external view returns (uint256);
+// }
 
 /**
  * @title Calculum Vault
@@ -67,7 +67,7 @@ contract CalculumVault is
     /// @dev Address of Uniswap v3 router to swap whitelisted ERC20 tokens to router.WETH()
     IRouter public router;
     // Interface for Oracle
-    Oracle public oracle;
+    // Oracle public oracle;
     // Period
     uint256 public EPOCH_DURATION; // 604800 seconds = 1 week
     // Number of Periods
@@ -126,11 +126,11 @@ contract CalculumVault is
         string memory _name,
         string memory _symbol,
         uint8 decimals_,
-        address[8] memory _initialAddress, // 0: Oracle, 1: Trader Bot Wallet, 2: Treasury Wallet, 3: OpenZeppelin Defender Wallet, 4: Router, 5: USDCToken Address, 6: Vertex Endpoint, 7: Spot Engine Vertex
+        address[7] memory _initialAddress, // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router, 4: USDCToken Address, 5: Vertex Endpoint, 6: Spot Engine Vertex
         uint256[7] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value
     ) public reinitializer(1) {
         if (
-            !_initialAddress[0].isContract() ||
+            !_initialAddress[3].isContract() ||
             !_initialAddress[4].isContract() ||
             !_initialAddress[5].isContract() ||
             !_initialAddress[6].isContract()
@@ -138,17 +138,17 @@ contract CalculumVault is
         __Ownable_init();
         __ReentrancyGuard_init();
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        _setupRole(TRANSFER_BOT_ROLE, _initialAddress[3]);
+        _setupRole(TRANSFER_BOT_ROLE, _initialAddress[2]);
         __ERC20_init(_name, _symbol);
-        _asset = IERC20MetadataUpgradeable(_initialAddress[5]);
+        _asset = IERC20MetadataUpgradeable(_initialAddress[4]);
         _decimals = decimals_;
-        oracle = Oracle(_initialAddress[0]);
-        router = IRouter(_initialAddress[4]);
-        endpointVertex = _initialAddress[6];
-        spotEngine = _initialAddress[7];
-        traderBotWallet = payable(_initialAddress[1]);
-        openZeppelinDefenderWallet = payable(_initialAddress[3]);
-        treasuryWallet = _initialAddress[2];
+        // oracle = Oracle(_initialAddress[0]);
+        router = IRouter(_initialAddress[3]);
+        endpointVertex = _initialAddress[5];
+        spotEngine = _initialAddress[6];
+        traderBotWallet = payable(_initialAddress[0]);
+        openZeppelinDefenderWallet = payable(_initialAddress[2]);
+        treasuryWallet = _initialAddress[1];
         EPOCH_START = _initialValue[0];
         MIN_DEPOSIT = _initialValue[1];
         MAX_DEPOSIT = _initialValue[2];
@@ -564,12 +564,12 @@ contract CalculumVault is
             DEX_WALLET_BALANCE = newDeposits();
         } else {
             // Must be changed by Get Spot Balance of Spot Engine of Vertex
-            // DEX_WALLET_BALANCE = Utils.getVertexBalance(spotEngine, address(this), 0);
-            DEX_WALLET_BALANCE = oracle.GetAccount(address(traderBotWallet));
+            DEX_WALLET_BALANCE = Utils.getVertexBalance(spotEngine, address(this), 0);
+            // DEX_WALLET_BALANCE = oracle.GetAccount(address(traderBotWallet));
             if (DEX_WALLET_BALANCE == 0) {
                 revert Errors.ActualAssetValueIsZero(
-                    address(oracle),
-                    address(traderBotWallet)
+                    address(spotEngine),
+                    address(this)
                 );
             }
         }

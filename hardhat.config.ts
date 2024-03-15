@@ -87,6 +87,14 @@ module.exports = {
             },
             // accounts: [PRIVATE_KEY]
         },
+        arbitrumSepolia: {
+            url: `https://arbitrum-sepolia.infura.io/v3/${API_KEY}`,
+            accounts: {
+                mnemonic: MNEMONIC,
+                accounts: ACCOUNTS,
+            },
+            // accounts: [PRIVATE_KEY]
+        },
         polygon: {
             chainId: 137,
             url: `https://polygon-mainnet.infura.io/v3/${API_KEY}`,
@@ -136,9 +144,20 @@ module.exports = {
         // Your API key for Etherscan
         // Obtain one at https://etherscan.io/
         // apiKey: process.env.ETHERSCAN_API_KEY,
-        apiKey: process.env.OPTIMISM_API_KEY,
+        // apiKey: process.env.OPTIMISM_API_KEY,
+        apiKey: process.env.ARBITRUM_API_KEY,
         // apiKey: process.env.POLYGON_API_KEY
         // apiKey: SNOWTRACE_API_KEY,
+        customChains: [
+            {
+                network: "arbitrumSepolia",
+                chainId: 421614,
+                urls: {
+                    apiURL: "https://api-sepolia.arbiscan.io/api",
+                    browserURL: "https://sepolia.arbiscan.io"
+                }
+            }
+        ]
     },
     solidity: {
         compilers: [

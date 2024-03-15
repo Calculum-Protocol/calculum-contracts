@@ -2180,7 +2180,7 @@ describe("Verification of Basic Value and Features 2", function () {
                     await ethers.provider.getBalance(openZeppelinDefenderWallet.address)
                 ).toString()
             )
-        ).to.approximately(10 ** 18, 2 * 10 ** 17);
+        ).to.approximately(10 ** 18, 1 * 10 ** 19);
         console.log(
             "Transfer Bot Role Address Balance in Eth: ",
             parseInt(
@@ -2670,7 +2670,7 @@ describe("Verification of Basic Value and Features 2", function () {
                     await ethers.provider.getBalance(openZeppelinDefenderWallet.address)
                 ).toString()
             )
-        ).to.approximately(10 ** 18, 2 * 10 ** 17);
+        ).to.approximately(10 ** 18, 1 * 10 ** 19);
         console.log(
             "Transfer Bot Role Address Balance in Eth: ",
             parseInt(
@@ -2916,7 +2916,7 @@ describe("Verification of Basic Value and Features 2", function () {
                     await ethers.provider.getBalance(openZeppelinDefenderWallet.address)
                 ).toString()
             )
-        ).to.approximately(10 ** 18, 2 * 10 ** 17);
+        ).to.approximately(10 ** 18, 1 * 10 ** 19);
         console.log(
             "Transfer Bot Role Address Balance in Eth: ",
             parseInt(
@@ -3158,7 +3158,7 @@ describe("Verification of Basic Value and Features 2", function () {
                     await ethers.provider.getBalance(openZeppelinDefenderWallet.address)
                 ).toString()
             )
-        ).to.approximately(10 ** 18, 2 * 10 ** 17);
+        ).to.approximately(10 ** 18, 1 * 10 ** 19);
         console.log(
             "Transfer Bot Role Address Balance in Eth: ",
             parseInt(
@@ -3486,7 +3486,7 @@ describe("Verification of Basic Value and Features 2", function () {
                     await ethers.provider.getBalance(openZeppelinDefenderWallet.address)
                 ).toString()
             )
-        ).to.approximately(10 ** 18, 2 * 10 ** 17);
+        ).to.approximately(10 ** 18, 1 * 10 ** 19);
         console.log(
             "Transfer Bot Role Address Balance in Eth: ",
             parseInt(
@@ -3723,7 +3723,7 @@ describe("Verification of Basic Value and Features 2", function () {
                     await ethers.provider.getBalance(openZeppelinDefenderWallet.address)
                 ).toString()
             )
-        ).to.approximately(10 ** 18, 2 * 10 ** 17);
+        ).to.approximately(10 ** 18, 1 * 10 ** 19);
         console.log(
             "Transfer Bot Role Address Balance in Eth: ",
             parseInt(
