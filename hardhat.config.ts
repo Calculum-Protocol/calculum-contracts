@@ -129,14 +129,15 @@ module.exports = {
         coinmarketcap:
             process.env.COINMARKETCAP_API_KEY,
         enabled: true,
-        gasPriceApi: `https://api-optimistic.etherscan.io/api?module=proxy&action=eth_gasPrice&apikey=${process.env.OPTIMISM_API_KEY}`,
+        gasPriceApi: `https://api.arbiscan.io/api?module=proxy&action=eth_gasPrice&apikey=${process.env.ARBITRUM_API_KEY}`,
         // gasPrice: 35
     },
     etherscan: {
         // Your API key for Etherscan
         // Obtain one at https://etherscan.io/
         // apiKey: process.env.ETHERSCAN_API_KEY,
-        apiKey: process.env.OPTIMISM_API_KEY,
+        // apiKey: process.env.OPTIMISM_API_KEY,
+        apiKey: process.env.ARBITRUM_API_KEY,
         // apiKey: process.env.POLYGON_API_KEY
         // apiKey: SNOWTRACE_API_KEY,
     },
