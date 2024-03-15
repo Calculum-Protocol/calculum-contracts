@@ -140,6 +140,16 @@ module.exports = {
         apiKey: process.env.ARBITRUM_API_KEY,
         // apiKey: process.env.POLYGON_API_KEY
         // apiKey: SNOWTRACE_API_KEY,
+        customChains: [
+            {
+                network: "arbitrumSepolia",
+                chainId: 421614,
+                urls: {
+                    apiURL: "https://api-sepolia.arbiscan.io/api",
+                    browserURL: "https://sepolia.arbiscan.io"
+                }
+            }
+        ]
     },
     solidity: {
         compilers: [
