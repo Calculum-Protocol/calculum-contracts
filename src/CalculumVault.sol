@@ -156,9 +156,9 @@ contract CalculumVault is
         MIN_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[4];
         TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[5];
         MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = _initialValue[6];
-        EPOCH_DURATION = 1 weeks; // 604800 seconds = 1 week
-        MAINTENANCE_PERIOD_PRE_START = 60 minutes; // 60 minutes
-        MAINTENANCE_PERIOD_POST_START = 30 minutes; // 30 minutes
+        EPOCH_DURATION = 12 minutes; // 604800 seconds = 1 week
+        MAINTENANCE_PERIOD_PRE_START = 1 minutes; // 1 minutes
+        MAINTENANCE_PERIOD_POST_START = 1 minutes; // 1 minutes
         CurrentEpoch();
         MANAGEMENT_FEE_PERCENTAGE = 1 ether / 100; // Represent 1%
         PERFORMANCE_FEE_PERCENTAGE = 15 ether / 100; // Represent 15%

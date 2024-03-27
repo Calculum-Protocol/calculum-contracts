@@ -46,6 +46,9 @@ const symbol = "calcUSDC1";
 const decimals = 18;
 const EPOCH_TIME: moment.Moment = moment();
 const ZERO_ADDRESS = `0x` + `0`.repeat(40);
+const epochDuration = 60 * 60 * 24 * 7 * 4; // 4 week
+const maintTimeBefore = 60 * 60; // 1 hour
+const maintTimeAfter = 60 * 30; // 30 minutes
 
 async function main() {
     // Hardhat always runs the compile task when running scripts with its command
