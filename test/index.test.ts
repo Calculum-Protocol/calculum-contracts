@@ -73,9 +73,9 @@ let Utils: Utils;
 const name = "CalculumUSDC1";
 const symbol = "calcUSDC1";
 const decimals = 18;
-const epochDuration = 60 * 60 * 24 * 7;
-const maintTimeBefore = 60 * 60;
-const maintTimeAfter = 30 * 60;
+const epochDuration = 60 * 60;
+const maintTimeBefore = 60 * 5;
+const maintTimeAfter = 60 * 5;
 const MIN_DEPOSIT = 30000 * 10 ** 6;
 const MAX_DEPOSIT = 250000 * 10 ** 6;
 const MAX_TOTAL_DEPOSIT = 1000000 * 10 ** 6;
@@ -85,7 +85,7 @@ const MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = ethers.parseEther("0.5");
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const USDC_ARB_ADDRESS = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
 const UNISWAP_ARB_ROUTER3 = "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45";
-const USDCe_ARB_BIG_HOLDER = "0xa656f7d2A93A6F5878AA768f24eB38Ec8C827fE2";
+const USDCe_ARB_BIG_HOLDER = "0x05e3a758FdD29d28435019ac453297eA37b61b62";
 const VERTEX_ENDPOINT = "0xbbEE07B3e8121227AfCFe1E2B82772246226128e";
 const CLEARING_HOUSE = "0xAE1ec28d6225dCE2ff787dcb8CE11cF6D3AE064f";
 const SPOT_ENGINE = "0x32d91Af2B17054D575A7bF1ACfa7615f41CCEfaB";
@@ -946,7 +946,7 @@ describe("Verification of Basic Value and Features 2", function () {
         console.log(
             "TimeStamp Current Epoch: ",
             currentEpoch.utc(false),
-            " TiemStamp Format: ",
+            " TimeStamp Format: ",
             currentEpoch.utc(false).unix()
         );
         expect(currentEpoch.utc(false).unix()).to.equal(
@@ -960,7 +960,8 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(nextEpoch.utc(false).unix()).to.equal(
             currentEpoch.add(epochDuration, "s").utc(false).unix()
         );
-        console.log("TimeStamp Next Epoch: ", nextEpoch.utc(false));
+        console.log("TimeStamp Next Epoch: ", nextEpoch.utc(false), " TimeStamp Format: ",
+            nextEpoch.utc(false).unix());
         // time before to set Epoch Duration
         const move2: moment.Moment = moment(
             Math.floor((await ethers.provider.getBlock("latest")).timestamp) * 1000
@@ -1174,9 +1175,10 @@ describe("Verification of Basic Value and Features 2", function () {
             "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
             0
         );
+        console.log("Actual TimeStamp: ", move4.utc(false).unix());
         // Move to Start Maintenance Window Pre start next Epoch
         await network.provider.send("evm_setNextBlockTimestamp", [
-            parseInt(move4.add(60, "m").format("X")),
+            parseInt(move4.add(maintTimeBefore, "s").format("X")),
         ]);
         await network.provider.send("evm_mine", []);
         // Update Epoch
@@ -1246,7 +1248,8 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(nextEpoch.utc(false).unix()).to.equal(
             currentEpoch.add(epochDuration, "s").utc(false).unix()
         );
-        console.log("TimeStamp Next Epoch: ", nextEpoch.utc(false));
+        console.log("TimeStamp Next Epoch: ", nextEpoch.utc(false), " TimeStamp Format: ",
+            nextEpoch.utc(false).unix());
         // time before to set Epoch Duration
         const move2: moment.Moment = moment(
             Math.floor((await ethers.provider.getBlock("latest")).timestamp) * 1000
@@ -1330,8 +1333,10 @@ describe("Verification of Basic Value and Features 2", function () {
         await expect(Calculum.connect(openZeppelinDefenderWallet).finalizeEpoch())
             .to.revertedWithCustomError(Calculum, "VaultOutMaintenance");
         // Move before to Maintenance Windows Pre Start
+        const move: moment.Moment = moment(
+            Math.floor(parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000));
         await network.provider.send("evm_setNextBlockTimestamp", [
-            parseInt(move1.add(epochDuration - maintTimeBefore, "s").format("X")),
+            parseInt(move.add(epochDuration - maintTimeBefore, "s").format("X")),
         ]);
         await network.provider.send("evm_mine", []);
         // Setting actual value of Assets
@@ -1354,9 +1359,9 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(netTransfer.direction).to.be.false;
         const netTransferAmount = netTransfer.amount;
         console.log("Net Transfer Amount: ", netTransferAmount / BigInt("1000000"));
-        expect(netTransferAmount / BigInt("100000")).to.equal(288);
+        expect(netTransferAmount / BigInt("100000")).to.equal(3);
         console.log("Vault Token Price: ", parseInt((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH())).toString()) / 10 ** 6);
-        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(974809);
+        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(974999);
         // Call dexTransfer to transfer the amount of USDc to the Vault (Withdrawal) without mode reserve
         await expect(Calculum.connect(openZeppelinDefenderWallet).dexTransfer(true))
             .to.emit(Calculum, "DexTransfer")
@@ -1388,7 +1393,7 @@ describe("Verification of Basic Value and Features 2", function () {
         // Verify the Transfer Bot Gas Reserve in USD is Zero
         expect(
             parseInt((await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress()))) / 10 ** 6
-        ).to.equal(288 / 10);
+        ).to.equal(3 / 10);
         const feeKept = await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress());
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
@@ -1414,7 +1419,7 @@ describe("Verification of Basic Value and Features 2", function () {
         // Validate the USDc into the Vautl (the minimal amount of Vault)
         expect(
             parseInt((await USDc.balanceOf(openZeppelinDefenderWallet.address))) / 10 ** 6
-        ).to.equal(2278 / 10);
+        ).to.equal(1993 / 10);
         console.log("Balance USDc of Open Zeppellin Wallet: ", parseInt((await USDc.balanceOf(openZeppelinDefenderWallet.address))) / 10 ** 6);
         // Verify the Balance of USDc of treasury in the Vault
         expect(
@@ -1525,7 +1530,7 @@ describe("Verification of Basic Value and Features 2", function () {
                 bob.address,
                 bob.address,
                 50000 * 10 ** 6,
-                ethers.parseUnits("51293362126007273398750", "wei")
+                ethers.parseUnits("51282156476218412755719", "wei")
             );
         // Verify the Balance of USDc of Bob in the Vault
         expect((await USDc.balanceOf(bob.address))).to.equal(
@@ -1547,7 +1552,7 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(
             (await Calculum.DEPOSITS(bob.address)).amountShares.toString()
         ).to.equal(
-            ethers.parseUnits("51293362126007273398750", "wei").toString()
+            ethers.parseUnits("51282156476218412755719", "wei").toString()
         );
         // Verify the final amount of Bob in DEPOSITS after deposit
         expect((await Calculum.DEPOSITS(bob.address)).finalAmount).to.equal(0);
@@ -1560,8 +1565,10 @@ describe("Verification of Basic Value and Features 2", function () {
         await expect(Calculum.connect(openZeppelinDefenderWallet).finalizeEpoch())
             .to.revertedWithCustomError(Calculum, "VaultOutMaintenance");
         // Move before to Maintenance Windows Pre Start
+        const move: moment.Moment = moment(
+            Math.floor(parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000));
         await network.provider.send("evm_setNextBlockTimestamp", [
-            parseInt(move1.add(epochDuration - maintTimeBefore, "s").format("X")),
+            parseInt(move.add(epochDuration - maintTimeBefore, "s").format("X")),
         ]);
         await network.provider.send("evm_mine", []);
         // Setting actual value of Assets
@@ -1587,15 +1594,15 @@ describe("Verification of Basic Value and Features 2", function () {
         const netTransferAmount = netTransfer.amount;
         console.log("Net Transfer Amount: ", parseInt(netTransferAmount) / 10 ** 6);
         expect(parseInt(netTransferAmount) / 10 ** 6).to.equal(
-            4997195 / 100
+            4999970 / 100
         );
         console.log("Vault Token Price: ", parseInt((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))) / 10 ** 6);
-        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(955126);
+        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(955311);
         // Verify status of bob in DEPOSITS after finalize epoch
         expect((await Calculum.DEPOSITS(bob.address)).status).to.equal(2); // 2 = Claimet
         expect((await Calculum.DEPOSITS(bob.address)).amountAssets).to.equal(0);
         expect((await Calculum.DEPOSITS(bob.address)).amountShares.toString()).to.equal(
-            ethers.parseUnits("52349114148290382630146", "wei").toString()
+            ethers.parseUnits("52338976521781911859070", "wei").toString()
         );
         expect((await Calculum.DEPOSITS(bob.address)).finalAmount).to.equal(
             50000 * 10 ** 6
@@ -1623,7 +1630,7 @@ describe("Verification of Basic Value and Features 2", function () {
         // Verify the Transfer Bot Gas Reserve in USD is Zero
         expect(
             parseInt((await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress()))) / 10 ** 6
-        ).to.equal(2805 / 100);
+        ).to.equal(3 / 10);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         const feeKept = await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress());
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
@@ -1663,7 +1670,7 @@ describe("Verification of Basic Value and Features 2", function () {
         // Validate Last Balance of TransferBot Role Wallet in USDc, comparring with value in the Excel Spread Sheet
         expect(
             parseInt((await USDc.balanceOf(openZeppelinDefenderWallet.address))) / 10 ** 6
-        ).to.equal(25485 / 100);
+        ).to.equal(1986 / 10);
         console.log("Balance USDc of Open Zeppellin Wallet: ", parseInt((await USDc.balanceOf(openZeppelinDefenderWallet.address))) / 10 ** 6);
     });
 
@@ -1774,7 +1781,7 @@ describe("Verification of Basic Value and Features 2", function () {
         expect((await Calculum.DEPOSITS(bob.address)).status).to.equal(2); // 2 = Claimet
         expect((await Calculum.DEPOSITS(bob.address)).amountAssets).to.equal(0);
         expect((await Calculum.DEPOSITS(bob.address)).amountShares.toString()).to.equal(
-            ethers.parseUnits("52349114148290382630146", "wei").toString()
+            ethers.parseUnits("52338976521781911859070", "wei").toString()
         );
         expect((await Calculum.DEPOSITS(bob.address)).finalAmount).to.equal(
             50000 * 10 ** 6
@@ -1785,14 +1792,14 @@ describe("Verification of Basic Value and Features 2", function () {
             .withArgs(
                 ZERO_ADDRESS,
                 bob.address,
-                ethers.parseUnits("52349114148290382630146", "wei")
+                ethers.parseUnits("52338976521781911859070", "wei")
             )
             .to.emit(Calculum, "Deposit")
             .withArgs(
                 bob.address,
                 bob.address,
                 50000 * 10 ** 6,
-                ethers.parseUnits("52349114148290382630146", "wei")
+                ethers.parseUnits("52338976521781911859070", "wei")
             );
         // Verify status of bob in DEPOSITS after claim his shares
         expect((await Calculum.DEPOSITS(bob.address)).status).to.equal(3); // 3 = Completed
@@ -1802,7 +1809,7 @@ describe("Verification of Basic Value and Features 2", function () {
             50000 * 10 ** 6
         );
         expect((await Calculum.balanceOf(bob.address)).toString()).to.equal(
-            ethers.parseUnits("52349114148290382630146", "wei").toString()
+            ethers.parseUnits("52338976521781911859070", "wei").toString()
         );
         // Verify status of carla in DEPOSITS before deposit
         expect((await Calculum.DEPOSITS(carla.address)).status).to.equal(0); // 0 = Inactive
@@ -1817,7 +1824,7 @@ describe("Verification of Basic Value and Features 2", function () {
                 alice.address,
                 alice.address,
                 100000 * 10 ** 6,
-                ethers.parseUnits("141246329361015730603701", "wei")
+                ethers.parseUnits("141203049985879695001413", "wei")
             );
         // Add deposit to the Vault from carla
         await expect(
@@ -1830,7 +1837,7 @@ describe("Verification of Basic Value and Features 2", function () {
                 carla.address,
                 carla.address,
                 30000 * 10 ** 6,
-                ethers.parseUnits("42373898808304719181111", "wei")
+                ethers.parseUnits("42360914995763908500424", "wei")
             );
         // Verify status of alice in DEPOSITS after deposit
         expect((await Calculum.DEPOSITS(alice.address)).status).to.equal(1); // 1 = Pending
@@ -1838,7 +1845,7 @@ describe("Verification of Basic Value and Features 2", function () {
             100000 * 10 ** 6
         );
         expect((await Calculum.DEPOSITS(alice.address)).amountShares).to.equal(
-            ethers.parseUnits("141246329361015730603701", "wei")
+            ethers.parseUnits("141203049985879695001413", "wei")
         );
         expect((await Calculum.DEPOSITS(alice.address)).finalAmount).to.equal(
             150000 * 10 ** 6
@@ -1849,7 +1856,7 @@ describe("Verification of Basic Value and Features 2", function () {
             30000 * 10 ** 6
         );
         expect((await Calculum.DEPOSITS(carla.address)).amountShares).to.equal(
-            ethers.parseUnits("42373898808304719181111", "wei")
+            ethers.parseUnits("42360914995763908500424", "wei")
         );
         expect((await Calculum.DEPOSITS(carla.address)).finalAmount).to.equal(0); // Zero because is a new user
         console.log("Balance of Calculum in USDc After Deposit: ", parseInt((await USDc.balanceOf(await Calculum.getAddress()))) / 10 ** 6);
@@ -1866,8 +1873,10 @@ describe("Verification of Basic Value and Features 2", function () {
         await expect(Calculum.connect(openZeppelinDefenderWallet).finalizeEpoch())
             .to.revertedWithCustomError(Calculum, "VaultOutMaintenance");
         // Move before to Maintenance Windows Pre Start
+        const move: moment.Moment = moment(
+            Math.floor(parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000));
         await network.provider.send("evm_setNextBlockTimestamp", [
-            parseInt(move1.add(epochDuration - maintTimeBefore, "s").format("X")),
+            parseInt(move.add(epochDuration - maintTimeBefore, "s").format("X")),
         ]);
         await network.provider.send("evm_mine", []);
         // Setting actual value of Assets
@@ -1890,16 +1899,16 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(netTransfer.pending).to.be.true;
         expect(netTransfer.direction).to.be.true;
         const netTransferAmount = netTransfer.amount;
-        expect(netTransferAmount / BigInt("100000")).to.equal(1288031);
+        expect(netTransferAmount / BigInt("100000")).to.equal(1288440);
         console.log("Vault Token Price: ", (await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH())));
-        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(987416);
+        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(987667);
         console.log("Net Transfer Amount:", parseInt(netTransferAmount) / 10 ** 6)
         console.log("Balance of Calculum in USDc: ", parseInt((await USDc.balanceOf(await Calculum.getAddress()))) / 10 ** 6);
         console.log("Reserve of Gas: ", parseInt((await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress()))) / 10 ** 6);
         // Verify the Transfer Bot Gas Reserve in USD is Zero
         expect(
             parseInt((await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress()))) / 10 ** 6
-        ).to.equal(74515 / 100);
+        ).to.equal(8014 / 10);
         const feeKept = await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress());
         // Verify Dex Wallet Balance
         // Call dexTransfer to transfer the amount of USDc to the Vault
@@ -1929,11 +1938,11 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         expect(
             parseInt((await USDc.balanceOf(await Calculum.getAddress()))) / 10 ** 6
-        ).to.equal(453.74501);
+        ).to.equal(356.562572);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
-            .withArgs(await Calculum.CURRENT_EPOCH(), ethers.parseUnits("453745010", "wei"));
+            .withArgs(await Calculum.CURRENT_EPOCH(), ethers.parseUnits("356562572", "wei"));
         // Start summarize the Epoch
         console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
         console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
@@ -1960,7 +1969,7 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(
             parseInt((await USDc.balanceOf(treasuryWallet.address))) /
             10 ** 6
-        ).to.equal(452.74501);
+        ).to.equal(355.562572);
         console.log(
             "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
             parseInt((await USDc.balanceOf(treasuryWallet.address))) /
@@ -2067,7 +2076,7 @@ describe("Verification of Basic Value and Features 2", function () {
         expect((await Calculum.DEPOSITS(alice.address)).status).to.equal(2); // 2 = Claimet
         expect((await Calculum.DEPOSITS(alice.address)).amountAssets).to.equal(0);
         expect((await Calculum.DEPOSITS(alice.address)).amountShares).to.equal(
-            ethers.parseUnits("101274437521774004067182", "wei")
+            ethers.parseUnits("101248700219810928177210", "wei")
         );
         expect((await Calculum.DEPOSITS(alice.address)).finalAmount).to.equal(
             250000 * 10 ** 6
@@ -2076,7 +2085,7 @@ describe("Verification of Basic Value and Features 2", function () {
         expect((await Calculum.DEPOSITS(carla.address)).status).to.equal(2); // 2 = Claimet
         expect((await Calculum.DEPOSITS(carla.address)).amountAssets).to.equal(0);
         expect((await Calculum.DEPOSITS(carla.address)).amountShares).to.equal(
-            ethers.parseUnits("30382331256532201220155", "wei")
+            ethers.parseUnits("30374610065943278453163", "wei")
         );
         expect((await Calculum.DEPOSITS(carla.address)).finalAmount).to.equal(
             30000 * 10 ** 6
@@ -2087,14 +2096,14 @@ describe("Verification of Basic Value and Features 2", function () {
             .withArgs(
                 ZERO_ADDRESS,
                 alice.address,
-                ethers.parseUnits("101274437521774004067182", "wei")
+                ethers.parseUnits("101248700219810928177210", "wei")
             )
             .to.emit(Calculum, "Deposit")
             .withArgs(
                 alice.address,
                 alice.address,
                 250000 * 10 ** 6,
-                ethers.parseUnits("101274437521774004067182", "wei")
+                ethers.parseUnits("101248700219810928177210", "wei")
             );
         // Claim Shares of Carla
         await expect(Calculum.connect(carla).claimShares(carla.address))
@@ -2102,14 +2111,14 @@ describe("Verification of Basic Value and Features 2", function () {
             .withArgs(
                 ZERO_ADDRESS,
                 carla.address,
-                ethers.parseUnits("30382331256532201220155", "wei")
+                ethers.parseUnits("30374610065943278453163", "wei")
             )
             .to.emit(Calculum, "Deposit")
             .withArgs(
                 carla.address,
                 carla.address,
                 30000 * 10 ** 6,
-                ethers.parseUnits("30382331256532201220155", "wei")
+                ethers.parseUnits("30374610065943278453163", "wei")
             );
         // Verify status of alice in DEPOSITS after claim her shares
         expect((await Calculum.DEPOSITS(alice.address)).status).to.equal(3); // 3 = Completed
@@ -2119,7 +2128,7 @@ describe("Verification of Basic Value and Features 2", function () {
             250000 * 10 ** 6
         );
         expect((await Calculum.balanceOf(alice.address)).toString()).to.equal(
-            ethers.parseUnits("251274437521774004067182", "wei").toString()
+            ethers.parseUnits("251248700219810928177210", "wei").toString()
         );
         // Verify status of carla in DEPOSITS after claim her shares
         expect((await Calculum.DEPOSITS(carla.address)).status).to.equal(3); // 3 = Completed
@@ -2129,7 +2138,7 @@ describe("Verification of Basic Value and Features 2", function () {
             30000 * 10 ** 6
         );
         expect((await Calculum.balanceOf(carla.address)).toString()).to.equal(
-            ethers.parseUnits("30382331256532201220155", "wei").toString()
+            ethers.parseUnits("30374610065943278453163", "wei").toString()
         );
         // Try to Finalize the Epoch before the Finalization Time
         const time = Math.floor(
@@ -2139,8 +2148,10 @@ describe("Verification of Basic Value and Features 2", function () {
         await expect(Calculum.connect(openZeppelinDefenderWallet).finalizeEpoch())
             .to.revertedWithCustomError(Calculum, "VaultOutMaintenance");
         // Move before to Maintenance Windows Pre Start
+        const move: moment.Moment = moment(
+            Math.floor(parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000));
         await network.provider.send("evm_setNextBlockTimestamp", [
-            parseInt(move1.add(epochDuration - maintTimeBefore, "s").format("X")),
+            parseInt(move.add(epochDuration - maintTimeBefore, "s").format("X")),
         ]);
         await network.provider.send("evm_mine", []);
         // Setting actual value of Assets
@@ -2197,9 +2208,9 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(netTransfer.direction).to.be.false;
         const netTransferAmount = netTransfer.amount;
         console.log("Net Transfer Amount:", parseInt(netTransferAmount) / 10 ** 6)
-        expect(netTransferAmount).to.equal(24798934789);
+        expect(netTransferAmount).to.equal(24729907338);
         console.log("Vault Token Price: ", parseInt(await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH())) / 10 ** 6);
-        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(1406878);
+        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(1407268);
         // Verify the Transfer Bot Gas Reserve in USD is Zero
         expect(
             (await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress()))
@@ -2238,11 +2249,11 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         expect(
             parseInt((await USDc.balanceOf(await Calculum.getAddress()))) / 10 ** 6
-        ).to.equal(23799.934789);
+        ).to.equal(23730.907338);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
-            .withArgs(await Calculum.CURRENT_EPOCH(), ethers.parseUnits("23799934789", "wei"));
+            .withArgs(await Calculum.CURRENT_EPOCH(), ethers.parseUnits("23730907338", "wei"));
         // Start summarize the Epoch
         console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
         console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
@@ -2264,7 +2275,7 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(
             parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
             10 ** 6
-        ).to.equal(24251.679799);
+        ).to.equal(24085.46991);
         console.log(
             "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
             parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
@@ -2377,10 +2388,10 @@ describe("Verification of Basic Value and Features 2", function () {
         // Try withdraw of Alice
         await expect(Calculum.connect(alice).redeem(ethers.parseEther("90497.4"), alice.address, alice.address))
             .to.emit(Calculum, "PendingWithdraw")
-            .withArgs(alice.address, alice.address, 133005657734, ethers.parseEther("90497.4"));
+            .withArgs(alice.address, alice.address, 133050001460, ethers.parseEther("90497.4"));
         // Validate WITHDRAWALS VALUE after withdraw
         expect((await Calculum.WITHDRAWALS(alice.address)).status).to.equal(4); // 4 = PendingRedeem
-        expect((await Calculum.WITHDRAWALS(alice.address)).amountAssets).to.equal(133005657734);
+        expect((await Calculum.WITHDRAWALS(alice.address)).amountAssets).to.equal(133050001460);
         expect((await Calculum.WITHDRAWALS(alice.address)).amountShares).to.equal(ethers.parseEther("90497.4"));
         expect((await Calculum.WITHDRAWALS(alice.address)).finalAmount).to.equal(0);
         console.log("Withdrawal: ", (await Calculum.WITHDRAWALS(alice.address)));
@@ -2391,8 +2402,10 @@ describe("Verification of Basic Value and Features 2", function () {
         await expect(Calculum.connect(openZeppelinDefenderWallet).finalizeEpoch())
             .to.revertedWithCustomError(Calculum, "VaultOutMaintenance");
         // Move before to Maintenance Windows Pre Start
+        const move: moment.Moment = moment(
+            Math.floor(parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000));
         await network.provider.send("evm_setNextBlockTimestamp", [
-            parseInt(move1.add(epochDuration - maintTimeBefore, "s").format("X")),
+            parseInt(move.add(epochDuration - maintTimeBefore, "s").format("X")),
         ]);
         await network.provider.send("evm_mine", []);
         // Setting actual value of Assets
@@ -2418,9 +2431,9 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(netTransfer.pending).to.be.true;
         expect(netTransfer.direction).to.be.false;
         const netTransferAmount = netTransfer.amount;
-        expect(netTransferAmount).to.equal(131852454711);
+        expect(netTransferAmount).to.equal(131796673902);
         console.log("Vault Token Price: ", parseInt(await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH())) / 10 ** 6);
-        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(1436506);
+        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(1436992);
         // Verify the Transfer Bot Gas Reserve in USD is Zero
         const feeKept = await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress());
         expect(feeKept).to.equal(0);
@@ -2453,11 +2466,11 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         expect(
             (await USDc.balanceOf(await Calculum.getAddress()))
-        ).to.equal(131852454711);
+        ).to.equal(131796673902);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
-            .withArgs(await Calculum.CURRENT_EPOCH(), 1852396626);
+            .withArgs(await Calculum.CURRENT_EPOCH(), 1752634081);
         // Start summarize the Epoch
         console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
         console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
@@ -2479,7 +2492,7 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(
             parseInt((await USDc.balanceOf(treasuryWallet.address))) /
             10 ** 6
-        ).to.equal(26103.076425);
+        ).to.equal(25837.103991);
         console.log(
             "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
             parseInt((await USDc.balanceOf(treasuryWallet.address))) /
@@ -2584,9 +2597,9 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         // Veriyfy the Value of Alice int the WITHDRAWS VALUE mapping before to Claimed
         expect((await Calculum.WITHDRAWALS(alice.address)).status).to.equal(2); // 2 = Claimet
-        expect((await Calculum.WITHDRAWALS(alice.address)).amountAssets).to.equal(130000058085);
+        expect((await Calculum.WITHDRAWALS(alice.address)).amountAssets).to.equal(130044039821);
         expect((await Calculum.WITHDRAWALS(alice.address)).amountShares).to.equal(ethers.parseEther("90497.4"));
-        expect((await Calculum.WITHDRAWALS(alice.address)).finalAmount).to.equal(130000058085);
+        expect((await Calculum.WITHDRAWALS(alice.address)).finalAmount).to.equal(130044039821);
         console.log("Withdrawal Status: ", (await Calculum.WITHDRAWALS(alice.address)).status);
         console.log("Withdrawal Amount Shares of Alice: ", parseInt((await Calculum.balanceOf(alice.address)).toString()) / 10 ** 18);
         // Claiming the Withdraw Assets of Alice
@@ -2601,7 +2614,7 @@ describe("Verification of Basic Value and Features 2", function () {
             .withArgs(
                 await Calculum.getAddress(),
                 alice.address,
-                130000058085
+                130044039821
             )
             .to.emit(Calculum, "Withdraw")
             .withArgs(
@@ -2609,13 +2622,13 @@ describe("Verification of Basic Value and Features 2", function () {
                 alice.address,
                 alice.address,
                 ethers.parseEther("90497.4"),
-                130000058085
+                130044039821
             );
         // Verify the Value of Alice int the WITHDRAWS VALUE mapping after to Claimed
         expect((await Calculum.WITHDRAWALS(alice.address)).status).to.equal(3); // 3 = Completed
         expect((await Calculum.WITHDRAWALS(alice.address)).amountAssets).to.equal(0);
         expect((await Calculum.WITHDRAWALS(alice.address)).amountShares).to.equal(0);
-        expect((await Calculum.WITHDRAWALS(alice.address)).finalAmount).to.equal(130000058085);
+        expect((await Calculum.WITHDRAWALS(alice.address)).finalAmount).to.equal(130044039821);
         console.log("Withdrawal Status After: ", (await Calculum.WITHDRAWALS(alice.address)).status);
 
         // Validate WITHDRAWALS VALUE before withdraw of Carla
@@ -2628,10 +2641,10 @@ describe("Verification of Basic Value and Features 2", function () {
         // Try withdraw of carla
         await expect(Calculum.connect(carla).redeem(ethers.parseEther("10767.1"), carla.address, carla.address))
             .to.emit(Calculum, "PendingWithdraw")
-            .withArgs(carla.address, carla.address, 20419568274, ethers.parseEther("10767.1"));
+            .withArgs(carla.address, carla.address, 20426545355, ethers.parseEther("10767.1"));
         // Validate WITHDRAWALS VALUE after withdraw
         expect((await Calculum.WITHDRAWALS(carla.address)).status).to.equal(4); // 4 = PendingRedeem
-        expect((await Calculum.WITHDRAWALS(carla.address)).amountAssets).to.equal(20419568274);
+        expect((await Calculum.WITHDRAWALS(carla.address)).amountAssets).to.equal(20426545355);
         expect((await Calculum.WITHDRAWALS(carla.address)).amountShares).to.equal(ethers.parseEther("10767.1"));
         expect((await Calculum.WITHDRAWALS(carla.address)).finalAmount).to.equal(0);
         console.log("Withdrawal Status: ", (await Calculum.WITHDRAWALS(carla.address)).status);
@@ -2643,8 +2656,10 @@ describe("Verification of Basic Value and Features 2", function () {
         await expect(Calculum.connect(openZeppelinDefenderWallet).finalizeEpoch())
             .to.revertedWithCustomError(Calculum, "VaultOutMaintenance");
         // Move before to Maintenance Windows Pre Start
+        const move: moment.Moment = moment(
+            Math.floor(parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000));
         await network.provider.send("evm_setNextBlockTimestamp", [
-            parseInt(move1.add(epochDuration - maintTimeBefore, "s").format("X")),
+            parseInt(move.add(epochDuration - maintTimeBefore, "s").format("X")),
         ]);
         await network.provider.send("evm_mine", []);
         // Setting actual value of Assets
@@ -2686,9 +2701,9 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(netTransfer.pending).to.be.true;
         expect(netTransfer.direction).to.be.false;
         const netTransferAmount = netTransfer.amount;
-        expect(netTransferAmount).to.equal(15067221433);
+        expect(netTransferAmount).to.equal(15006141981);
         console.log("Vault Token Price: ", parseInt(await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH())) / 10 ** 6);
-        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(1393134);
+        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(1393658);
         // Verify the Transfer Bot Gas Reserve in USD is Zero
         const feeKept = await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress());
         expect(feeKept).to.equal(0);
@@ -2726,11 +2741,11 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         expect(
             (await USDc.balanceOf(await Calculum.getAddress()))
-        ).to.equal(15067221433);
+        ).to.equal(15006655052);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
-            .withArgs(await Calculum.CURRENT_EPOCH(), 67208341);
+            .withArgs(await Calculum.CURRENT_EPOCH(), 0);
         // Start summarize the Epoch
         console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
         console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
@@ -2751,7 +2766,7 @@ describe("Verification of Basic Value and Features 2", function () {
         // Verify the Balance of USDc of treasury in the Vault
         expect(
             (await USDc.balanceOf(treasuryWallet.address))
-        ).to.equal(26169284766);
+        ).to.equal(25837103991);
         console.log(
             "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
             parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
@@ -2760,7 +2775,7 @@ describe("Verification of Basic Value and Features 2", function () {
         // Validate Last Balance of TransferBot Role Wallet in USDc, comparring with value in the Excel Spread Sheet
         expect(
             (await USDc.balanceOf(openZeppelinDefenderWallet.address))
-        ).to.equal(1000 * 10 ** 6);
+        ).to.equal(999486929);
         console.log("Balance USDc of Open Zeppellin Wallet: ", parseInt((await USDc.balanceOf(openZeppelinDefenderWallet.address))) / 10 ** 6);
     });
 
@@ -2866,7 +2881,7 @@ describe("Verification of Basic Value and Features 2", function () {
             .withArgs(
                 await Calculum.getAddress(),
                 carla.address,
-                15000.013092 * 10 ** 6
+                15005655052
             )
             .to.emit(Calculum, "Withdraw")
             .withArgs(
@@ -2874,13 +2889,13 @@ describe("Verification of Basic Value and Features 2", function () {
                 carla.address,
                 carla.address,
                 ethers.parseEther("10767.1"),
-                15000.013092 * 10 ** 6
+                15005655052
             );
         // Verify the Value of carla int the WITHDRAWS VALUE mapping after to Claimed
         expect((await Calculum.WITHDRAWALS(carla.address)).status).to.equal(3); // 3 = Completed
         expect((await Calculum.WITHDRAWALS(carla.address)).amountAssets).to.equal(0);
         expect((await Calculum.WITHDRAWALS(carla.address)).amountShares).to.equal(0);
-        expect((await Calculum.WITHDRAWALS(carla.address)).finalAmount).to.equal(15000.013092 * 10 ** 6);
+        expect((await Calculum.WITHDRAWALS(carla.address)).finalAmount).to.equal(15005655052);
         console.log("Withdrawal Status After: ", (await Calculum.WITHDRAWALS(carla.address)).status);
 
         // Try to Finalize the Epoch before the Finalization Time
@@ -2890,8 +2905,10 @@ describe("Verification of Basic Value and Features 2", function () {
         await expect(Calculum.connect(openZeppelinDefenderWallet).finalizeEpoch())
             .to.revertedWithCustomError(Calculum, "VaultOutMaintenance");
         // Move before to Maintenance Windows Pre Start
+        const move: moment.Moment = moment(
+            Math.floor(parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000));
         await network.provider.send("evm_setNextBlockTimestamp", [
-            parseInt(move1.add(epochDuration - maintTimeBefore, "s").format("X")),
+            parseInt(move.add(epochDuration - maintTimeBefore, "s").format("X")),
         ]);
         await network.provider.send("evm_mine", []);
         // Setting actual value of Assets
@@ -2908,7 +2925,7 @@ describe("Verification of Basic Value and Features 2", function () {
         // Verify the Balance of Transfer Bot Role Address in USDc
         expect(
             (await USDc.balanceOf(openZeppelinDefenderWallet.address))
-        ).to.equal(1000 * 10 ** 6);
+        ).to.equal(999486929);
         //** Verify the Balance of Transfer Bot Role Address in Eth is minor than 1 ETH **/
         expect(
             parseInt(
@@ -2932,12 +2949,12 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(netTransfer.pending).to.be.true;
         expect(netTransfer.direction).to.be.false;
         const netTransferAmount = netTransfer.amount;
-        expect(netTransferAmount).to.equal(1521430420);
+        expect(netTransferAmount).to.equal(1450405305);
         console.log("Vault Token Price: ", parseInt(await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH())) / 10 ** 6);
-        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(1428393);
+        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(1428965);
         // Verify the Transfer Bot Gas Reserve in USD is Zero
         const feeKept = await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress());
-        expect(feeKept).to.equal(0);
+        expect(feeKept).to.equal(513071);
         // Call dexTransfer to transfer the amount of USDc to the Vault
         await expect(Calculum.connect(openZeppelinDefenderWallet).dexTransfer(true))
             .to.emit(Calculum, "DexTransfer")
@@ -2966,11 +2983,11 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         expect(
             (await USDc.balanceOf(await Calculum.getAddress()))
-        ).to.equal(1521430420);
+        ).to.equal(1449892234);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
-            .withArgs(await Calculum.CURRENT_EPOCH(), 1521430420);
+            .withArgs(await Calculum.CURRENT_EPOCH(), 1449892234);
         // Start summarize the Epoch
         console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
         console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
@@ -2991,7 +3008,7 @@ describe("Verification of Basic Value and Features 2", function () {
         // Verify the Balance of USDc of treasury in the Vault
         expect(
             (await USDc.balanceOf(treasuryWallet.address))
-        ).to.equal(27689.715186 * 10 ** 6);
+        ).to.equal(27285996225);
         console.log(
             "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
             parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
@@ -3096,35 +3113,35 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         // Redeem Alice Shares
         // Try withdraw of Alice
-        await expect(Calculum.connect(alice).redeem(ethers.parseEther("160775.000"), alice.address, alice.address))
+        await expect(Calculum.connect(alice).redeem(ethers.parseEther("160751.000"), alice.address, alice.address))
             .to.emit(Calculum, "PendingWithdraw")
-            .withArgs(alice.address, alice.address, 230499.098125 * 10 ** 6, ethers.parseEther("160775.000"));
+            .withArgs(alice.address, alice.address, 230558890011, ethers.parseEther("160751.000"));
         // Validate WITHDRAWALS VALUE after withdraw
         expect((await Calculum.WITHDRAWALS(alice.address)).status).to.equal(4); // 4 = PendingRedeem
 
-        expect((await Calculum.WITHDRAWALS(alice.address)).amountAssets).to.equal(230499.098125 * 10 ** 6);
-        expect((await Calculum.WITHDRAWALS(alice.address)).amountShares).to.equal(ethers.parseEther("160775"));
-        expect((await Calculum.WITHDRAWALS(alice.address)).finalAmount).to.equal(130000058085);
+        expect((await Calculum.WITHDRAWALS(alice.address)).amountAssets).to.equal(230558890011);
+        expect((await Calculum.WITHDRAWALS(alice.address)).amountShares).to.equal(ethers.parseEther("160751"));
+        expect((await Calculum.WITHDRAWALS(alice.address)).finalAmount).to.equal(130044039821);
         // Claim bob Shares
         // Try withdraw of bob
-        await expect(Calculum.connect(bob).redeem(ethers.parseEther("52348.2"), bob.address, bob.address))
+        await expect(Calculum.connect(bob).redeem(ethers.parseUnits("52338976521781911859070", "wei"), bob.address, bob.address))
             .to.emit(Calculum, "PendingWithdraw")
-            .withArgs(bob.address, bob.address, 75050.305635 * 10 ** 6, ethers.parseEther("52348.2"));
+            .withArgs(bob.address, bob.address, ethers.parseUnits("75067752806", "wei"), ethers.parseUnits("52338976521781911859070", "wei"));
         // Validate WITHDRAWALS VALUE after withdraw
         expect((await Calculum.WITHDRAWALS(bob.address)).status).to.equal(4); // 4 = PendingRedeem
-        expect((await Calculum.WITHDRAWALS(bob.address)).amountAssets).to.equal(75050.305635 * 10 ** 6);
-        expect((await Calculum.WITHDRAWALS(bob.address)).amountShares).to.equal(ethers.parseEther("52348.2"));
+        expect((await Calculum.WITHDRAWALS(bob.address)).amountAssets).to.equal(ethers.parseUnits("75067752806", "wei"));
+        expect((await Calculum.WITHDRAWALS(bob.address)).amountShares).to.equal(ethers.parseUnits("52338976521781911859070", "wei"));
         expect((await Calculum.WITHDRAWALS(bob.address)).finalAmount).to.equal(0);
         // Claim carla Shares
         // Try withdraw of carla
-        await expect(Calculum.connect(carla).redeem(ethers.parseEther("19613.5"), carla.address, carla.address))
+        await expect(Calculum.connect(carla).redeem(ethers.parseEther("19607.5"), carla.address, carla.address))
             .to.emit(Calculum, "PendingWithdraw")
-            .withArgs(carla.address, carla.address, 28119384613, ethers.parseEther("19613.5"));
+            .withArgs(carla.address, carla.address, 28122272558, ethers.parseEther("19607.5"));
         // Validate WITHDRAWALS VALUE after withdraw
         expect((await Calculum.WITHDRAWALS(carla.address)).status).to.equal(4); // 4 = PendingRedeem
-        expect((await Calculum.WITHDRAWALS(carla.address)).amountAssets).to.equal(28119384613);
-        expect((await Calculum.WITHDRAWALS(carla.address)).amountShares).to.equal(ethers.parseEther("19613.5"));
-        expect((await Calculum.WITHDRAWALS(carla.address)).finalAmount).to.equal(15000013092);
+        expect((await Calculum.WITHDRAWALS(carla.address)).amountAssets).to.equal(28122272558);
+        expect((await Calculum.WITHDRAWALS(carla.address)).amountShares).to.equal(ethers.parseEther("19607.5"));
+        expect((await Calculum.WITHDRAWALS(carla.address)).finalAmount).to.equal(15005655052);
 
         // Try to Finalize the Epoch before the Finalization Time
         const time = Math.floor(
@@ -3133,8 +3150,10 @@ describe("Verification of Basic Value and Features 2", function () {
         await expect(Calculum.connect(openZeppelinDefenderWallet).finalizeEpoch())
             .to.revertedWithCustomError(Calculum, "VaultOutMaintenance");
         // Move before to Maintenance Windows Pre Start
+        const move: moment.Moment = moment(
+            Math.floor(parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000));
         await network.provider.send("evm_setNextBlockTimestamp", [
-            parseInt(move1.add(epochDuration - maintTimeBefore, "s").format("X")),
+            parseInt(move.add(epochDuration - maintTimeBefore, "s").format("X")),
         ]);
         await network.provider.send("evm_mine", []);
         // Setting actual value of Assets
@@ -3174,9 +3193,9 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(netTransfer.pending).to.be.true;
         expect(netTransfer.direction).to.be.false;
         const netTransferAmount = netTransfer.amount;
-        expect(netTransferAmount).to.equal(340750527050);
+        expect(netTransferAmount).to.equal(340757066923);
         console.log("Vault Token Price: ", (await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH())));
-        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(1458472);
+        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(1459064);
         // Verify the Transfer Bot Gas Reserve in USD is Zero
         const feeKept = await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress());
         expect(feeKept).to.equal(0);
@@ -3213,11 +3232,11 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         expect(
             (await USDc.balanceOf(await Calculum.getAddress()))
-        ).to.equal(340750527050);
+        ).to.equal(340757066923);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
-            .withArgs(await Calculum.CURRENT_EPOCH(), 1310566727);
+            .withArgs(await Calculum.CURRENT_EPOCH(), 1236556039);
         // Start summarize the Epoch
         console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
         console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
@@ -3241,7 +3260,7 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(
             parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
             10 ** 6
-        ).to.equal(28999.281913);
+        ).to.equal(28521.552264);
         console.log(
             "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
             parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
@@ -3351,27 +3370,27 @@ describe("Verification of Basic Value and Features 2", function () {
             .withArgs(
                 alice.address,
                 ZERO_ADDRESS,
-                ethers.parseEther("160775"),
+                ethers.parseEther("160751"),
             )
             .to.emit(USDc, "Transfer")
             .withArgs(
                 await Calculum.getAddress(),
                 alice.address,
-                234485.8358 * 10 ** 6
+                234545997064
             )
             .to.emit(Calculum, "Withdraw")
             .withArgs(
                 alice.address,
                 alice.address,
                 alice.address,
-                ethers.parseEther("160775"),
-                234485.8358 * 10 ** 6
+                ethers.parseEther("160751"),
+                234545997064
             );
         // Verify the Value of alice int the WITHDRAWS VALUE mapping after to Claimed
         expect((await Calculum.WITHDRAWALS(alice.address)).status).to.equal(3); // 3 = Completed
         expect((await Calculum.WITHDRAWALS(alice.address)).amountAssets).to.equal(0);
         expect((await Calculum.WITHDRAWALS(alice.address)).amountShares).to.equal(0);
-        expect((await Calculum.WITHDRAWALS(alice.address)).finalAmount).to.equal(364485893885);
+        expect((await Calculum.WITHDRAWALS(alice.address)).finalAmount).to.equal(364590036885);
 
         // Claiming the Withdraw Assets of Bob
         await expect(Calculum.connect(bob).claimAssets(bob.address, bob.address))
@@ -3379,27 +3398,27 @@ describe("Verification of Basic Value and Features 2", function () {
             .withArgs(
                 bob.address,
                 ZERO_ADDRESS,
-                ethers.parseEther("52348.2"),
+                ethers.parseUnits("52338976521781911859070", "wei"),
             )
             .to.emit(USDc, "Transfer")
             .withArgs(
                 await Calculum.getAddress(),
                 bob.address,
-                76348.383951 * 10 ** 6
+                76365916440
             )
             .to.emit(Calculum, "Withdraw")
             .withArgs(
                 bob.address,
                 bob.address,
                 bob.address,
-                ethers.parseEther("52348.2"),
-                76348.383951 * 10 ** 6
+                ethers.parseUnits("52338976521781911859070", "wei"),
+                76365916440
             );
         // Verify the Value of bob int the WITHDRAWS VALUE mapping after to Claimed
         expect((await Calculum.WITHDRAWALS(bob.address)).status).to.equal(3); // 3 = Completed
         expect((await Calculum.WITHDRAWALS(bob.address)).amountAssets).to.equal(0);
         expect((await Calculum.WITHDRAWALS(bob.address)).amountShares).to.equal(0);
-        expect((await Calculum.WITHDRAWALS(bob.address)).finalAmount).to.equal(76348.383951 * 10 ** 6);
+        expect((await Calculum.WITHDRAWALS(bob.address)).finalAmount).to.equal(76365916440);
 
         // Claiming the Withdraw Assets of carla
         await expect(Calculum.connect(carla).claimAssets(carla.address, carla.address))
@@ -3407,27 +3426,27 @@ describe("Verification of Basic Value and Features 2", function () {
             .withArgs(
                 carla.address,
                 ZERO_ADDRESS,
-                ethers.parseEther("19613.5"),
+                ethers.parseEther("19607.5"),
             )
             .to.emit(USDc, "Transfer")
             .withArgs(
                 await Calculum.getAddress(),
                 carla.address,
-                28605740572
+                28608597380
             )
             .to.emit(Calculum, "Withdraw")
             .withArgs(
                 carla.address,
                 carla.address,
                 carla.address,
-                ethers.parseEther("19613.5"),
-                28605740572
+                ethers.parseEther("19607.5"),
+                28608597380
             );
         // Verify the Value of carla int the WITHDRAWS VALUE mapping after to Claimed
         expect((await Calculum.WITHDRAWALS(carla.address)).status).to.equal(3); // 3 = Completed
         expect((await Calculum.WITHDRAWALS(carla.address)).amountAssets).to.equal(0);
         expect((await Calculum.WITHDRAWALS(carla.address)).amountShares).to.equal(0);
-        expect((await Calculum.WITHDRAWALS(carla.address)).finalAmount).to.equal(43605.753664 * 10 ** 6);
+        expect((await Calculum.WITHDRAWALS(carla.address)).finalAmount).to.equal(43614252432);
 
         // Add deposit to the Vault from bob
         await expect(
@@ -3440,7 +3459,7 @@ describe("Verification of Basic Value and Features 2", function () {
                 bob.address,
                 bob.address,
                 50000 * 10 ** 6,
-                ethers.parseUnits("808391327305192911", "wei")
+                ethers.parseUnits("53563206050171677", "wei")
             );
         // Verify status of bob in DEPOSITS after deposit
         expect((await Calculum.DEPOSITS(bob.address)).status).to.equal(1); // 1 = Pending
@@ -3448,7 +3467,7 @@ describe("Verification of Basic Value and Features 2", function () {
             50000 * 10 ** 6
         );
         expect((await Calculum.DEPOSITS(bob.address)).amountShares).to.equal(
-            ethers.parseUnits("808391327305192911", "wei")
+            ethers.parseUnits("53563206050171677", "wei")
         );
         expect((await Calculum.DEPOSITS(bob.address)).finalAmount).to.equal(
             50000 * 10 ** 6
@@ -3461,8 +3480,10 @@ describe("Verification of Basic Value and Features 2", function () {
         await expect(Calculum.connect(openZeppelinDefenderWallet).finalizeEpoch())
             .to.revertedWithCustomError(Calculum, "VaultOutMaintenance");
         // Move before to Maintenance Windows Pre Start
+        const move: moment.Moment = moment(
+            Math.floor(parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000));
         await network.provider.send("evm_setNextBlockTimestamp", [
-            parseInt(move1.add(epochDuration - maintTimeBefore, "s").format("X")),
+            parseInt(move.add(epochDuration - maintTimeBefore, "s").format("X")),
         ]);
         await network.provider.send("evm_mine", []);
         // Setting actual value of Assets
@@ -3502,9 +3523,9 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(netTransfer.pending).to.be.true;
         expect(netTransfer.direction).to.be.true;
         const netTransferAmount = netTransfer.amount;
-        expect(netTransferAmount).to.equal(ethers.parseUnits("49999922175", "wei"));
+        expect(netTransferAmount).to.equal(ethers.parseUnits("49998966906", "wei"));
         console.log("Vault Token Price: ", (await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH())));
-        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(1550778);
+        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(20326178);
         // Verify the Transfer Bot Gas Reserve in USD is Zero
         const feeKept = await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress());
         expect(feeKept).to.equal(0);
@@ -3539,11 +3560,11 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         expect(
             (await USDc.balanceOf(await Calculum.getAddress()))
-        ).to.equal(2000000);
+        ).to.equal(2033094);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
-            .withArgs(await Calculum.CURRENT_EPOCH(), 0);
+            .withArgs(await Calculum.CURRENT_EPOCH(), 1033094);
         // Start summarize the Epoch
         console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
         console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
@@ -3566,7 +3587,7 @@ describe("Verification of Basic Value and Features 2", function () {
         // Verify the Balance of USDc of treasury in the Vault
         expect(
             (await USDc.balanceOf(treasuryWallet.address)).toString()
-        ).to.equal("28999281913");
+        ).to.equal("28521585358");
         console.log(
             "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
             parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
@@ -3575,7 +3596,7 @@ describe("Verification of Basic Value and Features 2", function () {
         // Validate Last Balance of TransferBot Role Wallet in USDc, comparring with value in the Excel Spread Sheet
         expect(
             (await USDc.balanceOf(openZeppelinDefenderWallet.address))
-        ).to.equal(999077825);
+        ).to.equal(1000000000);
         console.log("Balance USDc of Open Zeppellin Wallet: ", parseInt((await USDc.balanceOf(openZeppelinDefenderWallet.address))) / 10 ** 6);
     });
 
@@ -3676,14 +3697,14 @@ describe("Verification of Basic Value and Features 2", function () {
             .withArgs(
                 ZERO_ADDRESS,
                 bob.address,
-                ethers.parseUnits("32241881171902103331361", "wei")
+                ethers.parseUnits("2459882029961559915495", "wei")
             )
             .to.emit(Calculum, "Deposit")
             .withArgs(
                 bob.address,
                 bob.address,
                 100000000000,
-                ethers.parseUnits("32241881171902103331361", "wei")
+                ethers.parseUnits("2459882029961559915495", "wei")
             );
         // Verify the Value of bob int the WITHDRAWS VALUE mapping after to Claimed
         expect((await Calculum.DEPOSITS(bob.address)).status).to.equal(3); // 3 = Completed
@@ -3698,8 +3719,10 @@ describe("Verification of Basic Value and Features 2", function () {
         await expect(Calculum.connect(openZeppelinDefenderWallet).finalizeEpoch())
             .to.revertedWithCustomError(Calculum, "VaultOutMaintenance");
         // Move before to Maintenance Windows Pre Start
+        const move: moment.Moment = moment(
+            Math.floor(parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000));
         await network.provider.send("evm_setNextBlockTimestamp", [
-            parseInt(move1.add(epochDuration - maintTimeBefore, "s").format("X")),
+            parseInt(move.add(epochDuration - maintTimeBefore, "s").format("X")),
         ]);
         await network.provider.send("evm_mine", []);
         // Setting actual value of Assets
@@ -3715,7 +3738,7 @@ describe("Verification of Basic Value and Features 2", function () {
         // Verify the Balance of Transfer Bot Role Address in USDc
         expect(
             (await USDc.balanceOf(openZeppelinDefenderWallet.address))
-        ).to.equal(999077825);
+        ).to.equal(1000000000);
         //** Verify the Balance of Transfer Bot Role Address in Eth is minor than 1 ETH **/
         expect(
             parseInt(
@@ -3739,12 +3762,12 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(netTransfer.pending).to.be.true;
         expect(netTransfer.direction).to.be.false;
         const netTransferAmount = netTransfer.amount;
-        expect(netTransferAmount).to.equal(ethers.parseUnits("159652738", "wei"));
+        expect(netTransferAmount).to.equal(ethers.parseUnits("150236564", "wei"));
         console.log("Vault Token Price: ", parseInt((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))) / 10 ** 6);
-        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(1576845);
+        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(20672061);
         // Verify the Transfer Bot Gas Reserve in USD is Zero
         const feeKept = await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress());
-        expect(feeKept).to.equal(922175);
+        expect(feeKept).to.equal(0);
         // Call dexTransfer to transfer the amount of USDc to the Vault
         await expect(Calculum.connect(openZeppelinDefenderWallet).dexTransfer(true))
             .to.emit(Calculum, "DexTransfer")
@@ -3779,11 +3802,11 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         expect(
             (await USDc.balanceOf(await Calculum.getAddress()))
-        ).to.equal(159730563);
+        ).to.equal(151236564);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
-            .withArgs(await Calculum.CURRENT_EPOCH(), 159730563);
+            .withArgs(await Calculum.CURRENT_EPOCH(), 150236564);
         // Start summarize the Epoch
         console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
         console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
@@ -3806,7 +3829,7 @@ describe("Verification of Basic Value and Features 2", function () {
         // Verify the Balance of USDc of treasury in the Vault
         expect(
             (await USDc.balanceOf(treasuryWallet.address)).toString()
-        ).to.equal("29158012476");
+        ).to.equal("28670821922");
         console.log(
             "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
             parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
