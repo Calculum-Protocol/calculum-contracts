@@ -17,6 +17,7 @@ const MNEMONIC =
     process.env.MNEMONIC!;
 const API_KEY = process.env.INFURAKEY || "ffc8f8f8f8f8f8f8f8f8f8f8f8f8f8f8";
 const ACCOUNTS = parseInt(process.env.ACCOUNTS!);
+const PRIVATE_KEY = process.env.PRIVATE_KEY!;
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -95,6 +96,15 @@ module.exports = {
             },
             // accounts: [PRIVATE_KEY]
         },
+        arbitrumOne: {
+            chainId: 42161,
+            url: `https://arbitrum-mainnet.infura.io/v3/${API_KEY}`,
+            // accounts: {
+            //     mnemonic: MNEMONIC,
+            //     accounts: ACCOUNTS,
+            // },
+            accounts: [PRIVATE_KEY]
+        },
         polygon: {
             chainId: 137,
             url: `https://polygon-mainnet.infura.io/v3/${API_KEY}`,
@@ -137,7 +147,7 @@ module.exports = {
         coinmarketcap:
             process.env.COINMARKETCAP_API_KEY,
         enabled: true,
-        gasPriceApi: `https://api-optimistic.etherscan.io/api?module=proxy&action=eth_gasPrice&apikey=${process.env.OPTIMISM_API_KEY}`,
+        gasPriceApi: `https://api.arbiscan.io/api?module=proxy&action=eth_gasPrice&apikey=${process.env.ARBITRUM_API_KEY}`,
         // gasPrice: 35
     },
     etherscan: {
@@ -145,7 +155,16 @@ module.exports = {
         // Obtain one at https://etherscan.io/
         // apiKey: process.env.ETHERSCAN_API_KEY,
         // apiKey: process.env.OPTIMISM_API_KEY,
-        apiKey: process.env.ARBITRUM_API_KEY,
+        apiKey: {
+            mainnet: process.env.ETHERSCAN_API_KEY,
+            goerli: process.env.ETHERSCAN_API_KEY,
+            sepolia: process.env.ETHERSCAN_API_KEY,
+            polygon: process.env.POLYGON_API_KEY,
+            mumbai: process.env.POLYGON_API_KEY,
+            optimism: process.env.OPTIMISM_API_KEY,
+            arbitrumOne: process.env.ARBITRUM_API_KEY,
+            avalance: process.env.SNOWTRACE_API_KEY,
+        },
         // apiKey: process.env.POLYGON_API_KEY
         // apiKey: SNOWTRACE_API_KEY,
         customChains: [
@@ -167,7 +186,7 @@ module.exports = {
                     viaIR: true,
                     optimizer: {
                         enabled: true,
-                        runs: 100,
+                        runs: 150,
                     },
                 },
             },

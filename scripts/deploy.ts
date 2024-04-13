@@ -41,14 +41,14 @@ let UniswapLibV3Factory: UniswapLibV3__factory;
 let UniswapLibV3: UniswapLibV3;
 let UtilsFactory: Utils__factory;
 let Utils: Utils;
-const name = "CalculumUSDC1";
-const symbol = "calcUSDC1";
+const name = "Bear Protocol USDc Vault";
+const symbol = "BearUSDC";
 const decimals = 18;
 const EPOCH_TIME: moment.Moment = moment();
 const ZERO_ADDRESS = `0x` + `0`.repeat(40);
-const epochDuration = 60 * 60 * 24 * 7 * 4; // 4 week
-const maintTimeBefore = 60 * 60; // 1 hour
-const maintTimeAfter = 60 * 30; // 30 minutes
+const epochDuration = 60 * 60; // 1 hour
+const maintTimeBefore = 60 * 5; // 5 minutes
+const maintTimeAfter = 60 * 5; // 5 minutes
 
 async function main() {
     // Hardhat always runs the compile task when running scripts with its command
@@ -64,6 +64,7 @@ async function main() {
     const contractName: string = "CalculumVault";
     const EPOCH_START = EPOCH_TIME.utc(false).unix();
     console.log(`Contract Name: ${contractName}`);
+    console.log(`Epoch Start: ${EPOCH_START}`);
     // const EPOCH_START = EPOCH_TIME.utc(false).unix();
     const accounts = await ethers.getSigners();
     const deployer = accounts[0];
@@ -114,16 +115,17 @@ async function main() {
     //     deployer
     // )) as Utils__factory;
     // Utils = (await UtilsFactory.deploy()) as Utils;
-    // // eslint-disable-next-line no-unused-expressions
+    // eslint-disable-next-line no-unused-expressions
     // expect(await Utils.getAddress()).to.properAddress;
     // console.log(`Utils Address: ${await Utils.getAddress()}`);
     // await snooze(10000);
     // We get the contract to deploy
     const CalculumFactory = await ethers.getContractFactory(
         contractName, {
+        signer: deployer,
         libraries: {
-            UniswapLibV3: "0x7A5Fb3E7700FA3219fcC1a4b066E36bBE11Bb5C8",
-            Utils: "0x060B3D11684be38156f129cADDB08fCa1D48db93",
+            UniswapLibV3: "0x08B579a3412939551c7C5A0bCbE234fE7E2Dce01",
+            Utils: "0xF2B6e6F5DfCc92619076e08Bd9a520Ebe4Cf72b3",
         }
     }
     );
@@ -134,22 +136,26 @@ async function main() {
             symbol,
             decimals,
             [
-                await traderBotWallet.getAddress(),
-                await treasuryWallet.getAddress(),
-                await transferBotRoleAddress.getAddress(),
-                "0x101F443B4d1b059569D643917553c771E1b9663E", // Router Address Arbitrum Sepolia
-                "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // USDC native in Arbitrum Sepolia
-                "0xaDeFDE1A14B6ba4DA3e82414209408a49930E8DC", // Vertex Endpoint Arbitrum Sepolia
-                "0x4597CFdd371239a99477Cdabf9cF0B23fDf559B4" // Vertex Spot Engine Arbitrum Sepolia
+                "0xc76d4391D9Dfbe9765608302be027c94b949f705", // Auxiliar Wallet (deployer) Calculum Test 0xc76d4391D9Dfbe9765608302be027c94b949f705
+                "0x658B13b773b0ceD400eC57cf7C03288d8Aa13805", // alfredolopez80.eth // Treasury Wallet
+                "0xcE42A43C47b3B5cAa3f5385e679dCbF42Eeab5ce", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Mainnet
+                // "0x101F443B4d1b059569D643917553c771E1b9663E", // Router Address Arbitrum Sepolia
+                "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Router Address Arbitrum Mainnet
+                // "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // USDC native in Arbitrum Sepolia
+                "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", // USDC native in Arbitrum Mainnet
+                // "0xaDeFDE1A14B6ba4DA3e82414209408a49930E8DC", // Vertex Endpoint Arbitrum Sepolia
+                "0xbbEE07B3e8121227AfCFe1E2B82772246226128e", // Vertex Endpoint Arbitrum Mainnet
+                // "0x4597CFdd371239a99477Cdabf9cF0B23fDf559B4" // Vertex Spot Engine Arbitrum Sepolia
+                "0x32d91Af2B17054D575A7bF1ACfa7615f41CCEfaB" // Vertex Spot Engine Arbitrum Mainnet
             ],
             [
                 EPOCH_START,
-                1 * 10 ** 4,
-                1000 * 10 ** 6,
-                50000 * 10 ** 6,
-                500 * 10 ** 6,
-                1000 * 10 ** 6,
-                ethers.parseEther("0.5")
+                1 * 10 ** 5, // 0.1 $
+                100 * 10 ** 6, // 100 $
+                5000 * 10 ** 6, // 5000 $
+                3 * 10 ** 6, // 5 $
+                10 * 10 ** 6, // 10 $
+                ethers.parseEther("0.01")
             ]
         ]
     );

@@ -14,7 +14,9 @@ library Utils {
     using SafeMathUpgradeable for uint256;
     using MathUpgradeable for uint256;
 
-    address public constant OZW = 0x3194E6AFB431d12b79A398Cf4788ebf9213b8Cc7;
+    address public constant OZW = 0xcE42A43C47b3B5cAa3f5385e679dCbF42Eeab5ce; // Arbitrum Mainnet
+    // address public constant OZW = 0x63833F79b09123e97672E9cbE6C2E976F0452318; // Arbitrum Sepolia
+    // address public constant OZW = 0x3194E6AFB431d12b79A398Cf4788ebf9213b8Cc7; // Unit-Test
 
     /**
      * @dev Method to Calculate the Transfer Bot Gas Reserve in USDC in the current epoch
