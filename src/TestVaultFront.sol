@@ -8,7 +8,6 @@ import "./lib/Errors.sol";
 import "./lib/IRouter.sol";
 import "./lib/UniswapLibV3.sol";
 import "./lib/Utils.sol";
-import "./lib/IEndpoint.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
@@ -19,12 +18,12 @@ import "@openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUp
 // }
 
 /**
- * @title Calculum Vault
+ * @title Test Vault Front
  * @dev Vault based on ERC-4626
- * @custom:a Alfredo Lopez / Calculum
+ * @custom:a Vautl Test Front / Bear Protocol
  */
 /// @custom:oz-upgrades-unsafe-allow external-library-linking
-contract CalculumVault is
+contract TestVaultFront is
     IERC4626,
     ERC20Upgradeable,
     PausableUpgradeable,
@@ -46,15 +45,11 @@ contract CalculumVault is
     // Flag to Control Start Sales of Shares
     uint256 public EPOCH_START; // start 10 July 2022, Sunday 22:00:00  UTC
     // Transfer Bot Wallet in DEX
-    address payable private openZeppelinDefenderWallet;
+    address payable public openZeppelinDefenderWallet;
     // Trader Bot Wallet in DEX
     address payable public traderBotWallet;
-    // Address of Vertex Endpoint
-    address private endpointVertex;
-    // Address of Spot Engine of Vertex
-    address private spotEngine;
     // Treasury Wallet of Calculum
-    address public treasuryWallet;
+    address payable public treasuryWallet;
     // Management Fee percentage , e.g. 1% = 1 / 100
     uint256 public MANAGEMENT_FEE_PERCENTAGE;
     // Performace Fee percentage , e.g. 15% = 15 / 100
@@ -83,12 +78,6 @@ contract CalculumVault is
     uint256 public MIN_DEPOSIT;
     // Max Total Assets
     uint256 public MAX_TOTAL_DEPOSIT;
-    // Minimal Wallet Ballance USDC in Transfer Bot
-    uint256 public MIN_WALLET_BALANCE_USDC_TRANSFER_BOT;
-    // Wallet Target Balance USDC in Transfer Bot
-    uint256 public TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT;
-    // Minimal Wallet Balance of ETH in Transfer Bot
-    uint256 public MIN_WALLET_BALANCE_ETH_TRANSFER_BOT;
     // ETH Gas Reserve in USDC in Transfer Bot
     uint256 public ETH_GAS_RESERVE_USDC_TRANSFER_BOT;
     // Array of Wallet Addresses with Deposit
@@ -125,39 +114,29 @@ contract CalculumVault is
         string memory _name,
         string memory _symbol,
         uint8 decimals_,
-        address[7] memory _initialAddress, // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router, 4: USDCToken Address, 5: Vertex Endpoint, 6: Spot Engine Vertex
-        uint256[7] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value
+        address[4] memory _initialAddress, // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: USDCToken Address
+        uint256[4] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value
     ) public reinitializer(1) {
         if (
-            !_initialAddress[3].isContract() ||
-            !_initialAddress[4].isContract() ||
-            !_initialAddress[5].isContract() ||
-            !_initialAddress[6].isContract()
+            !_initialAddress[3].isContract()
         ) revert Errors.AddressIsNotContract();
         __Ownable_init();
         __ReentrancyGuard_init();
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(TRANSFER_BOT_ROLE, _initialAddress[2]);
         __ERC20_init(_name, _symbol);
-        _asset = IERC20MetadataUpgradeable(_initialAddress[4]);
+        _asset = IERC20MetadataUpgradeable(_initialAddress[3]);
         _decimals = decimals_;
-        // oracle = Oracle(_initialAddress[0]);
-        router = IRouter(_initialAddress[3]);
-        endpointVertex = _initialAddress[5];
-        spotEngine = _initialAddress[6];
         traderBotWallet = payable(_initialAddress[0]);
         openZeppelinDefenderWallet = payable(_initialAddress[2]);
-        treasuryWallet = _initialAddress[1];
+        treasuryWallet = payable(_initialAddress[1]);
         EPOCH_START = _initialValue[0];
         MIN_DEPOSIT = _initialValue[1];
         MAX_DEPOSIT = _initialValue[2];
         MAX_TOTAL_DEPOSIT = _initialValue[3];
-        MIN_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[4];
-        TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[5];
-        MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = _initialValue[6];
-        EPOCH_DURATION = 30 minutes; // 1 weeks
-        MAINTENANCE_PERIOD_PRE_START = 3 minutes; // 5 minutes
-        MAINTENANCE_PERIOD_POST_START = 3 minutes; // 5 minutes
+        EPOCH_DURATION = 60 minutes; // 60 minutes
+        MAINTENANCE_PERIOD_PRE_START = 5 minutes; // 5 minutes
+        MAINTENANCE_PERIOD_POST_START = 5 minutes; // 5 minutes
         CurrentEpoch();
         MANAGEMENT_FEE_PERCENTAGE = 1 ether / 100; // Represent 1%
         PERFORMANCE_FEE_PERCENTAGE = 15 ether / 100; // Represent 15%
@@ -556,19 +535,12 @@ contract CalculumVault is
     /**
      * @dev Contract for Getting Actual Balance of the TraderBot Wallet in Dydx
      */
-    function DexWalletBalance() private {
+    function DexWalletBalance() public {
         if ((totalSupply() == 0) && (CURRENT_EPOCH == 0)) {
             DEX_WALLET_BALANCE = newDeposits();
         } else {
             // Must be changed by Get Spot Balance of Spot Engine of Vertex
-            DEX_WALLET_BALANCE = Utils.getVertexBalance(0);
-            // DEX_WALLET_BALANCE = oracle.GetAccount(address(traderBotWallet));
-            if (DEX_WALLET_BALANCE == 0) {
-                revert Errors.ActualAssetValueIsZero(
-                    address(spotEngine),
-                    address(this)
-                );
-            }
+            DEX_WALLET_BALANCE = _asset.balanceOf(address(this));
         }
     }
 
@@ -639,7 +611,6 @@ contract CalculumVault is
                 withdrawer.finalAmount += withdrawer.amountAssets;
             }
         }
-        _swapDAforETH();
     }
 
 
@@ -653,17 +624,6 @@ contract CalculumVault is
             ].add(newShares()).sub(newWithdrawalsShares());
         } else {
             TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = newShares();
-        }
-    }
-
-    function _swapDAforETH() private nonReentrant {
-        if (
-            (openZeppelinDefenderWallet.balance <
-                MIN_WALLET_BALANCE_ETH_TRANSFER_BOT) &&
-            (_asset.balanceOf(openZeppelinDefenderWallet) >
-                MIN_WALLET_BALANCE_USDC_TRANSFER_BOT)
-        ) {
-            UniswapLibV3._swapTokensForETH(address(_asset), address(router));
         }
     }
 
@@ -719,89 +679,9 @@ contract CalculumVault is
         DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
         _checkVaultOutMaintenance();
         if (actualTx.pending && kind) {
-            if (actualTx.direction) {
-                // Deposit
-                Utils.depositCollateralWithReferral(
-                    endpointVertex,
-                    address(_asset),
-                    0,
-                    actualTx.amount
-                );
-                // LinkSigner with EOA unique execution
-                if (!linked) {
-                    Utils.linkVertexSigner(
-                        endpointVertex,
-                        address(_asset),
-                        address(traderBotWallet)
-                    );
-                    linked = true;
-                }
-            } else {
-                // Withdrawl
-                Utils.withdrawVertexCollateral(
-                    endpointVertex,
-                    address(_asset),
-                    0,
-                    uint128(actualTx.amount)
-                );
-            }
             actualTx.pending = false;
         }
-        uint256 reserveGas = Utils.CalculateTransferBotGasReserveDA(
-            address(this),
-            address(_asset)
-        );
-        if (reserveGas > 0 && !kind) {
-            if (_asset.balanceOf(address(this)) < reserveGas) {
-                revert Errors.NotEnoughBalance(
-                    reserveGas,
-                    _asset.balanceOf(address(this))
-                );
-            }
-            SafeERC20Upgradeable.safeTransfer(
-                _asset,
-                openZeppelinDefenderWallet,
-                reserveGas
-            );
-        }
         emit DexTransfer(CURRENT_EPOCH, actualTx.amount);
-    }
-
-    /**
-     * @dev FeesTranfer per Epoch
-     */
-    function feesTransfer() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
-        _checkVaultOutMaintenance();
-        uint256 mgtFee = Utils.MgtFeePerVaultToken(address(this));
-        uint256 perfFee = Utils.PerfFeePerVaultToken(
-            address(this),
-            address(_asset)
-        );
-        if (CURRENT_EPOCH == 0) revert Errors.FirstEpochNoFeeTransfer();
-        uint256 totalFees = Utils.getPnLPerVaultToken(
-            address(this),
-            address(_asset)
-        )
-            ? mgtFee.add(perfFee).mulDiv(
-                TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)],
-                10 ** decimals()
-            )
-            : mgtFee.mulDiv(
-                TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)],
-                10 ** decimals()
-            );
-        uint256 rest = totalFees.sub(
-            Utils.CalculateTransferBotGasReserveDA(
-                address(this),
-                address(_asset)
-            )
-        );
-        rest = (rest > (_asset.balanceOf(address(this))) - 1 * 10 ** _asset.decimals())
-            ? _asset.balanceOf(address(this)) 
-            : (rest > 1 * 10 ** _asset.decimals()) ? rest : 0;
-        if (rest > 0)
-            SafeERC20Upgradeable.safeTransfer(_asset, treasuryWallet, rest - 1 * 10 ** _asset.decimals());
-        emit FeesTransfer(CURRENT_EPOCH, rest);
     }
 
     /**

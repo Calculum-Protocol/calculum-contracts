@@ -164,6 +164,7 @@ module.exports = {
             optimism: process.env.OPTIMISM_API_KEY,
             arbitrumOne: process.env.ARBITRUM_API_KEY,
             avalance: process.env.SNOWTRACE_API_KEY,
+            arbitrumSepolia: process.env.ARBITRUM_API_KEY
         },
         // apiKey: process.env.POLYGON_API_KEY
         // apiKey: SNOWTRACE_API_KEY,

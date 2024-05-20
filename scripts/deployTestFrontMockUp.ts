@@ -13,16 +13,14 @@ import dotenv from "dotenv";
 import moment from "moment";
 import chai from "chai";
 import {
-    USDC__factory,
-    USDC,
-    CalculumVault__factory,
-    CalculumVault,
-    MockUpOracle,
-    MockUpOracle__factory,
     UniswapLibV3__factory,
     UniswapLibV3,
     Utils__factory,
     Utils,
+    TestVaultFront__factory,
+    TestVaultFront,
+    USDC__factory,
+    USDC,
     // eslint-disable-next-line node/no-missing-import
 } from "../typechain-types";
 
@@ -32,8 +30,6 @@ const { expect } = chai;
 
 const snooze = (ms: any) => new Promise((resolve) => setTimeout(resolve, ms));
 
-let OracleFactory: MockUpOracle__factory;
-let Oracle: MockUpOracle;
 let traderBotWallet: SignerWithAddress;
 let treasuryWallet: SignerWithAddress;
 let transferBotRoleAddress: SignerWithAddress;
@@ -41,14 +37,11 @@ let UniswapLibV3Factory: UniswapLibV3__factory;
 let UniswapLibV3: UniswapLibV3;
 let UtilsFactory: Utils__factory;
 let Utils: Utils;
-const name = "Bear Protocol USDc Vault";
-const symbol = "BearUSDC";
+const name = "Test USDc Vault 2";
+const symbol = "tBearUSDC2";
 const decimals = 18;
 const EPOCH_TIME: moment.Moment = moment();
 const ZERO_ADDRESS = `0x` + `0`.repeat(40);
-const epochDuration = 60 * 60; // 1 hour
-const maintTimeBefore = 60 * 5; // 5 minutes
-const maintTimeAfter = 60 * 5; // 5 minutes
 
 async function main() {
     // Hardhat always runs the compile task when running scripts with its command
@@ -60,29 +53,25 @@ async function main() {
     const provider = network.provider;
     // const accounts: SignerWithAddress[] = await ethers.getSigners();
     // Getting from command Line de Contract Name
-    const contractName: string = "CalculumVault";
+    // Getting from command Line de Contract Name
+    const accounts = await ethers.getSigners();
+    const contractName: string = "TestVaultFront";
     const EPOCH_START = EPOCH_TIME.utc(false).unix();
     console.log(`Contract Name: ${contractName}`);
     console.log(`Epoch Start: ${EPOCH_START}`);
-    const accounts = await ethers.getSigners();
     const deployer = accounts[0];
-    traderBotWallet = accounts[1];
-    treasuryWallet = accounts[2];
-    transferBotRoleAddress = accounts[3];
-    //   let USDCFactory: USDC__factory;
-    //   let USDc: USDC;
-    //   // USD Testnet Deployer
-    //   USDCFactory = (await ethers.getContractFactory(
-    //     "USDC",
-    //     accounts[0]
-    //   )) as USDC__factory;
-    //   // Deploy Stable coin Mockup
-    //   USDc = (await USDCFactory.deploy()) as USDC;
-    //   await USDc.deployed();
-    //   await snooze(10000);
+    let USDCFactory: USDC__factory;
+    let USDc: USDC;
+    // USD Testnet Deployer
+    USDCFactory = (await ethers.getContractFactory(
+      "USDC",
+      accounts[0]
+    )) as USDC__factory;
+    // Deploy Stable coin Mockup
+    USDc = (await USDCFactory.deploy()) as USDC;
     // eslint-disable-next-line no-unused-expressions
-    //   expect(USDc.address).to.properAddress;
-    //   console.log(`USDC Address: ${USDc.address}`);
+    expect(await USDc.getAddress()).to.properAddress;
+    console.log(`USDC Address: ${await USDc.getAddress()}`);
     // Deploy Mockup Oracle
     //   OracleFactory = (await ethers.getContractFactory(
     //     "MockUpOracle",
@@ -113,88 +102,66 @@ async function main() {
     //     deployer
     // )) as Utils__factory;
     // Utils = (await UtilsFactory.deploy()) as Utils;
-    // eslint-disable-next-line no-unused-expressions
+    // // eslint-disable-next-line no-unused-expressions
     // expect(await Utils.getAddress()).to.properAddress;
     // console.log(`Utils Address: ${await Utils.getAddress()}`);
     // await snooze(10000);
     // We get the contract to deploy
-    const CalculumFactory = await ethers.getContractFactory(
+    const TestVaultFrontBearFactory = await ethers.getContractFactory(
         contractName, {
         signer: deployer,
         libraries: {
-            UniswapLibV3: "0x08B579a3412939551c7C5A0bCbE234fE7E2Dce01",
-            Utils: "0xF2B6e6F5DfCc92619076e08Bd9a520Ebe4Cf72b3",
+            Utils: "0x0fa20848DE25E6474EcDba6c2C23274007D60648",
         }
     }
     );
-    const Calculum = await upgrades.deployProxy(
-        CalculumFactory,
+    console.log("Deploying Test Vault Front Bear...");
+    const TestVaultFrontBear = await upgrades.deployProxy(
+        TestVaultFrontBearFactory as any,
         [
             name,
             symbol,
             decimals,
             [
-                "0xc76d4391D9Dfbe9765608302be027c94b949f705", // Auxiliar Wallet (deployer) Calculum Test 0xc76d4391D9Dfbe9765608302be027c94b949f705
+                "0x7Ef8114134cCF5dD5346E2d39322194278FFA696", // Auxiliar Wallet (deployer) Calculum Test 0x7Ef8114134cCF5dD5346E2d39322194278FFA696, like trader Bot
                 "0x658B13b773b0ceD400eC57cf7C03288d8Aa13805", // alfredolopez80.eth // Treasury Wallet
-                "0xcE42A43C47b3B5cAa3f5385e679dCbF42Eeab5ce", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Mainnet
-                // "0x101F443B4d1b059569D643917553c771E1b9663E", // Router Address Arbitrum Sepolia
-                "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Router Address Arbitrum Mainnet
-                // "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // USDC native in Arbitrum Sepolia
-                "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", // USDC native in Arbitrum Mainnet
-                // "0xaDeFDE1A14B6ba4DA3e82414209408a49930E8DC", // Vertex Endpoint Arbitrum Sepolia
-                "0xbbEE07B3e8121227AfCFe1E2B82772246226128e", // Vertex Endpoint Arbitrum Mainnet
-                // "0x4597CFdd371239a99477Cdabf9cF0B23fDf559B4" // Vertex Spot Engine Arbitrum Sepolia
-                "0x32d91Af2B17054D575A7bF1ACfa7615f41CCEfaB" // Vertex Spot Engine Arbitrum Mainnet
+                "0xe85c385DF8EC6394a17D5773e90B51BAD40873A0", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Sepolia
+                await USDc.getAddress(), // Own USDC test in Arbitrum Sepolia
             ],
             [
                 EPOCH_START,
                 1 * 10 ** 5, // 0.1 $
                 100 * 10 ** 6, // 100 $
-                5000 * 10 ** 6, // 5000 $
-                3 * 10 ** 6, // 5 $
-                10 * 10 ** 6, // 10 $
-                ethers.parseEther("0.01")
+                5000000 * 10 ** 6, // 5000000 $
             ]
         ]
     );
 
-    console.log("Calculum Vault deployed to:", await Calculum.getAddress());
+    console.log("Test Vault Front Bear deployed to:", await TestVaultFrontBear.getAddress());
 
-    // Setting the Value of Epoch Duration and Maintenance Time Before and After
-    // await Calculum.connect(deployer).setEpochDuration(
-    //     epochDuration,
-    //     maintTimeBefore,
-    //     maintTimeAfter
-    // );
 
     // Verify Process ERC20 Token
     if (network.name !== "hardhat") {
-        console.log("Start verifying the Implementation Smart Contract");
+        console.log(`Start verifying the Implementation Smart Contract: ${contractName}`);
         await snooze(60000);
         const currentImplAddress = await getImplementationAddress(
             provider,
-            await Calculum.getAddress()
+            await TestVaultFrontBear.getAddress()
         );
-        console.log(`Current Implementation Address: ${currentImplAddress}`);
+        console.log(`Current Implementation Address: ${currentImplAddress} of Contract: ${contractName}`);
         await snooze(60000);
         await run("verify:verify", {
             address: currentImplAddress,
             constructorArguments: [],
             contract: `src/${contractName}.sol:${contractName}`,
         });
-        // // USDC Token
-        // await run("verify:verify", {
-        //     address: USDc.address,
-        //     constructorArguments: [],
-        //     contract: `contracts/USDC.sol:USDC`,
-        // });
-        // // Oracle
-        // await snooze(60000);
-        // await run("verify:verify", {
-        //     address: Oracle.address,
-        //     constructorArguments: [traderBotWallet.address, USDc.address],
-        //     contract: `contracts/mock/MockUpOracle.sol:MockUpOracle`,
-        // });
+        console.log(`Current USDC Address: ${await USDc.getAddress()} associate to the Contract: ${contractName}`);
+        await snooze(60000);
+        await run("verify:verify", {
+            address: await USDc.getAddress(),
+            constructorArguments: [],
+            contract: `src/USDC.sol:USDC`,
+        });
     }
 }
 
