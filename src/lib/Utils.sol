@@ -16,7 +16,14 @@ library Utils {
     using SafeMathUpgradeable for uint256;
     using MathUpgradeable for uint256;
 
-    address public constant OZW = 0xc6B04026Ad05981840aD6bD77c924c67bAeCf0DC; // OZW in Test Environment
+    address public constant OZW = 0xcE42A43C47b3B5cAa3f5385e679dCbF42Eeab5ce; // Unit-Test
+    address public constant FQuerier = 0x1693273B443699bee277eCbc60e2C8027E91995d; // Arbitrum Mainnet
+    // address public constant OZW = 0x63833F79b09123e97672E9cbE6C2E976F0452318; // Arbitrum Sepolia
+    // address public constant OZW = 0x3194E6AFB431d12b79A398Cf4788ebf9213b8Cc7; // Unit-Test
+
+    bytes12 private constant defaultSubaccountName = bytes12(abi.encodePacked("default"));
+    string constant DEFAULT_REFERRAL_CODE = "-1";
+
 
     /**
      * @dev Method to Calculate the Transfer Bot Gas Reserve in USDC in the current epoch
@@ -155,17 +162,6 @@ library Utils {
         uint64 nonce;
     }
 
-    struct DepositCollateral {
-        // last 12 bytes of the subaccount bytes32
-        bytes12 subaccountName;
-        uint32 productId;
-        // raw amount of the ERC20 contract; i.e.
-        // if USDC has 6 decimals and you want to deposit 1 USDC
-        // provide 1e6; if wETH has 18 decimals and you want to
-        // deposit 1 wETH, provide 1e18
-        uint128 amount;
-    }
-
     struct WithdrawCollateral {
         bytes32 sender;
         uint32 productId;
@@ -173,25 +169,21 @@ library Utils {
         uint64 nonce;
     }
 
-    function getVertexBalance(address spotEngine, address subaccount, uint32 productId)
-        internal
-        view
-        returns (uint256 balance)
-    {
-        (, ISpotEngine.Balance memory Balance) = ISpotEngine(spotEngine).getStateAndBalance(
-            productId, bytes32(uint256(uint160(subaccount)) << 96)
+    function getVertexBalance(uint32 productId) public returns (uint256 balance) {
+        IFQuerier.SpotBalance memory spotBalance = IFQuerier(FQuerier).getSpotBalance(
+            bytes32(abi.encodePacked(uint160(address(this)), defaultSubaccountName)), productId
         );
-        balance = Balance.amount < 0 ? 0 : uint128(Balance.amount);
+        balance = spotBalance.balance.amount < 0 ? 0 : uint256(uint128(spotBalance.balance.amount));
     }
 
     function linkVertexSigner(address vertexEndpoint, address asset, address externalAccount)
-        internal
+        public
     {
         _payFeeVertex(vertexEndpoint, asset, 0);
-        bytes12 defaultSubaccountName = bytes12(abi.encodePacked("default"));
         bytes32 contractSubaccount =
             bytes32(abi.encodePacked(uint160(address(this)), defaultSubaccountName));
-        bytes32 externalSubaccount = bytes32(uint256(uint160(externalAccount)) << 96);
+        bytes32 externalSubaccount =
+            bytes32(abi.encodePacked(uint160(externalAccount), defaultSubaccountName));
         LinkSigner memory linkSigner = LinkSigner(
             contractSubaccount,
             externalSubaccount,
@@ -202,35 +194,33 @@ library Utils {
     }
 
     // TODO: need to add deposit method for Vertex
-    function depositVertexCollateral(
+    function depositCollateralWithReferral(
         address vertexEndpoint,
         address asset,
-        address subaccount,
         uint32 productId,
         uint256 amount
-    ) internal {
+    ) public {
         _payFeeVertex(vertexEndpoint, asset, amount);
-        bytes32 addrBytes32 = bytes32(uint256(uint160(subaccount)));
-        bytes12 result;
-        assembly {
-            mstore(result, addrBytes32)
-        }
-        IEndpoint(vertexEndpoint).depositCollateral(result, productId, uint128(amount));
+        bytes32 addrBytes32 =
+            bytes32(abi.encodePacked(uint160(address(this)), defaultSubaccountName));
+        IEndpoint(vertexEndpoint).depositCollateralWithReferral(
+            addrBytes32, productId, uint128(amount), DEFAULT_REFERRAL_CODE
+        );
     }
 
     function withdrawVertexCollateral(
         address vertexEndpoint,
         address asset,
-        address sender,
         uint32 productId,
-        uint128 amount
-    ) internal {
+        uint256 amount
+    ) public {
         _payFeeVertex(vertexEndpoint, asset, 0);
+        uint64 nonce = IEndpoint(vertexEndpoint).getNonce(address(this));
         WithdrawCollateral memory withdrawal = WithdrawCollateral(
-            bytes32(uint256(uint160(sender)) << 96),
+            bytes32(abi.encodePacked(uint160(address(this)), defaultSubaccountName)),
             productId,
-            amount,
-            IEndpoint(vertexEndpoint).getNonce(sender)
+            uint128(amount),
+            nonce
         );
         bytes memory txs = abi.encodePacked(uint8(2), abi.encode(withdrawal));
         IEndpoint(vertexEndpoint).submitSlowModeTransaction(txs);
@@ -238,8 +228,9 @@ library Utils {
 
     function _payFeeVertex(address vertexEndpoint, address asset, uint256 amount) private {
         IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(asset);
-        uint256 assetDecimals = 10 ** _asset.decimals();
-        _asset.approve(vertexEndpoint, amount + assetDecimals);
-        SafeERC20Upgradeable.safeTransferFrom(_asset, address(OZW), address(this), assetDecimals);
+        _asset.approve(vertexEndpoint, amount + 10 ** _asset.decimals());
+        SafeERC20Upgradeable.safeTransferFrom(
+            _asset, address(OZW), address(this), 10 ** _asset.decimals()
+        );
     }
 }
