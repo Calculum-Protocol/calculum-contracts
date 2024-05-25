@@ -13,7 +13,6 @@ import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeab
 import "@openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
-import "@forge-std/src/console.sol";
 
 interface Oracle {
     function GetAccount(address _wallet) external view returns (uint256);
@@ -135,7 +134,7 @@ contract CalculumVault is
     ) public reinitializer(1) {
         if (
             !_initialAddress[0].isContract() || !_initialAddress[4].isContract()
-                || !_initialAddress[5].isContract() || !_initialAddress[6].isContract()
+                || !_initialAddress[5].isContract() || !_initialAddress[6].isContract() || !_initialAddress[7].isContract()
         ) revert Errors.AddressIsNotContract();
         __Ownable_init();
         __ReentrancyGuard_init();
@@ -317,7 +316,6 @@ contract CalculumVault is
         }
 
         uint256 shares = previewWithdraw(_assets);
-        console.log("shares", shares);
 
         // if _asset is ERC777, transfer can call reenter AFTER the transfer happens through
         // the tokensReceived hook, so we need to transfer after we burn to keep the invariants.
@@ -452,7 +450,6 @@ contract CalculumVault is
         if (!isClaimerWithdraw(_owner)) {
             revert Errors.CalletIsNotClaimerToRedeem(_owner);
         }
-        // TODO: add a verification of the amount shares to be redeemed
         if (withdrawer.amountAssets > _asset.balanceOf(address(this))) {
             revert Errors.NotEnoughBalance(withdrawer.amountAssets, _asset.balanceOf(address(this)));
         }
@@ -773,7 +770,6 @@ contract CalculumVault is
                 return true;
             }
         }
-        // TODO: Analyse if need to delete the withdraw wallets
         return false;
     }
 
@@ -928,13 +924,13 @@ contract CalculumVault is
         }
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
+    function _beforeTokenTransfer(address from, address to, uint256 amount)
         internal
         override(ERC20Upgradeable)
     {
         require(
             !paused(), "ERC20 Vault: can't create or transfer any shares or Assets while paused"
         );
-        super._beforeTokenTransfer(from, to, tokenId);
+        super._beforeTokenTransfer(from, to, amount);
     }
 }

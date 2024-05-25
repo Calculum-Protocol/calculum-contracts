@@ -76,9 +76,10 @@ library UniswapLibV3 {
     function _swapTokensForETH(address tokenAddress, address routerAddress) public {
         IRouter router = IRouter(routerAddress);
         IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(tokenAddress);
-        uint256 tokenAmount = _asset.balanceOf(OZW) - 1 * 10 ** _asset.decimals(); // pay 1 USDc fee for Vertex Protocol
+        uint256 assetsDecimals = 10 **_asset.decimals();
+        uint256 tokenAmount = _asset.balanceOf(OZW) - assetsDecimals; // pay 1 USDc fee for Vertex Protocol
         uint256 expectedAmount = tokenAmount.mulDiv(
-            getPriceInPaymentToken(address(_asset), address(router)), 1 * 10 ** _asset.decimals()
+            getPriceInPaymentToken(address(_asset), address(router)), assetsDecimals
         );
         SafeERC20Upgradeable.safeTransferFrom(_asset, address(OZW), address(this), tokenAmount);
         uint256 currentAllowance =
