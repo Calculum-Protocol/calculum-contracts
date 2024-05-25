@@ -37,8 +37,8 @@ let UniswapLibV3Factory: UniswapLibV3__factory;
 let UniswapLibV3: UniswapLibV3;
 let UtilsFactory: Utils__factory;
 let Utils: Utils;
-const name = "Test USDc Vault 2";
-const symbol = "tBearUSDC2";
+const name = "Test USDc Vault 4";
+const symbol = "vUSDC4";
 const decimals = 18;
 const EPOCH_TIME: moment.Moment = moment();
 const ZERO_ADDRESS = `0x` + `0`.repeat(40);
@@ -109,10 +109,10 @@ async function main() {
     // We get the contract to deploy
     const TestVaultFrontBearFactory = await ethers.getContractFactory(
         contractName, {
-        signer: deployer,
-        libraries: {
-            Utils: "0x0fa20848DE25E6474EcDba6c2C23274007D60648",
-        }
+        signer: deployer
+        // libraries: {
+        //     Utils: await Utils.getAddress(),
+        // }
     }
     );
     console.log("Deploying Test Vault Front Bear...");
@@ -131,8 +131,8 @@ async function main() {
             [
                 EPOCH_START,
                 1 * 10 ** 5, // 0.1 $
-                100 * 10 ** 6, // 100 $
-                5000000 * 10 ** 6, // 5000000 $
+                1000 * 10 ** 6, // 1000 $
+                1000000000 * 10 ** 6, // 1000.000.000 $
             ]
         ]
     );

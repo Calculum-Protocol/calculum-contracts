@@ -282,11 +282,7 @@ interface IEndpoint is IVersion {
         bytes signature;
     }
 
-    function depositCollateral(
-        bytes12 subaccountName,
-        uint32 productId,
-        uint128 amount
-    ) external;
+    function depositCollateral(bytes12 subaccountName, uint32 productId, uint128 amount) external;
 
     function depositCollateralWithReferral(
         bytes32 subaccount,
@@ -299,10 +295,7 @@ interface IEndpoint is IVersion {
 
     function getBook(uint32 productId) external view returns (address);
 
-    function submitTransactionsChecked(
-        uint64 idx,
-        bytes[] calldata transactions
-    ) external;
+    function submitTransactionsChecked(uint64 idx, bytes[] calldata transactions) external;
 
     function submitSlowModeTransaction(bytes calldata transaction) external;
 

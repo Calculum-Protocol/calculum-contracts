@@ -49,11 +49,9 @@ interface IProductEngine is IProductEngineState {
         int128 lpSpreadX18
     ) external returns (int128, int128);
 
-    function swapLp(
-        uint32 productId,
-        int128 baseDelta,
-        int128 quoteDelta
-    ) external returns (int128, int128);
+    function swapLp(uint32 productId, int128 baseDelta, int128 quoteDelta)
+        external
+        returns (int128, int128);
 
     function mintLp(
         uint32 productId,
@@ -70,9 +68,7 @@ interface IProductEngine is IProductEngineState {
         int128 amountLp
     ) external returns (int128, int128);
 
-    function decomposeLps(
-        bytes32 liquidatee,
-        bytes32 liquidator,
-        address feeCalculator
-    ) external returns (int128);
+    function decomposeLps(bytes32 liquidatee, bytes32 liquidator, address feeCalculator)
+        external
+        returns (int128);
 }

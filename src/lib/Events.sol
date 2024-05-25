@@ -4,7 +4,8 @@ pragma solidity ^0.8.19;
 /// @title Library Events
 abstract contract Events {
     /// Events
-    /** @title Helpers Methods
+    /**
+     * @title Helpers Methods
      * @dev Events for Vault Contract
      * @custom:a Alfredo Lopez / Calculum
      */
@@ -16,12 +17,8 @@ abstract contract Events {
      * @param assets Amount of Assets to Deposit/Mint
      * @param estimationOfShares Estimation of Amount of Shares to Mint
      */
-
     event PendingDeposit(
-        address indexed caller,
-        address indexed receiver,
-        uint256 assets,
-        uint256 estimationOfShares
+        address indexed caller, address indexed receiver, uint256 assets, uint256 estimationOfShares
     );
 
     /**
@@ -39,19 +36,13 @@ abstract contract Events {
      * @param estimationOfShares Estimation of Amount of Shares to Mint
      */
     event PendingWithdraw(
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 estimationOfShares
+        address indexed receiver, address indexed owner, uint256 assets, uint256 estimationOfShares
     );
     /**
      * @dev Epoch Changed
      */
     event EpochChanged(
-        uint256 OldPeriod,
-        uint256 NewPeriod,
-        uint256 newMaintTimeBefore,
-        uint256 newMaintTimeAfter
+        uint256 OldPeriod, uint256 NewPeriod, uint256 newMaintTimeBefore, uint256 newMaintTimeAfter
     );
     /**
      * @dev Fees Transfer

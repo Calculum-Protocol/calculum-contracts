@@ -43,7 +43,7 @@ module.exports = {
             throwOnTransactionFailures: true,
             throwOnCallFailures: true,
             forking: {
-                url: `https://arbitrum-mainnet.infura.io/v3/${API_KEY}`,
+                url: `https://arb-mainnet.g.alchemy.com/v2/voUiqQJ9sM8RFiSeNnPK3tBXrvZhq-hy`,
             },
             accounts: {
                 mnemonic: MNEMONIC,

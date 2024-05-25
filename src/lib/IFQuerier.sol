@@ -3,9 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./ISpotEngine.sol";
 
-
 interface IFQuerier {
-
     struct SpotBalance {
         uint32 productId;
         ISpotEngine.LpBalance lpBalance;
@@ -13,6 +11,6 @@ interface IFQuerier {
     }
 
     function getSpotBalance(bytes32 subaccount, uint32 productId)
-        external returns (SpotBalance memory);
-    
+        external
+        returns (SpotBalance memory);
 }

@@ -85,7 +85,7 @@ const MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = ethers.parseEther("0.5");
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const USDC_ARB_ADDRESS = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
 const UNISWAP_ARB_ROUTER3 = "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45";
-const USDCe_ARB_BIG_HOLDER = "0x05e3a758FdD29d28435019ac453297eA37b61b62";
+const USDCe_ARB_BIG_HOLDER = "0xB38e8c17e38363aF6EbdCb3dAE12e0243582891D";
 const VERTEX_ENDPOINT = "0xbbEE07B3e8121227AfCFe1E2B82772246226128e";
 const CLEARING_HOUSE = "0xAE1ec28d6225dCE2ff787dcb8CE11cF6D3AE064f";
 const SPOT_ENGINE = "0x32d91Af2B17054D575A7bF1ACfa7615f41CCEfaB";
@@ -739,9 +739,9 @@ describe("Verification of Basic Value and Features 2", function () {
             decimals,
             [
                 await Oracle.getAddress(),
-                traderBotWallet.address,
-                treasuryWallet.address,
-                openZeppelinDefenderWallet.address,
+                await traderBotWallet.getAddress(),
+                await treasuryWallet.getAddress(),
+                await openZeppelinDefenderWallet.getAddress(),
                 UNISWAP_ARB_ROUTER3,
                 await USDc.getAddress(),
                 VERTEX_ENDPOINT,
@@ -785,12 +785,14 @@ describe("Verification of Basic Value and Features 2", function () {
             202 * 10 ** 6 // 200 + 2 for pay the first deposit and link signer to the Vertex Smart Contract
         );
         // Transfer 0.5 ETh from deployer to Contract Vault Address
-        await openZeppelinDefenderWallet.sendTransaction({
+        const txEth = await openZeppelinDefenderWallet.sendTransaction({
             to: deployer.address,
             value: (
                 await ethers.provider.getBalance(await openZeppelinDefenderWallet.getAddress())
                 - ethers.parseEther("0.5")),
         });
+
+        await txEth.wait();
 
         console.log(`EPOCH_START : ${EPOCH_START}`);
         console.log(

@@ -15,6 +15,7 @@ library DataTypes {
         Completed, // 3
         PendingRedeem, //4
         PendingWithdraw //5
+
     }
     /// Struct of Basics
 
@@ -33,7 +34,7 @@ library DataTypes {
     }
 
     // Transaction Type
-        // events that we parse transactions into
+    // events that we parse transactions into
     enum TransactionType {
         LiquidateSubaccount,
         DepositCollateral,

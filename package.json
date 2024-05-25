@@ -6,7 +6,7 @@
   "scripts": {
     "test": "yarn build && npx hardhat test ./test/index.test.ts --network hardhat",
     "test-local": "npx hardhat test --network local",
-    "lint": "prettier --list-different 'contracts/**/*.sol'",
+    "lint": "prettier --list-different 'src/**/*.sol'",
     "build": "rm -rf docs/ && npx hardhat clean && npx hardhat compile && npx hardhat docgen",
     "hardhat": "npx hardhat",
     "deploy": "npx hardhat run ./scripts/deploy.ts",

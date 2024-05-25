@@ -25,7 +25,7 @@ contract MockUpVertexInteraction is
     using MathUpgradeable for uint256;
     using AddressUpgradeable for address;
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    
+
     // Principal private Variable of ERC4626
 
     IERC20MetadataUpgradeable internal _asset;
@@ -71,10 +71,9 @@ contract MockUpVertexInteraction is
         uint8 decimals_,
         address[7] memory _initialAddress // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router, 4: USDCToken Address, 5: Vertex Endpoint, 6: Spot Engine Vertex
     ) public reinitializer(1) {
-            if (
-            !_initialAddress[4].isContract() ||
-            !_initialAddress[5].isContract() ||
-            !_initialAddress[6].isContract()
+        if (
+            !_initialAddress[4].isContract() || !_initialAddress[5].isContract()
+                || !_initialAddress[6].isContract()
         ) revert Errors.AddressIsNotContract();
         __Ownable_init();
         __ReentrancyGuard_init();
@@ -124,10 +123,7 @@ contract MockUpVertexInteraction is
         DEX_WALLET_BALANCE = Utils.getVertexBalance(0);
         // DEX_WALLET_BALANCE = oracle.GetAccount(address(traderBotWallet));
         if (DEX_WALLET_BALANCE == 0) {
-            revert Errors.ActualAssetValueIsZero(
-                address(spotEngine),
-                address(this)
-            );
+            revert Errors.ActualAssetValueIsZero(address(spotEngine), address(this));
         }
     }
 
@@ -137,11 +133,7 @@ contract MockUpVertexInteraction is
 
     function linkSigner() external onlyOwner {
         if (!linked) {
-            Utils.linkVertexSigner(
-                endpointVertex,
-                address(_asset),
-                address(traderBotWallet)
-            );
+            Utils.linkVertexSigner(endpointVertex, address(_asset), address(traderBotWallet));
             linked = true;
         }
     }
@@ -149,29 +141,15 @@ contract MockUpVertexInteraction is
     function dexTransfer(bool kind, uint256 amount) external nonReentrant {
         if (kind) {
             // Deposit
-            Utils.depositCollateralWithReferral(
-                endpointVertex,
-                address(_asset),
-                0,
-                amount
-            );
+            Utils.depositCollateralWithReferral(endpointVertex, address(_asset), 0, amount);
             // LinkSigner with EOA unique execution
             if (!linked) {
-                Utils.linkVertexSigner(
-                    endpointVertex,
-                    address(_asset),
-                    address(traderBotWallet)
-                );
+                Utils.linkVertexSigner(endpointVertex, address(_asset), address(traderBotWallet));
                 linked = true;
             }
         } else {
             // Withdrawl
-            Utils.withdrawVertexCollateral(
-                endpointVertex,
-                address(_asset),
-                0,
-                uint128(amount)
-            );
+            Utils.withdrawVertexCollateral(endpointVertex, address(_asset), 0, uint128(amount));
         }
         emit DexTransfer(kind ? 1 : 0, amount);
     }
@@ -187,5 +165,4 @@ contract MockUpVertexInteraction is
             spotEngine
         ];
     }
-
 }
