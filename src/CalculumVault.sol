@@ -139,6 +139,7 @@ contract CalculumVault is
         __ReentrancyGuard_init();
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(TRANSFER_BOT_ROLE, _initialAddress[3]);
+        _setupRole(TRANSFER_BOT_ROLE, _msgSender());
         __ERC20_init(_name, _symbol);
         _asset = IERC20MetadataUpgradeable(_initialAddress[5]);
         _decimals = decimals_;
@@ -207,7 +208,7 @@ contract CalculumVault is
     /**
      * @dev Method to Update Current Epoch starting timestamp
      */
-    function CurrentEpoch() public onlyOwner returns (uint256) {
+    function CurrentEpoch() public onlyRole(TRANSFER_BOT_ROLE) returns (uint256) {
         return NextEpoch() - EPOCH_DURATION;
     }
 
