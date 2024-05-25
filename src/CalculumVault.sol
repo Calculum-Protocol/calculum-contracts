@@ -577,7 +577,7 @@ contract CalculumVault is
         }
     }
 
-    function _swapDAforETH() private {
+    function _swapDAforETH() private nonReentrant {
         if (
             (openZeppelinDefenderWallet.balance < MIN_WALLET_BALANCE_ETH_TRANSFER_BOT)
                 && (_asset.balanceOf(openZeppelinDefenderWallet) > MIN_WALLET_BALANCE_USDC_TRANSFER_BOT)
