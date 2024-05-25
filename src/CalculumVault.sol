@@ -8,7 +8,6 @@ import "./lib/Errors.sol";
 import "./lib/IRouter.sol";
 import "./lib/UniswapLibV3.sol";
 import "./lib/Utils.sol";
-import "./lib/IEndpoint.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
