@@ -76,6 +76,7 @@ const decimals = 18;
 const epochDuration = 60 * 60 * 24 * 7;
 const maintTimeBefore = 60 * 60;
 const maintTimeAfter = 30 * 60;
+const floorwalletbalanceusdc = 5 * 10 ** 6; // 5$
 const MIN_DEPOSIT = 30000 * 10 ** 6;
 const MAX_DEPOSIT = 250000 * 10 ** 6;
 const MAX_TOTAL_DEPOSIT = 1000000 * 10 ** 6;
@@ -85,7 +86,7 @@ const MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = ethers.parseEther("0.5");
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const USDC_ARB_ADDRESS = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
 const UNISWAP_ARB_ROUTER3 = "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45";
-const USDCe_ARB_BIG_HOLDER = "0xa656f7d2A93A6F5878AA768f24eB38Ec8C827fE2";
+const USDCe_ARB_BIG_HOLDER = "0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7";
 const VERTEX_ENDPOINT = "0xbbEE07B3e8121227AfCFe1E2B82772246226128e";
 const CLEARING_HOUSE = "0xAE1ec28d6225dCE2ff787dcb8CE11cF6D3AE064f";
 const SPOT_ENGINE = "0x32d91Af2B17054D575A7bF1ACfa7615f41CCEfaB";
@@ -767,11 +768,11 @@ describe("Verification of Basic Value and Features 2", function () {
         await USDc.connect(carla).approve(await Calculum.getAddress(), 30000 * 10 ** 6);
         await USDc.connect(openZeppelinDefenderWallet).approve(
             await Calculum.getAddress(),
-            2000000 * 10 ** 6
+            200 * 10 ** 6 * 10 ** 6
         );
         await USDc.connect(traderBotWallet).approve(
             await Calculum.getAddress(),
-            2000000 * 10 ** 6
+            200 * 10 ** 6 * 10 ** 6
         );
         // Add deployer, alice, bob and carla wallet in the whitelist
         await Calculum.connect(deployer).addDropWhitelist(deployer.address, true);
@@ -909,7 +910,8 @@ describe("Verification of Basic Value and Features 2", function () {
             Calculum.connect(deployer).setEpochDuration(
                 epochDuration,
                 maintTimeBefore,
-                maintTimeAfter
+                maintTimeAfter,
+                floorwalletbalanceusdc
             )
         )
             .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
@@ -973,7 +975,8 @@ describe("Verification of Basic Value and Features 2", function () {
         await Calculum.connect(deployer).setEpochDuration(
             epochDuration,
             maintTimeBefore,
-            maintTimeAfter
+            maintTimeAfter,
+            floorwalletbalanceusdc
         );
         // Verify Epoch Duration
         expect(await Calculum.EPOCH_DURATION()).to.equal(epochDuration);
@@ -1195,7 +1198,8 @@ describe("Verification of Basic Value and Features 2", function () {
             Calculum.connect(deployer).setEpochDuration(
                 epochDuration,
                 maintTimeBefore,
-                maintTimeAfter
+                maintTimeAfter,
+                floorwalletbalanceusdc
             )
         )
             .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
@@ -1259,7 +1263,8 @@ describe("Verification of Basic Value and Features 2", function () {
         await Calculum.connect(deployer).setEpochDuration(
             epochDuration,
             maintTimeBefore,
-            maintTimeAfter
+            maintTimeAfter,
+            floorwalletbalanceusdc
         );
         // Verify Epoch Duration
         expect(await Calculum.EPOCH_DURATION()).to.equal(epochDuration);
@@ -1437,7 +1442,8 @@ describe("Verification of Basic Value and Features 2", function () {
             Calculum.connect(deployer).setEpochDuration(
                 epochDuration,
                 maintTimeBefore,
-                maintTimeAfter
+                maintTimeAfter,
+                floorwalletbalanceusdc
             )
         )
             .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
@@ -1502,7 +1508,8 @@ describe("Verification of Basic Value and Features 2", function () {
         await Calculum.connect(deployer).setEpochDuration(
             epochDuration,
             maintTimeBefore,
-            maintTimeAfter
+            maintTimeAfter,
+            floorwalletbalanceusdc
         );
         // Verify Epoch Duration
         expect(await Calculum.EPOCH_DURATION()).to.equal(epochDuration);
@@ -1678,7 +1685,8 @@ describe("Verification of Basic Value and Features 2", function () {
             Calculum.connect(deployer).setEpochDuration(
                 epochDuration,
                 maintTimeBefore,
-                maintTimeAfter
+                maintTimeAfter,
+                floorwalletbalanceusdc
             )
         )
             .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
@@ -1745,7 +1753,8 @@ describe("Verification of Basic Value and Features 2", function () {
         await Calculum.connect(deployer).setEpochDuration(
             epochDuration,
             maintTimeBefore,
-            maintTimeAfter
+            maintTimeAfter,
+            floorwalletbalanceusdc
         );
         // Verify Epoch Duration
         expect(await Calculum.EPOCH_DURATION()).to.equal(epochDuration);
@@ -1933,7 +1942,7 @@ describe("Verification of Basic Value and Features 2", function () {
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
-            .withArgs(await Calculum.CURRENT_EPOCH(), ethers.parseUnits("453745010", "wei"));
+            .withArgs(await Calculum.CURRENT_EPOCH(), 448745010);
         // Start summarize the Epoch
         console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
         console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
@@ -1952,20 +1961,22 @@ describe("Verification of Basic Value and Features 2", function () {
         console.log('\x1b[32m%s\x1b[0m', "Vault Token Price: ", parseInt((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))) / 10 ** 6);
         console.log('\x1b[32m%s\x1b[0m', "Net Transfer Amount: ", parseInt(netTransferAmount) / 10 ** 6);
         // The Amount of USDc in the Dex Wallet is 1500000 USDc minus the last fee
-        // expect(
-        //     parseInt((await USDc.balanceOf(traderBotWallet.address))) / 10 ** 6
-        // ).to.equal(32980295 / 100);
         console.log("Balance USDc of Dex Wallet: ", parseInt((await USDc.balanceOf(traderBotWallet.address))) / 10 ** 6);
         // Verify the Balance of USDc of treasury in the Vault
         expect(
             parseInt((await USDc.balanceOf(treasuryWallet.address))) /
             10 ** 6
-        ).to.equal(452.74501);
+        ).to.equal(448.74501);
         console.log(
             "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
             parseInt((await USDc.balanceOf(treasuryWallet.address))) /
             10 ** 6
         );
+        //  Verify the Balance of USDc of Calculum in the Vault is equal to 5 USDc
+        expect(
+            parseInt((await USDc.balanceOf(await Calculum.getAddress()))) /
+            10 ** 6
+        ).to.equal(5);
         // Validate Last Balance of TransferBot Role Wallet in USDc, comparring with value in the Excel Spread Sheet
         expect(
             (await USDc.balanceOf(openZeppelinDefenderWallet.address)) / BigInt("1000000")
@@ -1984,7 +1995,8 @@ describe("Verification of Basic Value and Features 2", function () {
             Calculum.connect(deployer).setEpochDuration(
                 epochDuration,
                 maintTimeBefore,
-                maintTimeAfter
+                maintTimeAfter,
+                floorwalletbalanceusdc
             )
         )
             .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
@@ -2051,7 +2063,8 @@ describe("Verification of Basic Value and Features 2", function () {
         await Calculum.connect(deployer).setEpochDuration(
             epochDuration,
             maintTimeBefore,
-            maintTimeAfter
+            maintTimeAfter,
+            floorwalletbalanceusdc
         );
         // Verify Epoch Duration
         expect(await Calculum.EPOCH_DURATION()).to.equal(epochDuration);
@@ -2238,11 +2251,11 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         expect(
             parseInt((await USDc.balanceOf(await Calculum.getAddress()))) / 10 ** 6
-        ).to.equal(23799.934789);
+        ).to.equal(23803.934789);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
-            .withArgs(await Calculum.CURRENT_EPOCH(), ethers.parseUnits("23799934789", "wei"));
+            .withArgs(await Calculum.CURRENT_EPOCH(), 23798934789);
         // Start summarize the Epoch
         console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
         console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
@@ -2264,12 +2277,17 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(
             parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
             10 ** 6
-        ).to.equal(24251.679799);
+        ).to.equal(24247.679799);
         console.log(
             "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
             parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
             10 ** 6
         );
+        //  Verify the Balance of USDc of Calculum in the Vault is equal to 5 USDc
+        expect(
+            parseInt((await USDc.balanceOf(await Calculum.getAddress()))) /
+            10 ** 6
+        ).to.equal(5);
         // Validate Last Balance of TransferBot Role Wallet in USDc, comparring with value in the Excel Spread Sheet
         expect(
             parseInt(await USDc.balanceOf(openZeppelinDefenderWallet.address)) / 10 ** 6
@@ -2288,7 +2306,8 @@ describe("Verification of Basic Value and Features 2", function () {
             Calculum.connect(deployer).setEpochDuration(
                 epochDuration,
                 maintTimeBefore,
-                maintTimeAfter
+                maintTimeAfter,
+                floorwalletbalanceusdc
             )
         )
             .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
@@ -2355,7 +2374,8 @@ describe("Verification of Basic Value and Features 2", function () {
         await Calculum.connect(deployer).setEpochDuration(
             epochDuration,
             maintTimeBefore,
-            maintTimeAfter
+            maintTimeAfter,
+            floorwalletbalanceusdc
         );
         // Verify Epoch Duration
         expect(await Calculum.EPOCH_DURATION()).to.equal(epochDuration);
@@ -2453,11 +2473,11 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         expect(
             (await USDc.balanceOf(await Calculum.getAddress()))
-        ).to.equal(131852454711);
+        ).to.equal(131856454711);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
-            .withArgs(await Calculum.CURRENT_EPOCH(), 1852396626);
+            .withArgs(await Calculum.CURRENT_EPOCH(), 1847396626);
         // Start summarize the Epoch
         console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
         console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
@@ -2479,12 +2499,17 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(
             parseInt((await USDc.balanceOf(treasuryWallet.address))) /
             10 ** 6
-        ).to.equal(26103.076425);
+        ).to.equal(26095.076425);
         console.log(
             "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
             parseInt((await USDc.balanceOf(treasuryWallet.address))) /
             10 ** 6
         );
+        //  Verify the Balance of USDc of Calculum in the Vault is equal to 5 USDc + Withdrawal of Alice pending for next Epoch
+        expect(
+            parseInt((await USDc.balanceOf(await Calculum.getAddress()))) /
+            10 ** 6
+        ).to.equal(130004.058085 + 5);
         // Validate Last Balance of TransferBot Role Wallet in USDc, comparring with value in the Excel Spread Sheet
         expect(
             parseInt(await USDc.balanceOf(openZeppelinDefenderWallet.address)) / 10 ** 6
@@ -2503,7 +2528,8 @@ describe("Verification of Basic Value and Features 2", function () {
             Calculum.connect(deployer).setEpochDuration(
                 epochDuration,
                 maintTimeBefore,
-                maintTimeAfter
+                maintTimeAfter,
+                floorwalletbalanceusdc
             )
         )
             .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
@@ -2570,7 +2596,8 @@ describe("Verification of Basic Value and Features 2", function () {
         await Calculum.connect(deployer).setEpochDuration(
             epochDuration,
             maintTimeBefore,
-            maintTimeAfter
+            maintTimeAfter,
+            floorwalletbalanceusdc
         );
         // Verify Epoch Duration
         expect(await Calculum.EPOCH_DURATION()).to.equal(epochDuration);
@@ -2726,11 +2753,11 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         expect(
             (await USDc.balanceOf(await Calculum.getAddress()))
-        ).to.equal(15067221433);
+        ).to.equal(15075221433);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
-            .withArgs(await Calculum.CURRENT_EPOCH(), 67208341);
+            .withArgs(await Calculum.CURRENT_EPOCH(), 62208341);
         // Start summarize the Epoch
         console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
         console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
@@ -2751,12 +2778,17 @@ describe("Verification of Basic Value and Features 2", function () {
         // Verify the Balance of USDc of treasury in the Vault
         expect(
             (await USDc.balanceOf(treasuryWallet.address))
-        ).to.equal(26169284766);
+        ).to.equal(26157284766);
         console.log(
             "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
             parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
             10 ** 6
         );
+        //  Verify the Balance of USDc of Calculum in the Vault is equal to 5 USDc + Withdrawal of Carla pending for next Epoch
+        expect(
+            parseInt((await USDc.balanceOf(await Calculum.getAddress()))) /
+            10 ** 6
+        ).to.equal(15008.013092 + 5);
         // Validate Last Balance of TransferBot Role Wallet in USDc, comparring with value in the Excel Spread Sheet
         expect(
             (await USDc.balanceOf(openZeppelinDefenderWallet.address))
@@ -2775,7 +2807,8 @@ describe("Verification of Basic Value and Features 2", function () {
             Calculum.connect(deployer).setEpochDuration(
                 epochDuration,
                 maintTimeBefore,
-                maintTimeAfter
+                maintTimeAfter,
+                floorwalletbalanceusdc
             )
         )
             .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
@@ -2842,7 +2875,8 @@ describe("Verification of Basic Value and Features 2", function () {
         await Calculum.connect(deployer).setEpochDuration(
             epochDuration,
             maintTimeBefore,
-            maintTimeAfter
+            maintTimeAfter,
+            floorwalletbalanceusdc
         );
         // Verify Epoch Duration
         expect(await Calculum.EPOCH_DURATION()).to.equal(epochDuration);
@@ -2966,11 +3000,11 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         expect(
             (await USDc.balanceOf(await Calculum.getAddress()))
-        ).to.equal(1521430420);
+        ).to.equal(1533430420);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
-            .withArgs(await Calculum.CURRENT_EPOCH(), 1521430420);
+            .withArgs(await Calculum.CURRENT_EPOCH(), 1516430420);
         // Start summarize the Epoch
         console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
         console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
@@ -2991,12 +3025,17 @@ describe("Verification of Basic Value and Features 2", function () {
         // Verify the Balance of USDc of treasury in the Vault
         expect(
             (await USDc.balanceOf(treasuryWallet.address))
-        ).to.equal(27689.715186 * 10 ** 6);
+        ).to.equal(27673.715186 * 10 ** 6);
         console.log(
             "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
             parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
             10 ** 6
         );
+        //  Verify the Balance of USDc of Calculum in the Vault is equal to 5 USDc + 12 USDc not precision where?
+        expect(
+            parseInt((await USDc.balanceOf(await Calculum.getAddress()))) /
+            10 ** 6
+        ).to.equal(12+5);
         // Validate Last Balance of TransferBot Role Wallet in USDc, comparring with value in the Excel Spread Sheet
         expect(
             (await USDc.balanceOf(openZeppelinDefenderWallet.address))
@@ -3015,7 +3054,8 @@ describe("Verification of Basic Value and Features 2", function () {
             Calculum.connect(deployer).setEpochDuration(
                 epochDuration,
                 maintTimeBefore,
-                maintTimeAfter
+                maintTimeAfter,
+                floorwalletbalanceusdc
             )
         )
             .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
@@ -3082,7 +3122,8 @@ describe("Verification of Basic Value and Features 2", function () {
         await Calculum.connect(deployer).setEpochDuration(
             epochDuration,
             maintTimeBefore,
-            maintTimeAfter
+            maintTimeAfter,
+            floorwalletbalanceusdc
         );
         // Verify Epoch Duration
         expect(await Calculum.EPOCH_DURATION()).to.equal(epochDuration);
@@ -3213,7 +3254,7 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         expect(
             (await USDc.balanceOf(await Calculum.getAddress()))
-        ).to.equal(340750527050);
+        ).to.equal(340766527050);
         // Call FeeTransfer to transfer the amount of USDc to the Fee Address
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
@@ -3247,6 +3288,11 @@ describe("Verification of Basic Value and Features 2", function () {
             parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
             10 ** 6
         );
+        //  Verify the Balance of USDc of Calculum in the Vault is equal to 5 USDc
+        expect(
+            parseInt((await USDc.balanceOf(await Calculum.getAddress()))) /
+            10 ** 6
+        ).to.equal(5);
         // Validate Last Balance of TransferBot Role Wallet in USDc, comparring with value in the Excel Spread Sheet
         expect(
             (await USDc.balanceOf(openZeppelinDefenderWallet.address))
@@ -3265,7 +3311,8 @@ describe("Verification of Basic Value and Features 2", function () {
             Calculum.connect(deployer).setEpochDuration(
                 epochDuration,
                 maintTimeBefore,
-                maintTimeAfter
+                maintTimeAfter,
+                floorwalletbalanceusdc
             )
         )
             .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
@@ -3332,7 +3379,8 @@ describe("Verification of Basic Value and Features 2", function () {
         await Calculum.connect(deployer).setEpochDuration(
             epochDuration,
             maintTimeBefore,
-            maintTimeAfter
+            maintTimeAfter,
+            floorwalletbalanceusdc
         );
         // Verify Epoch Duration
         expect(await Calculum.EPOCH_DURATION()).to.equal(epochDuration);
@@ -3590,7 +3638,8 @@ describe("Verification of Basic Value and Features 2", function () {
             Calculum.connect(deployer).setEpochDuration(
                 epochDuration,
                 maintTimeBefore,
-                maintTimeAfter
+                maintTimeAfter,
+                floorwalletbalanceusdc
             )
         )
             .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
@@ -3657,7 +3706,8 @@ describe("Verification of Basic Value and Features 2", function () {
         await Calculum.connect(deployer).setEpochDuration(
             epochDuration,
             maintTimeBefore,
-            maintTimeAfter
+            maintTimeAfter,
+            floorwalletbalanceusdc
         );
         // Verify Epoch Duration
         expect(await Calculum.EPOCH_DURATION()).to.equal(epochDuration);

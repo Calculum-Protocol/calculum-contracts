@@ -239,11 +239,7 @@ interface IEndpoint is IVersion {
         bytes32 recipient;
     }
 
-    function depositCollateral(
-        bytes12 subaccountName,
-        uint32 productId,
-        uint128 amount
-    ) external;
+    function depositCollateral(bytes12 subaccountName, uint32 productId, uint128 amount) external;
 
     function depositCollateralWithReferral(
         bytes12 subaccountName,
@@ -263,10 +259,7 @@ interface IEndpoint is IVersion {
 
     function getBook(uint32 productId) external view returns (address);
 
-    function submitTransactionsChecked(
-        uint64 idx,
-        bytes[] calldata transactions
-    ) external;
+    function submitTransactionsChecked(uint64 idx, bytes[] calldata transactions) external;
 
     function submitSlowModeTransaction(bytes calldata transaction) external;
 
@@ -274,10 +267,7 @@ interface IEndpoint is IVersion {
 
     function getPriceX18(uint32 productId) external view returns (int128);
 
-    function getPricesX18(uint32 healthGroup)
-        external
-        view
-        returns (Prices memory);
+    function getPricesX18(uint32 healthGroup) external view returns (Prices memory);
 
     function getTime() external view returns (uint128);
 
@@ -287,8 +277,5 @@ interface IEndpoint is IVersion {
 
     function getSubaccountId(bytes32 subaccount) external view returns (uint64);
 
-    function getSubaccountById(uint64 subaccountId)
-        external
-        view
-        returns (bytes32);
+    function getSubaccountById(uint64 subaccountId) external view returns (bytes32);
 }

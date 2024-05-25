@@ -14,23 +14,17 @@ interface IClearinghouse is
     IEndpointGated,
     IVersion
 {
-    function addEngine(address engine, IProductEngine.EngineType engineType)
-        external;
+    function addEngine(address engine, IProductEngine.EngineType engineType) external;
 
-    function registerProductForId(
-        address book,
-        RiskStore memory riskStore,
-        uint32 healthGroup
-    ) external returns (uint32);
+    function registerProductForId(address book, RiskStore memory riskStore, uint32 healthGroup)
+        external
+        returns (uint32);
 
-    function modifyProductConfig(uint32 productId, RiskStore memory riskStore)
-        external;
+    function modifyProductConfig(uint32 productId, RiskStore memory riskStore) external;
 
-    function depositCollateral(IEndpoint.DepositCollateral calldata tx)
-        external;
+    function depositCollateral(IEndpoint.DepositCollateral calldata tx) external;
 
-    function withdrawCollateral(IEndpoint.WithdrawCollateral calldata tx)
-        external;
+    function withdrawCollateral(IEndpoint.WithdrawCollateral calldata tx) external;
 
     function mintLp(IEndpoint.MintLp calldata tx) external;
 
@@ -38,11 +32,9 @@ interface IClearinghouse is
 
     function burnLp(IEndpoint.BurnLp calldata tx) external;
 
-    function burnLpAndTransfer(IEndpoint.BurnLpAndTransfer calldata tx)
-        external;
+    function burnLpAndTransfer(IEndpoint.BurnLpAndTransfer calldata tx) external;
 
-    function liquidateSubaccount(IEndpoint.LiquidateSubaccount calldata tx)
-        external;
+    function liquidateSubaccount(IEndpoint.LiquidateSubaccount calldata tx) external;
 
     function depositInsurance(IEndpoint.DepositInsurance calldata tx) external;
 
@@ -50,10 +42,8 @@ interface IClearinghouse is
 
     function updateFeeRates(IEndpoint.UpdateFeeRates calldata tx) external;
 
-    function claimSequencerFees(
-        IEndpoint.ClaimSequencerFees calldata tx,
-        int128[] calldata fees
-    ) external;
+    function claimSequencerFees(IEndpoint.ClaimSequencerFees calldata tx, int128[] calldata fees)
+        external;
 
     /// @notice Retrieve quote ERC20 address
     function getQuote() external view returns (address);
@@ -65,10 +55,7 @@ interface IClearinghouse is
         returns (address);
 
     /// @notice Returns the engine associated with a product ID
-    function getEngineByProduct(uint32 productId)
-        external
-        view
-        returns (address);
+    function getEngineByProduct(uint32 productId) external view returns (address);
 
     /// @notice Returns the orderbook associated with a product ID
     function getOrderbook(uint32 productId) external view returns (address);

@@ -20,11 +20,7 @@ library MathSD21x18 {
         }
     }
 
-    function mulDiv(
-        int128 x,
-        int128 y,
-        int128 z
-    ) internal pure returns (int128) {
+    function mulDiv(int128 x, int128 y, int128 z) internal pure returns (int128) {
         unchecked {
             require(z != 0, ERR_DIV_BY_ZERO);
             int256 result = (int256(x) * y) / z;
@@ -101,4 +97,4 @@ library MathSD21x18 {
             return result;
         }
     }
-}   
+}

@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
@@ -65,45 +64,33 @@ interface ISpotEngine is IProductEngine {
         view
         returns (Balance memory);
 
-    function hasBalance(uint32 productId, bytes32 subaccount)
-        external
-        view
-        returns (bool);
+    function hasBalance(uint32 productId, bytes32 subaccount) external view returns (bool);
 
     function getStatesAndBalances(uint32 productId, bytes32 subaccount)
         external
         view
-        returns (
-            LpState memory,
-            LpBalance memory,
-            State memory,
-            Balance memory
-        );
+        returns (LpState memory, LpBalance memory, State memory, Balance memory);
 
     function getBalances(uint32 productId, bytes32 subaccount)
         external
         view
         returns (LpBalance memory, Balance memory);
 
-    function getLpState(uint32 productId)
-        external
-        view
-        returns (LpState memory);
+    function getLpState(uint32 productId) external view returns (LpState memory);
 
     function getConfig(uint32 productId) external view returns (Config memory);
 
     function getWithdrawFee(uint32 productId) external view returns (int128);
 
     function isPlaceholder(uint32 productId) external view returns (bool);
-    
+
     function getToken(uint32 productId) external view returns (address);
 
     function updateStates(uint128 dt) external;
 
-    function manualAssert(
-        int128[] calldata totalDeposits,
-        int128[] calldata totalBorrows
-    ) external view;
+    function manualAssert(int128[] calldata totalDeposits, int128[] calldata totalBorrows)
+        external
+        view;
 
     function socializeSubaccount(bytes32 subaccount) external;
 

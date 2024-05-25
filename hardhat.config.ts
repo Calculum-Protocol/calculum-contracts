@@ -16,6 +16,7 @@ dotenv.config();
 const MNEMONIC =
     process.env.MNEMONIC!;
 const API_KEY = process.env.INFURAKEY || "ffc8f8f8f8f8f8f8f8f8f8f8f8f8f8f8";
+const ALCHEMY_KEY = process.env.ALCHEMY_KEY || "ffc8f8f8f8f8f8f8f8f8f8f8f8f8f8";
 const ACCOUNTS = parseInt(process.env.ACCOUNTS!);
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -42,7 +43,7 @@ module.exports = {
             throwOnTransactionFailures: true,
             throwOnCallFailures: true,
             forking: {
-                url: `https://arbitrum-mainnet.infura.io/v3/${API_KEY}`,
+                url: `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
             },
             accounts: {
                 mnemonic: MNEMONIC,

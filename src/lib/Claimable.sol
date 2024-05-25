@@ -41,21 +41,13 @@ abstract contract Claimable is OwnableUpgradeable, Events {
      * @param _token address of the claimed token or address(0) for native coins.
      * @param _to address of the tokens/coins receiver.
      */
-    function claimValues(
-        address _token,
-        address _to
-    )
-        public
-        onlyOwner
-        validAddress(_to) /// /// notBlacklisted(_to)
+    function claimValues(address _token, address _to) public onlyOwner validAddress(_to) 
+    /// /// notBlacklisted(_to)
     {
         if (_token == address(0)) {
             _claimNativeCoins(_to);
         } else {
-            require(
-                _token.isContract(),
-                "ERC20 Vault: Address: not a contract"
-            );
+            require(_token.isContract(), "ERC20 Vault: Address: not a contract");
             _claimErc20Tokens(_token, _to);
         }
     }
@@ -68,11 +60,8 @@ abstract contract Claimable is OwnableUpgradeable, Events {
         uint256 amount = address(this).balance;
 
         // solhint-disable-next-line avoid-low-level-calls, avoid-call-value
-        (bool success, ) = _to.call{value: amount}("");
-        require(
-            success,
-            "ERC20: Address: unable to send value, recipient may have reverted"
-        );
+        (bool success,) = _to.call{value: amount}("");
+        require(success, "ERC20: Address: unable to send value, recipient may have reverted");
     }
 
     /**
@@ -91,10 +80,7 @@ abstract contract Claimable is OwnableUpgradeable, Events {
      * @param _token address of the claimed ERC721 token.
      * @param _to address of the tokens receiver.
      */
-    function _claimErc721Tokens(
-        address _token,
-        address _to
-    ) public validAddress(_to) onlyOwner {
+    function _claimErc721Tokens(address _token, address _to) public validAddress(_to) onlyOwner {
         IERC721Upgradeable token = IERC721Upgradeable(_token);
         uint256 balance = token.balanceOf(address(this));
         token.safeTransferFrom(address(this), _to, balance);
@@ -105,11 +91,11 @@ abstract contract Claimable is OwnableUpgradeable, Events {
      * @param _token address of the claimed ERC721 token.
      * @param _to address of the tokens receiver.
      */
-    function _claimErc1155Tokens(
-        address _token,
-        address _to,
-        uint256 _id
-    ) public validAddress(_to) onlyOwner {
+    function _claimErc1155Tokens(address _token, address _to, uint256 _id)
+        public
+        validAddress(_to)
+        onlyOwner
+    {
         IERC1155Upgradeable token = IERC1155Upgradeable(_token);
         uint256 balance = token.balanceOf(address(this), _id);
         bytes memory data = "0x00";
