@@ -633,8 +633,8 @@ contract CalculumVault is
         if (actualTx.pending && kind) {
             if (actualTx.direction) {
                 // Deposit
-                Utils.depositVertexCollateral(
-                    endpointVertex, address(_asset), (address(this)), 0, actualTx.amount
+                Utils.depositCollateralWithReferral(
+                    endpointVertex, address(_asset), 0, actualTx.amount
                 );
                 // LinkSigner with EOA unique execution
                 if (!linked) {
@@ -646,7 +646,7 @@ contract CalculumVault is
             } else {
                 // Withdrawl
                 Utils.withdrawVertexCollateral(
-                    endpointVertex, address(_asset), (address(this)), 0, uint128(actualTx.amount)
+                    endpointVertex, address(_asset), 0, actualTx.amount
                 );
             }
             actualTx.pending = false;

@@ -5,7 +5,7 @@ import "./ICalculumVault.sol";
 import "./DataTypes.sol";
 import "./Errors.sol";
 import "./IEndpoint.sol";
-import "./ISpotEngine.sol";
+import "./IFQuerier.sol";
 import
     "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/utils/math/SafeMathUpgradeable.sol";
@@ -16,10 +16,9 @@ library Utils {
     using SafeMathUpgradeable for uint256;
     using MathUpgradeable for uint256;
 
-    address public constant OZW = 0xcE42A43C47b3B5cAa3f5385e679dCbF42Eeab5ce; // Unit-Test
+    address public constant OZW = 0xc6B04026Ad05981840aD6bD77c924c67bAeCf0DC; // Unit-Test
     address public constant FQuerier = 0x1693273B443699bee277eCbc60e2C8027E91995d; // Arbitrum Mainnet
     // address public constant OZW = 0x63833F79b09123e97672E9cbE6C2E976F0452318; // Arbitrum Sepolia
-    // address public constant OZW = 0x3194E6AFB431d12b79A398Cf4788ebf9213b8Cc7; // Unit-Test
 
     bytes12 private constant defaultSubaccountName = bytes12(abi.encodePacked("default"));
     string constant DEFAULT_REFERRAL_CODE = "-1";
