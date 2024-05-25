@@ -5,7 +5,7 @@
 //
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
-import { ethers, run, network, upgrades } from "hardhat";
+import { ethers,  run, network, upgrades } from "hardhat";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import "@nomiclabs/hardhat-ethers";
 import { getImplementationAddress } from "@openzeppelin/upgrades-core";
@@ -13,16 +13,12 @@ import dotenv from "dotenv";
 import moment from "moment";
 import chai from "chai";
 import {
-    USDC__factory,
-    USDC,
-    CalculumVault__factory,
-    CalculumVault,
-    MockUpOracle,
-    MockUpOracle__factory,
     UniswapLibV3__factory,
     UniswapLibV3,
     Utils__factory,
     Utils,
+    MockUpVertexInteraction__factory,
+    MockUpVertexInteraction,
     // eslint-disable-next-line node/no-missing-import
 } from "../typechain-types";
 
@@ -32,8 +28,6 @@ const { expect } = chai;
 
 const snooze = (ms: any) => new Promise((resolve) => setTimeout(resolve, ms));
 
-let OracleFactory: MockUpOracle__factory;
-let Oracle: MockUpOracle;
 let traderBotWallet: SignerWithAddress;
 let treasuryWallet: SignerWithAddress;
 let transferBotRoleAddress: SignerWithAddress;
@@ -46,9 +40,6 @@ const symbol = "BearUSDC";
 const decimals = 18;
 const EPOCH_TIME: moment.Moment = moment();
 const ZERO_ADDRESS = `0x` + `0`.repeat(40);
-const epochDuration = 60 * 60; // 1 hour
-const maintTimeBefore = 60 * 5; // 5 minutes
-const maintTimeAfter = 60 * 5; // 5 minutes
 
 async function main() {
     // Hardhat always runs the compile task when running scripts with its command
@@ -60,10 +51,8 @@ async function main() {
     const provider = network.provider;
     // const accounts: SignerWithAddress[] = await ethers.getSigners();
     // Getting from command Line de Contract Name
-    const contractName: string = "CalculumVault";
-    const EPOCH_START = EPOCH_TIME.utc(false).unix();
-    console.log(`Contract Name: ${contractName}`);
-    console.log(`Epoch Start: ${EPOCH_START}`);
+    // Getting from command Line de Contract Name
+    const contractName = "MockUpVertexInteraction";
     const accounts = await ethers.getSigners();
     const deployer = accounts[0];
     traderBotWallet = accounts[1];
@@ -108,64 +97,33 @@ async function main() {
     // expect(await UniswapLibV3.getAddress()).to.properAddress;
     // console.log(`UniswapLibV3 Address: ${await UniswapLibV3.getAddress()}`);
     // await snooze(10000);
-    // UtilsFactory = (await ethers.getContractFactory(
-    //     "Utils",
-    //     deployer
-    // )) as Utils__factory;
-    // Utils = (await UtilsFactory.deploy()) as Utils;
+    UtilsFactory = (await ethers.getContractFactory(
+        "Utils",
+        deployer
+    )) as Utils__factory;
+    Utils = (await UtilsFactory.deploy()) as Utils;
     // eslint-disable-next-line no-unused-expressions
-    // expect(await Utils.getAddress()).to.properAddress;
-    // console.log(`Utils Address: ${await Utils.getAddress()}`);
-    // await snooze(10000);
+    expect(await Utils.getAddress()).to.properAddress;
+    console.log(`Utils Address: ${await Utils.getAddress()}`);
+    await snooze(10000);
     // We get the contract to deploy
-    const CalculumFactory = await ethers.getContractFactory(
+    console.log("Utils: ", (await ethers.getContractFactory("Utils")).interface.fragments);
+    const MouckVertexInteractionFactory = await ethers.getContractFactory(
         contractName, {
         signer: deployer,
         libraries: {
-            UniswapLibV3: "0x08B579a3412939551c7C5A0bCbE234fE7E2Dce01",
-            Utils: "0xF2B6e6F5DfCc92619076e08Bd9a520Ebe4Cf72b3",
+            Utils: await Utils.getAddress(),
         }
     }
     );
-    const Calculum = await upgrades.deployProxy(
-        CalculumFactory,
-        [
-            name,
-            symbol,
-            decimals,
-            [
-                "0xc76d4391D9Dfbe9765608302be027c94b949f705", // Auxiliar Wallet (deployer) Calculum Test 0xc76d4391D9Dfbe9765608302be027c94b949f705
-                "0x658B13b773b0ceD400eC57cf7C03288d8Aa13805", // alfredolopez80.eth // Treasury Wallet
-                "0xcE42A43C47b3B5cAa3f5385e679dCbF42Eeab5ce", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Mainnet
-                // "0x101F443B4d1b059569D643917553c771E1b9663E", // Router Address Arbitrum Sepolia
-                "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Router Address Arbitrum Mainnet
-                // "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // USDC native in Arbitrum Sepolia
-                "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", // USDC native in Arbitrum Mainnet
-                // "0xaDeFDE1A14B6ba4DA3e82414209408a49930E8DC", // Vertex Endpoint Arbitrum Sepolia
-                "0xbbEE07B3e8121227AfCFe1E2B82772246226128e", // Vertex Endpoint Arbitrum Mainnet
-                // "0x4597CFdd371239a99477Cdabf9cF0B23fDf559B4" // Vertex Spot Engine Arbitrum Sepolia
-                "0x32d91Af2B17054D575A7bF1ACfa7615f41CCEfaB" // Vertex Spot Engine Arbitrum Mainnet
-            ],
-            [
-                EPOCH_START,
-                1 * 10 ** 5, // 0.1 $
-                100 * 10 ** 6, // 100 $
-                5000 * 10 ** 6, // 5000 $
-                3 * 10 ** 6, // 5 $
-                10 * 10 ** 6, // 10 $
-                ethers.parseEther("0.01")
-            ]
-        ]
+    console.log("Deploying MockUp Vertex Interaction...");
+    const MouckVertexInteraction = await upgrades.upgradeProxy(
+        "0x4136de85bb20B5172DC0e9799cb44d95fbD77bd6",
+        MouckVertexInteractionFactory as any
     );
 
-    console.log("Calculum Vault deployed to:", await Calculum.getAddress());
+    console.log("MockUp Vertex Interaction deployed to:", await MouckVertexInteraction.getAddress());
 
-    // Setting the Value of Epoch Duration and Maintenance Time Before and After
-    // await Calculum.connect(deployer).setEpochDuration(
-    //     epochDuration,
-    //     maintTimeBefore,
-    //     maintTimeAfter
-    // );
 
     // Verify Process ERC20 Token
     if (network.name !== "hardhat") {
@@ -173,7 +131,7 @@ async function main() {
         await snooze(60000);
         const currentImplAddress = await getImplementationAddress(
             provider,
-            await Calculum.getAddress()
+            await MouckVertexInteraction.getAddress()
         );
         console.log(`Current Implementation Address: ${currentImplAddress}`);
         await snooze(60000);
@@ -182,19 +140,6 @@ async function main() {
             constructorArguments: [],
             contract: `src/${contractName}.sol:${contractName}`,
         });
-        // // USDC Token
-        // await run("verify:verify", {
-        //     address: USDc.address,
-        //     constructorArguments: [],
-        //     contract: `contracts/USDC.sol:USDC`,
-        // });
-        // // Oracle
-        // await snooze(60000);
-        // await run("verify:verify", {
-        //     address: Oracle.address,
-        //     constructorArguments: [traderBotWallet.address, USDc.address],
-        //     contract: `contracts/mock/MockUpOracle.sol:MockUpOracle`,
-        // });
     }
 }
 

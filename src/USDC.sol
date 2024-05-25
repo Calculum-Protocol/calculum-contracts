@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 contract USDC is ERC20 {
     address public admin;
 
-    constructor() ERC20("USDC Contract", "USDC") {
+    constructor() ERC20("USDC Bear Protocol", "bpUSDC4") {
         _mint(msg.sender, 1000000 * 10 ** 6);
         admin = msg.sender;
     }

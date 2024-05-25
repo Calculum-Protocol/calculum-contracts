@@ -1,0 +1,17 @@
+
+[compiler.solc]
+remappings = [
+	'@ensdomains/=node_modules/@ensdomains/',
+	'@oz-upgradeable/=lib/OZ-Upgradeable-Foundry/lib/openzeppelin-contracts-upgradeable/contracts/',
+	'@oz/=lib/OZ-Upgradeable-Foundry/lib/openzeppelin-contracts/contracts/',
+	'@prb/test/=lib/OZ-Upgradeable-Foundry/lib/prb-test/src/',
+	'@std/=lib/OZ-Upgradeable-Foundry/lib/forge-std/src/',
+	'OZ-Upgradeable-Foundry/=lib/OZ-Upgradeable-Foundry/',
+	'ds-test/=lib/forge-std/lib/ds-test/src/',
+	'@uniswap/v2-periphery/=lib/v2-periphery/',
+    '@uniswap/v3-core/=lib/v3-core/',
+    '@uniswap/v3-periphery/=lib/v3-periphery/',
+	'@openzeppelin/=lib/openzeppelin-contracts/',
+	'@openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/',
+    '@forge-std/=lib/forge-std/'
+]
