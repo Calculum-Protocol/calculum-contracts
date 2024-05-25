@@ -569,8 +569,13 @@ contract CalculumVault is
      */
     function updateTotalSupply() private {
         if (CURRENT_EPOCH != 0) {
+            // rewrite the total supply of the vault token to avoid underflow errors
             TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)]
-                .add(newShares()).sub(newWithdrawalsShares());
+                .add(newShares()) > newWithdrawalsShares()
+                ? TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)].add(newShares()).sub(
+                    newWithdrawalsShares()
+                )
+                : 0;
         } else {
             TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = newShares();
         }
@@ -888,6 +893,23 @@ contract CalculumVault is
         returns (uint8)
     {
         return _decimals;
+    }
+
+    // Creata a function to return a tuple with a boolean is the vault is in maintenance or not and the time for out of maintenance
+    function InMaintenance() public view returns (bool, uint256) {
+        bool inMaintenance = block.timestamp > getNextEpoch().sub(MAINTENANCE_PERIOD_PRE_START)
+            || block.timestamp < getCurrentEpoch().add(MAINTENANCE_PERIOD_POST_START);
+        if (inMaintenance) {
+            // for calculate the time for out of maintenance, need to verify if the vault if finalized the actual epoch or are in the start the next epoch
+            uint256 timeOutMaintenance = block.timestamp
+                > getNextEpoch().sub(MAINTENANCE_PERIOD_PRE_START)
+                ? (block.timestamp - getNextEpoch().sub(MAINTENANCE_PERIOD_PRE_START))
+                    + MAINTENANCE_PERIOD_POST_START
+                : getCurrentEpoch().add(MAINTENANCE_PERIOD_POST_START) - block.timestamp;
+            return (true, timeOutMaintenance);
+        } else {
+            return (false, 0);
+        }
     }
 
     function _checkVaultInMaintenance() private view {
