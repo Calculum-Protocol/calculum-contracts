@@ -1532,7 +1532,7 @@ describe("Verification of Basic Value and Features 2", function () {
                 bob.address,
                 bob.address,
                 50000 * 10 ** 6,
-                ethers.parseUnits("51293362126007273398750", "wei")
+                ethers.parseUnits("51293362126000000000000", "wei")
             );
         // Verify the Balance of USDc of Bob in the Vault
         expect((await USDc.balanceOf(bob.address))).to.equal(
@@ -1554,7 +1554,7 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(
             (await Calculum.DEPOSITS(bob.address)).amountShares.toString()
         ).to.equal(
-            ethers.parseUnits("51293362126007273398750", "wei").toString()
+            ethers.parseUnits("51293362126000000000000", "wei").toString()
         );
         // Verify the final amount of Bob in DEPOSITS after deposit
         expect((await Calculum.DEPOSITS(bob.address)).finalAmount).to.equal(0);
@@ -1602,7 +1602,7 @@ describe("Verification of Basic Value and Features 2", function () {
         expect((await Calculum.DEPOSITS(bob.address)).status).to.equal(2); // 2 = Claimet
         expect((await Calculum.DEPOSITS(bob.address)).amountAssets).to.equal(0);
         expect((await Calculum.DEPOSITS(bob.address)).amountShares.toString()).to.equal(
-            ethers.parseUnits("52349114148290382630146", "wei").toString()
+            ethers.parseUnits("52349114148000000000000", "wei").toString()
         );
         expect((await Calculum.DEPOSITS(bob.address)).finalAmount).to.equal(
             50000 * 10 ** 6
@@ -1783,7 +1783,7 @@ describe("Verification of Basic Value and Features 2", function () {
         expect((await Calculum.DEPOSITS(bob.address)).status).to.equal(2); // 2 = Claimet
         expect((await Calculum.DEPOSITS(bob.address)).amountAssets).to.equal(0);
         expect((await Calculum.DEPOSITS(bob.address)).amountShares.toString()).to.equal(
-            ethers.parseUnits("52349114148290382630146", "wei").toString()
+            ethers.parseUnits("52349114148000000000000", "wei").toString()
         );
         expect((await Calculum.DEPOSITS(bob.address)).finalAmount).to.equal(
             50000 * 10 ** 6
@@ -1794,14 +1794,14 @@ describe("Verification of Basic Value and Features 2", function () {
             .withArgs(
                 ZERO_ADDRESS,
                 bob.address,
-                ethers.parseUnits("52349114148290382630146", "wei")
+                ethers.parseUnits("52349114148000000000000", "wei")
             )
             .to.emit(Calculum, "Deposit")
             .withArgs(
                 bob.address,
                 bob.address,
                 50000 * 10 ** 6,
-                ethers.parseUnits("52349114148290382630146", "wei")
+                ethers.parseUnits("52349114148000000000000", "wei")
             );
         // Verify status of bob in DEPOSITS after claim his shares
         expect((await Calculum.DEPOSITS(bob.address)).status).to.equal(3); // 3 = Completed
@@ -1811,7 +1811,7 @@ describe("Verification of Basic Value and Features 2", function () {
             50000 * 10 ** 6
         );
         expect((await Calculum.balanceOf(bob.address)).toString()).to.equal(
-            ethers.parseUnits("52349114148290382630146", "wei").toString()
+            ethers.parseUnits("52349114148000000000000", "wei").toString()
         );
         // Verify status of carla in DEPOSITS before deposit
         expect((await Calculum.DEPOSITS(carla.address)).status).to.equal(0); // 0 = Inactive
@@ -1826,7 +1826,7 @@ describe("Verification of Basic Value and Features 2", function () {
                 alice.address,
                 alice.address,
                 100000 * 10 ** 6,
-                ethers.parseUnits("141246329361015730603701", "wei")
+                ethers.parseUnits("141246329361000000000000", "wei")
             );
         // Add deposit to the Vault from carla
         await expect(
@@ -1839,7 +1839,7 @@ describe("Verification of Basic Value and Features 2", function () {
                 carla.address,
                 carla.address,
                 30000 * 10 ** 6,
-                ethers.parseUnits("42373898808304719181111", "wei")
+                ethers.parseUnits("42373898808000000000000", "wei")
             );
         // Verify status of alice in DEPOSITS after deposit
         expect((await Calculum.DEPOSITS(alice.address)).status).to.equal(1); // 1 = Pending
@@ -1847,7 +1847,7 @@ describe("Verification of Basic Value and Features 2", function () {
             100000 * 10 ** 6
         );
         expect((await Calculum.DEPOSITS(alice.address)).amountShares).to.equal(
-            ethers.parseUnits("141246329361015730603701", "wei")
+            ethers.parseUnits("141246329361000000000000", "wei")
         );
         expect((await Calculum.DEPOSITS(alice.address)).finalAmount).to.equal(
             150000 * 10 ** 6
@@ -1858,7 +1858,7 @@ describe("Verification of Basic Value and Features 2", function () {
             30000 * 10 ** 6
         );
         expect((await Calculum.DEPOSITS(carla.address)).amountShares).to.equal(
-            ethers.parseUnits("42373898808304719181111", "wei")
+            ethers.parseUnits("42373898808000000000000", "wei")
         );
         expect((await Calculum.DEPOSITS(carla.address)).finalAmount).to.equal(0); // Zero because is a new user
         console.log("Balance of Calculum in USDc After Deposit: ", parseInt((await USDc.balanceOf(await Calculum.getAddress()))) / 10 ** 6);
@@ -2080,7 +2080,7 @@ describe("Verification of Basic Value and Features 2", function () {
         expect((await Calculum.DEPOSITS(alice.address)).status).to.equal(2); // 2 = Claimet
         expect((await Calculum.DEPOSITS(alice.address)).amountAssets).to.equal(0);
         expect((await Calculum.DEPOSITS(alice.address)).amountShares).to.equal(
-            ethers.parseUnits("101274437521774004067182", "wei")
+            ethers.parseUnits("101274437521000000000000", "wei")
         );
         expect((await Calculum.DEPOSITS(alice.address)).finalAmount).to.equal(
             250000 * 10 ** 6
@@ -2089,7 +2089,7 @@ describe("Verification of Basic Value and Features 2", function () {
         expect((await Calculum.DEPOSITS(carla.address)).status).to.equal(2); // 2 = Claimet
         expect((await Calculum.DEPOSITS(carla.address)).amountAssets).to.equal(0);
         expect((await Calculum.DEPOSITS(carla.address)).amountShares).to.equal(
-            ethers.parseUnits("30382331256532201220155", "wei")
+            ethers.parseUnits("30382331256000000000000", "wei")
         );
         expect((await Calculum.DEPOSITS(carla.address)).finalAmount).to.equal(
             30000 * 10 ** 6
@@ -2100,14 +2100,14 @@ describe("Verification of Basic Value and Features 2", function () {
             .withArgs(
                 ZERO_ADDRESS,
                 alice.address,
-                ethers.parseUnits("101274437521774004067182", "wei")
+                ethers.parseUnits("101274437521000000000000", "wei")
             )
             .to.emit(Calculum, "Deposit")
             .withArgs(
                 alice.address,
                 alice.address,
                 250000 * 10 ** 6,
-                ethers.parseUnits("101274437521774004067182", "wei")
+                ethers.parseUnits("101274437521000000000000", "wei")
             );
         // Claim Shares of Carla
         await expect(Calculum.connect(carla).claimShares(carla.address))
@@ -2115,14 +2115,14 @@ describe("Verification of Basic Value and Features 2", function () {
             .withArgs(
                 ZERO_ADDRESS,
                 carla.address,
-                ethers.parseUnits("30382331256532201220155", "wei")
+                ethers.parseUnits("30382331256000000000000", "wei")
             )
             .to.emit(Calculum, "Deposit")
             .withArgs(
                 carla.address,
                 carla.address,
                 30000 * 10 ** 6,
-                ethers.parseUnits("30382331256532201220155", "wei")
+                ethers.parseUnits("30382331256000000000000", "wei")
             );
         // Verify status of alice in DEPOSITS after claim her shares
         expect((await Calculum.DEPOSITS(alice.address)).status).to.equal(3); // 3 = Completed
@@ -2132,7 +2132,7 @@ describe("Verification of Basic Value and Features 2", function () {
             250000 * 10 ** 6
         );
         expect((await Calculum.balanceOf(alice.address)).toString()).to.equal(
-            ethers.parseUnits("251274437521774004067182", "wei").toString()
+            ethers.parseUnits("251274437521000000000000", "wei").toString()
         );
         // Verify status of carla in DEPOSITS after claim her shares
         expect((await Calculum.DEPOSITS(carla.address)).status).to.equal(3); // 3 = Completed
@@ -2142,7 +2142,7 @@ describe("Verification of Basic Value and Features 2", function () {
             30000 * 10 ** 6
         );
         expect((await Calculum.balanceOf(carla.address)).toString()).to.equal(
-            ethers.parseUnits("30382331256532201220155", "wei").toString()
+            ethers.parseUnits("30382331256000000000000", "wei").toString()
         );
         // Try to Finalize the Epoch before the Finalization Time
         const time = Math.floor(
@@ -3488,7 +3488,7 @@ describe("Verification of Basic Value and Features 2", function () {
                 bob.address,
                 bob.address,
                 50000 * 10 ** 6,
-                ethers.parseUnits("808391327305192911", "wei")
+                ethers.parseUnits("808391000000000000", "wei")
             );
         // Verify status of bob in DEPOSITS after deposit
         expect((await Calculum.DEPOSITS(bob.address)).status).to.equal(1); // 1 = Pending
@@ -3496,7 +3496,7 @@ describe("Verification of Basic Value and Features 2", function () {
             50000 * 10 ** 6
         );
         expect((await Calculum.DEPOSITS(bob.address)).amountShares).to.equal(
-            ethers.parseUnits("808391327305192911", "wei")
+            ethers.parseUnits("808391000000000000", "wei")
         );
         expect((await Calculum.DEPOSITS(bob.address)).finalAmount).to.equal(
             50000 * 10 ** 6
@@ -3733,14 +3733,14 @@ describe("Verification of Basic Value and Features 2", function () {
             .withArgs(
                 ZERO_ADDRESS,
                 bob.address,
-                ethers.parseUnits("32241881171902103331361", "wei")
+                ethers.parseUnits("32241881171000000000000", "wei")
             )
             .to.emit(Calculum, "Deposit")
             .withArgs(
                 bob.address,
                 bob.address,
                 100000000000,
-                ethers.parseUnits("32241881171902103331361", "wei")
+                ethers.parseUnits("32241881171000000000000", "wei")
             );
         // Verify the Value of bob int the WITHDRAWS VALUE mapping after to Claimed
         expect((await Calculum.DEPOSITS(bob.address)).status).to.equal(3); // 3 = Completed
@@ -3871,6 +3871,23 @@ describe("Verification of Basic Value and Features 2", function () {
             parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
             10 ** 6
         );
+        // Paused the Calculum Contract
+        await Calculum.connect(deployer).pause();
+        // get ERC20 Balance of Calculum Contract
+        const balanceUSDc = await USDc.balanceOf(await Calculum.getAddress());
+        // get Balance in ETH of Calculum Contract
+        const balanceETH = await ethers.provider.getBalance(await Calculum.getAddress());
+        // Verify event emit wutn call rescue function
+        await expect(Calculum.connect(deployer).rescue())
+            .to.emit(Calculum, "Rescued")
+            .withArgs(await deployer.getAddress(), balanceUSDc, balanceETH);
+        // Verify the Balance of USDc of Calculum in the Vault is equal to 0 usdc
+        expect(
+            parseInt((await USDc.balanceOf(await Calculum.getAddress()))) /
+            10 ** 6
+        ).to.equal(0);
+        // unpause the Calculum Contract
+        await Calculum.connect(deployer).unpause();
         // Validate Last Balance of TransferBot Role Wallet in USDc, comparring with value in the Excel Spread Sheet
         expect(
             (await USDc.balanceOf(openZeppelinDefenderWallet.address))

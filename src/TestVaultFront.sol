@@ -212,6 +212,9 @@ contract TestVaultFront is
         _checkVaultInMaintenance();
         address caller = _msgSender();
         DataTypes.Basics storage depositor = DEPOSITS[_receiver];
+        if (_receiver != caller) {
+            revert Errors.CallerIsNotOwnerOrReceiver(caller, _receiver, _receiver);
+        }
         if (_assets < MIN_DEPOSIT) {
             revert Errors.DepositAmountTooLow(_receiver, _assets);
         }
@@ -225,6 +228,12 @@ contract TestVaultFront is
             revert Errors.DepositExceedTotalVaultMax(
                 _receiver, totalAssets().add(_assets), MAX_TOTAL_DEPOSIT
             );
+        }
+        if (
+            depositor.status == DataTypes.Status.Claimet
+                || depositor.status == DataTypes.Status.Pending
+        ) {
+            revert Errors.DepositPendingClaim(_receiver);
         }
 
         uint256 shares = previewDeposit(_assets);
@@ -284,6 +293,14 @@ contract TestVaultFront is
         if (_assets > maxWithdraw(_owner)) {
             revert Errors.NotEnoughBalance(_assets, maxWithdraw(_owner));
         }
+        DataTypes.Basics storage withdrawer = WITHDRAWALS[_owner];
+        if (
+            withdrawer.status == DataTypes.Status.Claimet
+                || withdrawer.status == DataTypes.Status.PendingRedeem
+                || withdrawer.status == DataTypes.Status.PendingWithdraw
+        ) {
+            revert Errors.WithdrawPendingClaim(_owner);
+        }
 
         uint256 shares = previewWithdraw(_assets);
 
@@ -324,6 +341,14 @@ contract TestVaultFront is
         if (_shares == 0) revert Errors.AmountMustBeGreaterThanZero(caller);
         if (_shares > maxRedeem(_owner)) {
             revert Errors.NotEnoughBalance(_shares, maxRedeem(_owner));
+        }
+        DataTypes.Basics storage withdrawer = WITHDRAWALS[_owner];
+        if (
+            withdrawer.status == DataTypes.Status.Claimet
+                || withdrawer.status == DataTypes.Status.PendingRedeem
+                || withdrawer.status == DataTypes.Status.PendingWithdraw
+        ) {
+            revert Errors.WithdrawPendingClaim(_owner);
         }
 
         uint256 assets = previewRedeem(_shares);
@@ -507,8 +532,11 @@ contract TestVaultFront is
     function updateTotalSupply() private {
         if (CURRENT_EPOCH != 0) {
             TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)]
-                .add(newShares()) > newWithdrawalsShares() ? TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)]
-                .add(newShares()).sub(newWithdrawalsShares()) : 0;
+                .add(newShares()) > newWithdrawalsShares()
+                ? TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)].add(newShares()).sub(
+                    newWithdrawalsShares()
+                )
+                : 0;
         } else {
             TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = newShares();
         }
@@ -532,7 +560,7 @@ contract TestVaultFront is
                 : (_shares * totalAssets()) / supply;
         } else {
             _assets = _shares.mulDiv(
-                10 ** _asset.decimals(), 10 ** decimals(), MathUpgradeable.Rounding.Down
+                10 ** _asset.decimals(), 10 ** decimals(), MathUpgradeable.Rounding.Up
             );
         }
     }
@@ -542,14 +570,18 @@ contract TestVaultFront is
      */
     function convertToShares(uint256 _assets) public view override returns (uint256 _shares) {
         uint256 supply = totalSupply();
+        // decimalsAdjust to fixed the rounding issue with stable coins
+        uint256 decimalsAdjust = 10 ** (decimals() - _asset.decimals());
         if (CURRENT_EPOCH == 0) {
             return (_assets == 0 || supply == 0)
                 ? (_assets * 10 ** decimals()) / 10 ** _asset.decimals()
                 : (_assets * supply) / totalAssets();
         } else {
             _shares = _assets.mulDiv(
-                10 ** decimals(), 10 ** _asset.decimals(), MathUpgradeable.Rounding.Down
-            );
+                10 ** decimals(),
+                10 ** _asset.decimals(),
+                MathUpgradeable.Rounding.Up
+            ).div(decimalsAdjust).mul(decimalsAdjust); // last part is to fixed the rounding issue with stable coins
         }
     }
 

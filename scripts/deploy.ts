@@ -42,9 +42,9 @@ let UniswapLibV3: UniswapLibV3;
 let UtilsFactory: Utils__factory;
 let Utils: Utils;
 const name = "Bear Protocol USDc Vault";
-const symbol = "BearUSDC";
+const symbol = "vbUSDC";
 const decimals = 18;
-const EPOCH_TIME: moment.Moment = moment();
+const EPOCH_TIME: moment.Moment = moment().utc();
 const ZERO_ADDRESS = `0x` + `0`.repeat(40);
 const epochDuration = 60 * 60; // 1 hour
 const maintTimeBefore = 60 * 5; // 5 minutes
@@ -53,7 +53,24 @@ const maintTimeAfter = 60 * 5; // 5 minutes
 async function main() {
     // Hardhat always runs the compile task when running scripts with its command
     // line interface.
-    //
+
+    // Round to the nearest hour in UTC
+    let roundedHour = EPOCH_TIME.clone().startOf('hour');
+    if (EPOCH_TIME.minutes() >= 30) {
+        roundedHour.add(1, 'hour');
+    }
+
+    // Calculate the difference in seconds to the rounded hour and one hour before it
+    const diffToRoundedHour = Math.abs(EPOCH_TIME.unix() - roundedHour.unix());
+    const oneHourBefore = roundedHour.clone().subtract(1, 'hour');
+
+    // Determine the closest hour within a 30-minute difference
+    let EPOCH_START;
+    if (diffToRoundedHour <= 1800) { // 1800 seconds = 30 minutes
+        EPOCH_START = roundedHour.unix();
+    } else {
+        EPOCH_START = oneHourBefore.unix();
+    }
     // If this script is run directly using `node` you may want to call compile
     // manually to make sure everything is compiled
     // await run("compile");
@@ -61,7 +78,6 @@ async function main() {
     // const accounts: SignerWithAddress[] = await ethers.getSigners();
     // Getting from command Line de Contract Name
     const contractName: string = "CalculumVault";
-    const EPOCH_START = EPOCH_TIME.utc(false).unix();
     console.log(`Contract Name: ${contractName}`);
     console.log(`Epoch Start: ${EPOCH_START}`);
     const accounts = await ethers.getSigners();
@@ -99,31 +115,31 @@ async function main() {
     //   expect(Oracle.address).to.properAddress;
     //   console.log(`Oracle Address: ${Oracle.address}`);
     // Deploy all Libraries of Calculum , with not upgradeable version
-    // UniswapLibV3Factory = (await ethers.getContractFactory(
-    //     "UniswapLibV3",
-    //     deployer
-    // )) as UniswapLibV3__factory;
-    // UniswapLibV3 = (await UniswapLibV3Factory.deploy()) as UniswapLibV3;
-    // // eslint-disable-next-line no-unused-expressions
-    // expect(await UniswapLibV3.getAddress()).to.properAddress;
-    // console.log(`UniswapLibV3 Address: ${await UniswapLibV3.getAddress()}`);
-    // await snooze(10000);
-    // UtilsFactory = (await ethers.getContractFactory(
-    //     "Utils",
-    //     deployer
-    // )) as Utils__factory;
-    // Utils = (await UtilsFactory.deploy()) as Utils;
+    UniswapLibV3Factory = (await ethers.getContractFactory(
+        "UniswapLibV3",
+        deployer
+    )) as UniswapLibV3__factory;
+    UniswapLibV3 = (await UniswapLibV3Factory.deploy()) as UniswapLibV3;
     // eslint-disable-next-line no-unused-expressions
-    // expect(await Utils.getAddress()).to.properAddress;
-    // console.log(`Utils Address: ${await Utils.getAddress()}`);
-    // await snooze(10000);
+    expect(await UniswapLibV3.getAddress()).to.properAddress;
+    console.log(`UniswapLibV3 Address: ${await UniswapLibV3.getAddress()}`);
+    await snooze(10000);
+    UtilsFactory = (await ethers.getContractFactory(
+        "Utils",
+        deployer
+    )) as Utils__factory;
+    Utils = (await UtilsFactory.deploy()) as Utils;
+    // eslint-disable-next-line no-unused-expressions
+    expect(await Utils.getAddress()).to.properAddress;
+    console.log(`Utils Address: ${await Utils.getAddress()}`);
+    await snooze(10000);
     // We get the contract to deploy
     const CalculumFactory = await ethers.getContractFactory(
         contractName, {
         signer: deployer,
         libraries: {
-            UniswapLibV3: "0x08B579a3412939551c7C5A0bCbE234fE7E2Dce01",
-            Utils: "0xF2B6e6F5DfCc92619076e08Bd9a520Ebe4Cf72b3",
+            UniswapLibV3: await UniswapLibV3.getAddress(),
+            Utils: await Utils.getAddress(),
         }
     }
     );
@@ -150,22 +166,15 @@ async function main() {
                 EPOCH_START,
                 1 * 10 ** 5, // 0.1 $
                 100 * 10 ** 6, // 100 $
-                5000 * 10 ** 6, // 5000 $
+                10000 * 10 ** 6, // 5000 $
                 3 * 10 ** 6, // 5 $
                 10 * 10 ** 6, // 10 $
-                ethers.parseEther("0.01")
+                ethers.parseEther("0.001")
             ]
         ]
     );
 
-    console.log("Calculum Vault deployed to:", await Calculum.getAddress());
-
-    // Setting the Value of Epoch Duration and Maintenance Time Before and After
-    // await Calculum.connect(deployer).setEpochDuration(
-    //     epochDuration,
-    //     maintTimeBefore,
-    //     maintTimeAfter
-    // );
+    console.log("Bear Protocol Vault deployed to:", await Calculum.getAddress());
 
     // Verify Process ERC20 Token
     if (network.name !== "hardhat") {

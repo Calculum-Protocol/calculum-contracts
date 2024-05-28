@@ -56,4 +56,9 @@ abstract contract Events {
      * @dev Dex Transfer
      */
     event DexTransfer(uint256 indexed epoch, uint256 Amount);
+
+    /**
+     * @dev Rescued Emercency Funds
+     */
+    event Rescued(address indexed owner, uint256 amountAssets, uint256 amountEth);
 }

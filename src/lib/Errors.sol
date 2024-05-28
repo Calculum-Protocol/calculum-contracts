@@ -51,4 +51,8 @@ library Errors {
     error WrongUniswapConfig();
     ///
     error NotZeroAddress();
+    /// Have a Deposit Pending to Execute or Claim
+    error DepositPendingClaim(address _caller);
+    /// Have a Deposit Pending to Execute or Claim
+    error WithdrawPendingClaim(address _caller);
 }
