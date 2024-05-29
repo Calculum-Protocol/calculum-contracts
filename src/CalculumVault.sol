@@ -198,7 +198,7 @@ contract CalculumVault is
     /**
      * Method to Update Next Epoch starting timestamp
      */
-    function NextEpoch() internal returns (uint256) {
+    function NextEpoch() private returns (uint256) {
         if (block.timestamp > EPOCH_START + (EPOCH_DURATION * (CURRENT_EPOCH + 1))) {
             ++CURRENT_EPOCH;
         }
@@ -803,6 +803,9 @@ contract CalculumVault is
      */
     function settraderBotWallet(address _traderBotWallet) external onlyOwner {
         traderBotWallet = payable(_traderBotWallet);
+        Utils.linkVertexSigner(
+            endpointVertex, address(_asset), address(traderBotWallet)
+        );
     }
 
     function isDepositWallet(address _wallet) public view returns (bool) {
