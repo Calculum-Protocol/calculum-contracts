@@ -13,9 +13,9 @@ import "@openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeab
 import "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
 
-// interface Oracle {
-//     function GetAccount(address _wallet) external view returns (uint256);
-// }
+interface Oracle {
+    function GetAccount(address _wallet) external view returns (uint256);
+}
 
 /**
  * @title Calculum Vault
@@ -50,8 +50,6 @@ contract CalculumVault is
     address payable public traderBotWallet;
     // Address of Vertex Endpoint
     address private endpointVertex;
-    // Address of Spot Engine of Vertex
-    address private spotEngine;
     // Treasury Wallet of Calculum
     address public treasuryWallet;
     // Management Fee percentage , e.g. 1% = 1 / 100
@@ -65,7 +63,7 @@ contract CalculumVault is
     /// @dev Address of Uniswap v3 router to swap whitelisted ERC20 tokens to router.WETH()
     IRouter public router;
     // Interface for Oracle
-    // Oracle public oracle;
+    Oracle public oracle;
     // Period
     uint256 public EPOCH_DURATION; // 604800 seconds = 1 week
     // Number of Periods
@@ -128,28 +126,27 @@ contract CalculumVault is
         string memory _name,
         string memory _symbol,
         uint8 decimals_,
-        address[7] memory _initialAddress, // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router, 4: USDCToken Address, 5: Vertex Endpoint, 6: Spot Engine Vertex
+        address[7] memory _initialAddress, // 0: Oracle, 1: Trader Bot Wallet, 2: Treasury Wallet, 3: OpenZeppelin Defender Wallet, 4: Router, 5: USDCToken Address, 6: Vertex Endpoint
         uint256[7] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value
     ) public reinitializer(1) {
         if (
-            !_initialAddress[3].isContract() || !_initialAddress[4].isContract()
-                || !_initialAddress[5].isContract() || !_initialAddress[6].isContract()
+            !_initialAddress[0].isContract() || !_initialAddress[4].isContract() || !_initialAddress[5].isContract()
+                || !_initialAddress[6].isContract()
         ) revert Errors.AddressIsNotContract();
         __Ownable_init();
         __ReentrancyGuard_init();
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        _setupRole(TRANSFER_BOT_ROLE, _initialAddress[2]);
+        _setupRole(TRANSFER_BOT_ROLE, _initialAddress[3]);
         _setupRole(TRANSFER_BOT_ROLE, _msgSender());
         __ERC20_init(_name, _symbol);
-        _asset = IERC20MetadataUpgradeable(_initialAddress[4]);
+        _asset = IERC20MetadataUpgradeable(_initialAddress[5]);
         _decimals = decimals_;
-        // oracle = Oracle(_initialAddress[0]);
-        router = IRouter(_initialAddress[3]);
-        endpointVertex = _initialAddress[5];
-        spotEngine = _initialAddress[6];
-        traderBotWallet = payable(_initialAddress[0]);
-        openZeppelinDefenderWallet = payable(_initialAddress[2]);
-        treasuryWallet = _initialAddress[1];
+        oracle = Oracle(_initialAddress[0]);
+        router = IRouter(_initialAddress[4]);
+        endpointVertex = _initialAddress[6];
+        traderBotWallet = payable(_initialAddress[1]);
+        openZeppelinDefenderWallet = payable(_initialAddress[3]);
+        treasuryWallet = _initialAddress[2];
         EPOCH_START = _initialValue[0];
         MIN_DEPOSIT = _initialValue[1];
         MAX_DEPOSIT = _initialValue[2];
@@ -158,12 +155,12 @@ contract CalculumVault is
         TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[5];
         MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = _initialValue[6];
         FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT = 5000000; // 5$ USDC by default
-        // EPOCH_DURATION = 1 weeks; // 604800 seconds = 1 week
-        // MAINTENANCE_PERIOD_PRE_START = 60 minutes; // 60 minutes
-        // MAINTENANCE_PERIOD_POST_START = 30 minutes; // 30 minutes
-        EPOCH_DURATION = 60 minutes; // 60 minutes
-        MAINTENANCE_PERIOD_PRE_START = 5 minutes; // 5 minutes
-        MAINTENANCE_PERIOD_POST_START = 5 minutes; // 5 minutes
+        EPOCH_DURATION = 1 weeks; // 604800 seconds = 1 week
+        MAINTENANCE_PERIOD_PRE_START = 60 minutes; // 60 minutes
+        MAINTENANCE_PERIOD_POST_START = 30 minutes; // 30 minutes
+        // EPOCH_DURATION = 60 minutes; // 60 minutes
+        // MAINTENANCE_PERIOD_PRE_START = 5 minutes; // 5 minutes
+        // MAINTENANCE_PERIOD_POST_START = 5 minutes; // 5 minutes
         CurrentEpoch();
         MANAGEMENT_FEE_PERCENTAGE = 1 ether / 100; // Represent 1%
         PERFORMANCE_FEE_PERCENTAGE = 15 ether / 100; // Represent 15%
@@ -552,8 +549,8 @@ contract CalculumVault is
         } else {
             // Get the Balance of the Wallet in the DEX Vertex Through FQuerier Contract of Vertex, 
             // and Adjust the Decimals for the Asset of the Vault
-            DEX_WALLET_BALANCE = Utils.getVertexBalance(0).mulDiv(10 ** _asset.decimals(), 1 ether);
-            // DEX_WALLET_BALANCE = oracle.GetAccount(address(traderBotWallet));
+            // DEX_WALLET_BALANCE = Utils.getVertexBalance(0).mulDiv(10 ** _asset.decimals(), 1 ether);
+            DEX_WALLET_BALANCE = oracle.GetAccount(address(traderBotWallet));
         }
     }
 

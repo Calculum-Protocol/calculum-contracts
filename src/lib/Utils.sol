@@ -19,8 +19,8 @@ library Utils {
     // address public constant OZW =
 
     address public constant FQuerier = 0x1693273B443699bee277eCbc60e2C8027E91995d; // Arbitrum Mainnet
-    address public constant OZW = 0xB19b03Bf35bBdd30CF154bef41c19621a17068f2; // OpenZeppelin Defender Wallet Arbitrum Mainnet
-    // address public constant OZW = 0xc6B04026Ad05981840aD6bD77c924c67bAeCf0DC; // OpenZeppelin Defender Wallet Unit Test
+    // address public constant OZW = 0xB19b03Bf35bBdd30CF154bef41c19621a17068f2; // OpenZeppelin Defender Wallet Arbitrum Mainnet
+    address public constant OZW = 0xc6B04026Ad05981840aD6bD77c924c67bAeCf0DC; // OpenZeppelin Defender Wallet Unit Test
 
     bytes12 private constant defaultSubaccountName = bytes12(abi.encodePacked("default"));
     string constant DEFAULT_REFERRAL_CODE = "-1";
