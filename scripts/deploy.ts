@@ -152,7 +152,7 @@ async function main() {
             [
                 "0xc76d4391D9Dfbe9765608302be027c94b949f705", // Auxiliar Wallet (deployer) Calculum Test 0xc76d4391D9Dfbe9765608302be027c94b949f705
                 "0x658B13b773b0ceD400eC57cf7C03288d8Aa13805", // alfredolopez80.eth // Treasury Wallet
-                "0xcE42A43C47b3B5cAa3f5385e679dCbF42Eeab5ce", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Mainnet
+                "0xB19b03Bf35bBdd30CF154bef41c19621a17068f2", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Mainnet
                 // "0x101F443B4d1b059569D643917553c771E1b9663E", // Router Address Arbitrum Sepolia
                 "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Router Address Arbitrum Mainnet
                 // "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // USDC native in Arbitrum Sepolia
