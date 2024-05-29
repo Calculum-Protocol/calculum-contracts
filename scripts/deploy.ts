@@ -159,8 +159,6 @@ async function main() {
                 "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", // USDC native in Arbitrum Mainnet
                 // "0xaDeFDE1A14B6ba4DA3e82414209408a49930E8DC", // Vertex Endpoint Arbitrum Sepolia
                 "0xbbEE07B3e8121227AfCFe1E2B82772246226128e", // Vertex Endpoint Arbitrum Mainnet
-                // "0x4597CFdd371239a99477Cdabf9cF0B23fDf559B4" // Vertex Spot Engine Arbitrum Sepolia
-                "0x32d91Af2B17054D575A7bF1ACfa7615f41CCEfaB" // Vertex Spot Engine Arbitrum Mainnet
             ],
             [
                 EPOCH_START,
