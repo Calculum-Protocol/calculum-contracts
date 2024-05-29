@@ -132,9 +132,8 @@ contract CalculumVault is
         uint256[7] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value
     ) public reinitializer(1) {
         if (
-            !_initialAddress[3].isContract()
-                || !_initialAddress[4].isContract() || !_initialAddress[5].isContract()
-                || !_initialAddress[6].isContract()
+            !_initialAddress[3].isContract() || !_initialAddress[4].isContract()
+                || !_initialAddress[5].isContract() || !_initialAddress[6].isContract()
         ) revert Errors.AddressIsNotContract();
         __Ownable_init();
         __ReentrancyGuard_init();
@@ -490,7 +489,8 @@ contract CalculumVault is
         withdrawer.status = DataTypes.Status.Completed;
     }
 
-    /** @dev Rescue method for emergency situation
+    /**
+     * @dev Rescue method for emergency situation
      * @notice withdraw all assets in Vertex and send to the owner
      */
     function rescue() external whenPaused onlyOwner nonReentrant {
@@ -499,7 +499,7 @@ contract CalculumVault is
         SafeERC20Upgradeable.safeTransfer(_asset, _msgSender(), assets);
         // Transfer all Eth to the Owner
         uint256 amount = address(this).balance;
-        claimValues(address(0) ,_msgSender());
+        claimValues(address(0), _msgSender());
         emit Events.Rescued(_msgSender(), assets, amount);
     }
 
@@ -508,8 +508,9 @@ contract CalculumVault is
      */
     function previewRescue() external whenPaused onlyOwner nonReentrant {
         DexWalletBalance();
-        // Withdrawl
-        Utils.withdrawVertexCollateral(endpointVertex, address(_asset), 0, DEX_WALLET_BALANCE);
+        // Withdrawl and Adjust assets, because the Valance is in Format 18 decimals
+        uint256 assets = DEX_WALLET_BALANCE;
+        Utils.withdrawVertexCollateral(endpointVertex, address(_asset), 0, assets);
     }
 
     /**
@@ -545,16 +546,14 @@ contract CalculumVault is
     /**
      * @dev Contract for Getting Actual Balance of the TraderBot Wallet in Dydx
      */
-    function DexWalletBalance() private {
+    function DexWalletBalance() public {
         if ((totalSupply() == 0) && (CURRENT_EPOCH == 0)) {
             DEX_WALLET_BALANCE = newDeposits();
         } else {
-            // Must be changed by Get Spot Balance of Spot Engine of Vertex
-            DEX_WALLET_BALANCE = Utils.getVertexBalance(0);
+            // Get the Balance of the Wallet in the DEX Vertex Through FQuerier Contract of Vertex, 
+            // and Adjust the Decimals for the Asset of the Vault
+            DEX_WALLET_BALANCE = Utils.getVertexBalance(0).mulDiv(10 ** _asset.decimals(), 1 ether);
             // DEX_WALLET_BALANCE = oracle.GetAccount(address(traderBotWallet));
-            if (DEX_WALLET_BALANCE == 0) {
-                revert Errors.ActualAssetValueIsZero(address(spotEngine), address(this));
-            }
         }
     }
 
@@ -679,7 +678,7 @@ contract CalculumVault is
     function dexTransfer(bool kind) external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
         DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
         _checkVaultOutMaintenance();
-        if (actualTx.pending && kind) {
+        if (actualTx.pending && kind && actualTx.amount != uint256(0)) {
             if (actualTx.direction) {
                 // Deposit
                 Utils.depositCollateralWithReferral(
@@ -706,7 +705,10 @@ contract CalculumVault is
             }
             SafeERC20Upgradeable.safeTransfer(_asset, openZeppelinDefenderWallet, reserveGas);
         }
-        emit DexTransfer(CURRENT_EPOCH, actualTx.amount);
+        if (!kind) {
+            // Avoid Duplicate Event
+            emit DexTransfer(CURRENT_EPOCH, actualTx.amount);
+        }
     }
 
     /**

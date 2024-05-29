@@ -6,15 +6,11 @@ import "./lib/Claimable.sol";
 import "./lib/DataTypes.sol";
 import "./lib/Errors.sol";
 import "./lib/IRouter.sol";
-import "./lib/UniswapLibV3.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
-
-// interface Oracle {
-//     function GetAccount(address _wallet) external view returns (uint256);
-// }
+import "@openzeppelin-contracts-upgradeable/contracts/utils/math/SafeMathUpgradeable.sol";
 
 /**
  * @title Test Vault Front
@@ -57,10 +53,6 @@ contract TestVaultFront is
     mapping(uint256 => uint256) public VAULT_TOKEN_PRICE;
     // Total Supply per EPOCH
     mapping(uint256 => uint256) public TOTAL_VAULT_TOKEN_SUPPLY;
-    /// @dev Address of Uniswap v3 router to swap whitelisted ERC20 tokens to router.WETH()
-    IRouter public router;
-    // Interface for Oracle
-    // Oracle public oracle;
     // Period
     uint256 public EPOCH_DURATION; // 604800 seconds = 1 week
     // Number of Periods
@@ -119,6 +111,7 @@ contract TestVaultFront is
         __ReentrancyGuard_init();
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(TRANSFER_BOT_ROLE, _initialAddress[2]);
+        _setupRole(TRANSFER_BOT_ROLE, _msgSender());
         __ERC20_init(_name, _symbol);
         _asset = IERC20MetadataUpgradeable(_initialAddress[3]);
         _decimals = decimals_;
@@ -178,7 +171,7 @@ contract TestVaultFront is
     /**
      * @dev Method to Update Current Epoch starting timestamp
      */
-    function CurrentEpoch() public returns (uint256) {
+    function CurrentEpoch() public onlyRole(TRANSFER_BOT_ROLE) returns (uint256) {
         return NextEpoch() - EPOCH_DURATION;
     }
 
@@ -524,6 +517,8 @@ contract TestVaultFront is
                 withdrawer.finalAmount += withdrawer.amountAssets;
             }
         }
+        // Update the Current Epoch
+        CurrentEpoch();
     }
 
     /**
@@ -578,9 +573,7 @@ contract TestVaultFront is
                 : (_assets * supply) / totalAssets();
         } else {
             _shares = _assets.mulDiv(
-                10 ** decimals(),
-                10 ** _asset.decimals(),
-                MathUpgradeable.Rounding.Up
+                10 ** decimals(), 10 ** _asset.decimals(), MathUpgradeable.Rounding.Up
             ).div(decimalsAdjust).mul(decimalsAdjust); // last part is to fixed the rounding issue with stable coins
         }
     }

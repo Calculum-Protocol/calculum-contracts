@@ -15,6 +15,7 @@
     "deploy:sepolia": "npx hardhat run ./scripts/deploy.ts --network sepolia",
     "deploy:arbSepolia": "npx hardhat run ./scripts/deploy.ts --network arbitrumSepolia",
     "deploy:arbitrumOne": "npx hardhat run ./scripts/deploy.ts --network arbitrumOne",
+    "upgrade:arbitrumOne": "npx hardhat run ./scripts/upgrade.ts --network arbitrumOne",
     "deployMockUp:arbitrumOne": "npx hardhat run ./scripts/deployMockUp.ts --network arbitrumOne",
     "deployMockUp:arbSepolia": "npx hardhat run ./scripts/deployTestFrontMockUp.ts --network arbitrumSepolia"
   },

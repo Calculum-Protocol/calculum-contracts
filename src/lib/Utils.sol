@@ -16,12 +16,11 @@ library Utils {
     using SafeMathUpgradeable for uint256;
     using MathUpgradeable for uint256;
 
-    // address public constant OZW = 
+    // address public constant OZW =
 
     address public constant FQuerier = 0x1693273B443699bee277eCbc60e2C8027E91995d; // Arbitrum Mainnet
-    // address public constant OZW = 0x63833F79b09123e97672E9cbE6C2E976F0452318; // Arbitrum Sepolia
     address public constant OZW = 0xB19b03Bf35bBdd30CF154bef41c19621a17068f2; // OpenZeppelin Defender Wallet Arbitrum Mainnet
-
+    // address public constant OZW = 0xc6B04026Ad05981840aD6bD77c924c67bAeCf0DC; // OpenZeppelin Defender Wallet Unit Test
 
     bytes12 private constant defaultSubaccountName = bytes12(abi.encodePacked("default"));
     string constant DEFAULT_REFERRAL_CODE = "-1";
@@ -68,7 +67,9 @@ library Utils {
         IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(asset);
         uint256 assetDecimals = 10 ** _asset.decimals();
         uint256 currentEpoch = Calculum.CURRENT_EPOCH();
-        if ((currentEpoch == 0) || (Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch.sub(1)) == 0)) return false;
+        if ((currentEpoch == 0) || (Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch.sub(1)) == 0)) {
+            return false;
+        }
         return (
             Calculum.DEX_WALLET_BALANCE().mulDiv(
                 assetDecimals,
@@ -116,7 +117,9 @@ library Utils {
         IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(asset);
         uint256 assetDecimals = 10 ** _asset.decimals();
         uint256 currentEpoch = Calculum.CURRENT_EPOCH();
-        if ((currentEpoch == 0) || (Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch.sub(1)) == 0)) return 0;
+        if ((currentEpoch == 0) || (Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch.sub(1)) == 0)) {
+            return 0;
+        }
         if (getPnLPerVaultToken(calculum, asset)) {
             return (
                 Calculum.DEX_WALLET_BALANCE().mulDiv(
