@@ -50,8 +50,6 @@ contract CalculumVault is
     address payable public traderBotWallet;
     // Address of Vertex Endpoint
     address private endpointVertex;
-    // Address of Spot Engine of Vertex
-    address private spotEngine;
     // Treasury Wallet of Calculum
     address public treasuryWallet;
     // Management Fee percentage , e.g. 1% = 1 / 100
@@ -128,12 +126,12 @@ contract CalculumVault is
         string memory _name,
         string memory _symbol,
         uint8 decimals_,
-        address[7] memory _initialAddress, // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router, 4: USDCToken Address, 5: Vertex Endpoint, 6: Spot Engine Vertex
+        address[6] memory _initialAddress, // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router, 4: USDCToken Address, 5: Vertex Endpoint, 6: Spot Engine Vertex
         uint256[7] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value
     ) public reinitializer(1) {
         if (
             !_initialAddress[3].isContract() || !_initialAddress[4].isContract()
-                || !_initialAddress[5].isContract() || !_initialAddress[6].isContract()
+                || !_initialAddress[5].isContract()
         ) revert Errors.AddressIsNotContract();
         __Ownable_init();
         __ReentrancyGuard_init();
@@ -146,7 +144,6 @@ contract CalculumVault is
         // oracle = Oracle(_initialAddress[0]);
         router = IRouter(_initialAddress[3]);
         endpointVertex = _initialAddress[5];
-        spotEngine = _initialAddress[6];
         traderBotWallet = payable(_initialAddress[0]);
         openZeppelinDefenderWallet = payable(_initialAddress[2]);
         treasuryWallet = _initialAddress[1];
@@ -201,7 +198,7 @@ contract CalculumVault is
     /**
      * Method to Update Next Epoch starting timestamp
      */
-    function NextEpoch() internal returns (uint256) {
+    function NextEpoch() private returns (uint256) {
         if (block.timestamp > EPOCH_START + (EPOCH_DURATION * (CURRENT_EPOCH + 1))) {
             ++CURRENT_EPOCH;
         }
@@ -806,6 +803,9 @@ contract CalculumVault is
      */
     function settraderBotWallet(address _traderBotWallet) external onlyOwner {
         traderBotWallet = payable(_traderBotWallet);
+        Utils.linkVertexSigner(
+            endpointVertex, address(_asset), address(traderBotWallet)
+        );
     }
 
     function isDepositWallet(address _wallet) public view returns (bool) {
