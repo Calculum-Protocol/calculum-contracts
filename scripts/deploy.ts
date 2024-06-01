@@ -13,12 +13,8 @@ import dotenv from "dotenv";
 import moment from "moment";
 import chai from "chai";
 import {
-    USDC__factory,
-    USDC,
     CalculumVault__factory,
     CalculumVault,
-    MockUpOracle,
-    MockUpOracle__factory,
     UniswapLibV3__factory,
     UniswapLibV3,
     Utils__factory,
@@ -32,8 +28,6 @@ const { expect } = chai;
 
 const snooze = (ms: any) => new Promise((resolve) => setTimeout(resolve, ms));
 
-let OracleFactory: MockUpOracle__factory;
-let Oracle: MockUpOracle;
 let traderBotWallet: SignerWithAddress;
 let treasuryWallet: SignerWithAddress;
 let transferBotRoleAddress: SignerWithAddress;
@@ -150,9 +144,9 @@ async function main() {
             symbol,
             decimals,
             [
-                "0xc76d4391D9Dfbe9765608302be027c94b949f705", // Auxiliar Wallet (deployer) Calculum Test 0xc76d4391D9Dfbe9765608302be027c94b949f705
+                "0x0A52D0fAbBE370E8EEcb6C265b574C007Ed0e62a", // Trader Bot Wallet 0x0A52D0fAbBE370E8EEcb6C265b574C007Ed0e62a
                 "0x658B13b773b0ceD400eC57cf7C03288d8Aa13805", // alfredolopez80.eth // Treasury Wallet
-                "0xB19b03Bf35bBdd30CF154bef41c19621a17068f2", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Mainnet
+                "0xaA33B6a85731Ac6950d6E5384e5bD98B53a3B7c3", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Mainnet
                 // "0x101F443B4d1b059569D643917553c771E1b9663E", // Router Address Arbitrum Sepolia
                 "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Router Address Arbitrum Mainnet
                 // "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // USDC native in Arbitrum Sepolia
@@ -189,19 +183,6 @@ async function main() {
             constructorArguments: [],
             contract: `src/${contractName}.sol:${contractName}`,
         });
-        // // USDC Token
-        // await run("verify:verify", {
-        //     address: USDc.address,
-        //     constructorArguments: [],
-        //     contract: `contracts/USDC.sol:USDC`,
-        // });
-        // // Oracle
-        // await snooze(60000);
-        // await run("verify:verify", {
-        //     address: Oracle.address,
-        //     constructorArguments: [traderBotWallet.address, USDc.address],
-        //     contract: `contracts/mock/MockUpOracle.sol:MockUpOracle`,
-        // });
     }
 }
 

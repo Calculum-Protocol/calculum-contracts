@@ -18,7 +18,7 @@ library UniswapLibV3 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     uint256 private constant TWAP_INTERVAL = 60 * 15; // 15 minutes twap;
-    address public constant OZW = 0xB19b03Bf35bBdd30CF154bef41c19621a17068f2; // OpenZeppelin Defender Wallet Arbitrum Mainnet
+    address public constant OZW = 0xaA33B6a85731Ac6950d6E5384e5bD98B53a3B7c3; // OpenZeppelin Defender Wallet Arbitrum Mainnet
     // address public constant OZW = 0xc6B04026Ad05981840aD6bD77c924c67bAeCf0DC; // OpenZeppelin Defender Wallet Unit Test
 
     /// @dev Method to get the price of 1 token of tokenAddress if swapped for paymentToken

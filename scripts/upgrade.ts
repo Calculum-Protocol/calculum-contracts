@@ -123,7 +123,7 @@ async function main() {
     // eslint-disable-next-line no-unused-expressions
     expect(await UniswapLibV3.getAddress()).to.properAddress;
     console.log(`UniswapLibV3 Address: ${await UniswapLibV3.getAddress()}`);
-    await snooze(10000);
+    await snooze(2000);
     UtilsFactory = (await ethers.getContractFactory(
         "Utils",
         deployer
@@ -132,7 +132,7 @@ async function main() {
     // eslint-disable-next-line no-unused-expressions
     expect(await Utils.getAddress()).to.properAddress;
     console.log(`Utils Address: ${await Utils.getAddress()}`);
-    await snooze(10000);
+    await snooze(2000);
     // We get the contract to deploy
     const CalculumFactory = await ethers.getContractFactory(
         contractName, {
@@ -144,7 +144,7 @@ async function main() {
     }
     );
     const Calculum = await upgrades.upgradeProxy(
-        "0x31758eD7da38A069712d80230aE03d7c9dC01e89", // Address of the existing proxy
+        "0xDAd5479d17e21f8246AED2A284b9E307a55C5fE3", // Address of the existing proxy
         CalculumFactory
     );
 
@@ -165,19 +165,6 @@ async function main() {
             constructorArguments: [],
             contract: `src/${contractName}.sol:${contractName}`,
         });
-        // // USDC Token
-        // await run("verify:verify", {
-        //     address: USDc.address,
-        //     constructorArguments: [],
-        //     contract: `contracts/USDC.sol:USDC`,
-        // });
-        // // Oracle
-        // await snooze(60000);
-        // await run("verify:verify", {
-        //     address: Oracle.address,
-        //     constructorArguments: [traderBotWallet.address, USDc.address],
-        //     contract: `contracts/mock/MockUpOracle.sol:MockUpOracle`,
-        // });
     }
 }
 

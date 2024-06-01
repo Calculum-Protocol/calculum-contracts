@@ -33,7 +33,7 @@ const contractAbi = [
 ];
 
 // Contract address
-const contractAddress = '0x63d5d50e5c5B016f7A428A57Cd6FEc018b5a3071';
+const contractAddress = '0x9379B2a449c457050432E4f137c26A96CE05B9F3';
 
 // Snooze function to pause execution
 const snooze = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -70,8 +70,8 @@ exports.handler = async function (credentials) {
         await dexTransferTx1.wait();
         console.log('Transaction for dexTransfer confirmed.');
 
-        // Pause to ensure the state is updated
-        await snooze(360000); // Adjust the delay as necessary
+        // Pause to ensure the state is updated 4 minutes y 30 seconds
+        await snooze(250000); // Adjust the delay as necessary
 
         // Call dexTransfer with the argument true
         const dexTransferTx2 = await contract.dexTransfer(false);
@@ -82,15 +82,15 @@ exports.handler = async function (credentials) {
         console.log('Transaction for dexTransfer confirmed.');
 
         // Pause to ensure the state is updated
-        await snooze(2000); // Adjust the delay as necessary
+        await snooze(1000); // Adjust the delay as necessary
 
         // Call CurrentEpoch to force the contract to update the epoch value
         const feesTransferTx = await contract.feesTransfer();
-        console.log('Transaction for CurrentEpoch sent:', feesTransferTx.hash);
+        console.log('Transaction for feesTransferTx sent:', feesTransferTx.hash);
 
         // Wait for the CurrentEpoch transaction to be confirmed
         await feesTransferTx.wait();
-        console.log('Transaction for CurrentEpoch confirmed.');
+        console.log('Transaction for feesTransferTx confirmed.');
 
         return {
             finalizeEpochTxHash: finalizeEpochTx.hash,
