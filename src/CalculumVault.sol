@@ -675,7 +675,7 @@ contract CalculumVault is
     function dexTransfer(bool kind) external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
         DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
         _checkVaultOutMaintenance();
-        if (actualTx.pending && kind && actualTx.amount != uint256(0)) {
+        if (actualTx.pending && kind && (actualTx.amount > 0)) {
             if (actualTx.direction) {
                 // Deposit
                 Utils.depositCollateralWithReferral(
@@ -713,27 +713,31 @@ contract CalculumVault is
      */
     function feesTransfer() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
         _checkVaultOutMaintenance();
-        uint256 mgtFee = Utils.MgtFeePerVaultToken(address(this));
-        uint256 perfFee = Utils.PerfFeePerVaultToken(address(this), address(_asset));
-        if (CURRENT_EPOCH == 0) revert Errors.FirstEpochNoFeeTransfer();
-        uint256 totalFees = Utils.getPnLPerVaultToken(address(this), address(_asset))
-            ? mgtFee.add(perfFee).mulDiv(TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)], DECIMAL_FACTOR)
-            : mgtFee.mulDiv(TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)], DECIMAL_FACTOR);
-        uint256 rest =
-            totalFees.sub(Utils.CalculateTransferBotGasReserveDA(address(this), address(_asset)));
-        uint256 assetBalance = _asset.balanceOf(address(this));
-        uint256 adjustedBalance =
-            assetBalance > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT ? assetBalance : 0;
-        rest = rest > adjustedBalance
-            ? adjustedBalance
-            : (rest > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT ? rest : 0);
-        uint256 restEvent = rest;
-        if (rest > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT) {
-            restEvent = rest - FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT;
-            SafeERC20Upgradeable.safeTransfer(_asset, treasuryWallet, restEvent);
+        if (CURRENT_EPOCH > 0) {
+            uint256 mgtFee = Utils.MgtFeePerVaultToken(address(this));
+            uint256 perfFee = Utils.PerfFeePerVaultToken(address(this), address(_asset));
+            uint256 totalFees = Utils.getPnLPerVaultToken(address(this), address(_asset))
+                ? mgtFee.add(perfFee).mulDiv(TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)], DECIMAL_FACTOR)
+                : mgtFee.mulDiv(TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)], DECIMAL_FACTOR);
+            uint256 rest =
+                totalFees.sub(Utils.CalculateTransferBotGasReserveDA(address(this), address(_asset)));
+            uint256 assetBalance = _asset.balanceOf(address(this));
+            uint256 adjustedBalance =
+                assetBalance > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT ? assetBalance : 0;
+            rest = rest > adjustedBalance
+                ? adjustedBalance
+                : (rest > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT ? rest : 0);
+            uint256 restEvent = rest;
+            if (rest > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT) {
+                restEvent = rest - FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT;
+                SafeERC20Upgradeable.safeTransfer(_asset, treasuryWallet, restEvent);
+            }
+            emit FeesTransfer(CURRENT_EPOCH, restEvent);
+        } else {
+            revert Errors.FirstEpochNoFeeTransfer();
         }
-        emit FeesTransfer(CURRENT_EPOCH, restEvent);
         // Update Current Epoch
+        DexWalletBalance();
         CurrentEpoch();
     }
 
@@ -748,11 +752,8 @@ contract CalculumVault is
      * @dev See {IERC4262-convertToAssets}
      */
     function convertToAssets(uint256 _shares) public view override returns (uint256 _assets) {
-        uint256 supply = totalSupply();
         if (CURRENT_EPOCH == 0) {
-            return (supply == 0)
-                ? (_shares * 10 ** _asset.decimals()) / DECIMAL_FACTOR
-                : (_shares * totalAssets()) / supply;
+            _assets = (_shares * 10 ** _asset.decimals()) / DECIMAL_FACTOR;
         } else {
             _assets = _shares.mulDiv(
                 Utils.UpdateVaultPriceToken(address(this), address(_asset)),
@@ -766,13 +767,10 @@ contract CalculumVault is
      * @dev See {IERC4262-convertToAssets}
      */
     function convertToShares(uint256 _assets) public view override returns (uint256 _shares) {
-        uint256 supply = totalSupply();
         // decimalsAdjust to fixed the rounding issue with stable coins
         uint256 decimalsAdjust = 10 ** (decimals() - _asset.decimals());
         if (CURRENT_EPOCH == 0) {
-            return (_assets == 0 || supply == 0)
-                ? (_assets * DECIMAL_FACTOR) / 10 ** _asset.decimals()
-                : (_assets * supply) / totalAssets();
+            _shares = (_assets * DECIMAL_FACTOR) / 10 ** _asset.decimals();
         } else {
             _shares = _assets.mulDiv(
                 DECIMAL_FACTOR,
