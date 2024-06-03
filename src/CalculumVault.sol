@@ -42,6 +42,8 @@ contract CalculumVault is
     uint8 private _decimals;
     // Flag to Control Linksigner
     bool private linked;
+    // flag no transfer to Vertez
+    bool private _tx;
     // Flag to Control Start Sales of Shares
     uint256 public EPOCH_START; // start 10 July 2022, Sunday 22:00:00  UTC
     // Transfer Bot Wallet in DEX
@@ -130,8 +132,8 @@ contract CalculumVault is
         uint256[7] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value
     ) public reinitializer(1) {
         if (
-            !_initialAddress[0].isContract() || !_initialAddress[4].isContract() || !_initialAddress[5].isContract()
-                || !_initialAddress[6].isContract()
+            !_initialAddress[0].isContract() || !_initialAddress[4].isContract()
+                || !_initialAddress[5].isContract() || !_initialAddress[6].isContract()
         ) revert Errors.AddressIsNotContract();
         __Ownable_init();
         __ReentrancyGuard_init();
@@ -273,6 +275,8 @@ contract CalculumVault is
         SafeERC20Upgradeable.safeTransferFrom(_asset, _receiver, address(this), _assets);
         addDeposit(_receiver, shares, _assets);
 
+        // flag to control the transfer to Vertex
+        _tx = true;
         emit PendingDeposit(caller, _receiver, _assets, shares);
 
         return shares;
@@ -337,7 +341,8 @@ contract CalculumVault is
         // if _asset is ERC777, transfer can call reenter AFTER the transfer happens through
         // the tokensReceived hook, so we need to transfer after we burn to keep the invariants.
         addWithdraw(_receiver, shares, _assets, true);
-
+        // flag to control the transfer to Vertex
+        _tx = true;
         emit PendingWithdraw(_receiver, _owner, _assets, shares);
 
         return shares;
@@ -386,7 +391,8 @@ contract CalculumVault is
         // if _asset is ERC777, transfer can call reenter AFTER the transfer happens through
         // the tokensReceived hook, so we need to transfer after we burn to keep the invariants.
         addWithdraw(_receiver, _shares, assets, false);
-
+        // flag to control the transfer to Vertex
+        _tx = true;
         emit PendingWithdraw(_receiver, _owner, assets, _shares);
 
         return assets;
@@ -454,6 +460,8 @@ contract CalculumVault is
             revert Errors.CalletIsNotClaimerToDeposit(_owner);
         }
         _mint(_owner, depositor.amountShares);
+        // flag to control the transfer to Vertex
+        _tx = true;
         emit Deposit(caller, _owner, depositor.finalAmount, depositor.amountShares);
         delete depositor.amountShares;
         depositor.status = DataTypes.Status.Completed;
@@ -480,6 +488,8 @@ contract CalculumVault is
         }
         _burn(_owner, withdrawer.amountShares);
         SafeERC20Upgradeable.safeTransfer(_asset, _receiver, withdrawer.amountAssets);
+        // flag to control the transfer to Vertex
+        _tx = true;
         emit Withdraw(caller, _receiver, _owner, withdrawer.amountShares, withdrawer.amountAssets);
         delete withdrawer.amountAssets;
         delete withdrawer.amountShares;
@@ -547,7 +557,7 @@ contract CalculumVault is
         if ((totalSupply() == 0) && (CURRENT_EPOCH == 0)) {
             DEX_WALLET_BALANCE = newDeposits();
         } else {
-            // Get the Balance of the Wallet in the DEX Vertex Through FQuerier Contract of Vertex, 
+            // Get the Balance of the Wallet in the DEX Vertex Through FQuerier Contract of Vertex,
             // and Adjust the Decimals for the Asset of the Vault
             // DEX_WALLET_BALANCE = Utils.getVertexBalance(0).mulDiv(10 ** _asset.decimals(), 1 ether);
             DEX_WALLET_BALANCE = oracle.GetAccount(address(traderBotWallet));
@@ -640,6 +650,8 @@ contract CalculumVault is
         if ((totalSupply() == 0) && (CURRENT_EPOCH == 0)) {
             actualTx.direction = true;
             actualTx.amount = newDeposits();
+        } else if (!_tx) {
+            actualTx.pending = false;
         } else {
             uint256 deposits = newDeposits();
             uint256 withdrawals = newWithdrawals();
@@ -696,7 +708,7 @@ contract CalculumVault is
         }
         uint256 reserveGas = Utils.CalculateTransferBotGasReserveDA(address(this), address(_asset));
         uint256 assetBalance = _asset.balanceOf(address(this));
-        if (reserveGas > 0 && !kind) {
+        if (reserveGas > 0 && !kind && _tx) {
             if (assetBalance < reserveGas) {
                 revert Errors.NotEnoughBalance(reserveGas, assetBalance);
             }
@@ -713,29 +725,33 @@ contract CalculumVault is
      */
     function feesTransfer() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
         _checkVaultOutMaintenance();
-        if (CURRENT_EPOCH > 0) {
-            uint256 mgtFee = Utils.MgtFeePerVaultToken(address(this));
-            uint256 perfFee = Utils.PerfFeePerVaultToken(address(this), address(_asset));
-            uint256 totalFees = Utils.getPnLPerVaultToken(address(this), address(_asset))
-                ? mgtFee.add(perfFee).mulDiv(TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)], DECIMAL_FACTOR)
-                : mgtFee.mulDiv(TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)], DECIMAL_FACTOR);
-            uint256 rest =
-                totalFees.sub(Utils.CalculateTransferBotGasReserveDA(address(this), address(_asset)));
-            uint256 assetBalance = _asset.balanceOf(address(this));
-            uint256 adjustedBalance =
-                assetBalance > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT ? assetBalance : 0;
-            rest = rest > adjustedBalance
-                ? adjustedBalance
-                : (rest > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT ? rest : 0);
-            uint256 restEvent = rest;
-            if (rest > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT) {
-                restEvent = rest - FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT;
-                SafeERC20Upgradeable.safeTransfer(_asset, treasuryWallet, restEvent);
-            }
-            emit FeesTransfer(CURRENT_EPOCH, restEvent);
-        } else {
+        if (CURRENT_EPOCH == 0) {
             revert Errors.FirstEpochNoFeeTransfer();
         }
+        uint256 restEvent = 0;
+        uint256 mgtFee = Utils.MgtFeePerVaultToken(address(this));
+        uint256 perfFee =
+            _tx ? Utils.PerfFeePerVaultToken(address(this), address(_asset)) : 0;
+        uint256 totalFees = Utils.getPnLPerVaultToken(address(this), address(_asset))
+            ? mgtFee.add(perfFee).mulDiv(TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)], DECIMAL_FACTOR)
+            : mgtFee.mulDiv(TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)], DECIMAL_FACTOR);
+        uint256 rest = totalFees
+            > Utils.CalculateTransferBotGasReserveDA(address(this), address(_asset))
+            ? totalFees.sub(Utils.CalculateTransferBotGasReserveDA(address(this), address(_asset)))
+            : 0;
+        uint256 assetBalance = _asset.balanceOf(address(this));
+        uint256 adjustedBalance =
+            assetBalance > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT ? assetBalance : 0;
+        rest = rest > adjustedBalance
+            ? adjustedBalance
+            : (rest > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT ? rest : 0);
+        restEvent = rest;
+        if (rest > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT) {
+            restEvent = rest - FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT;
+            SafeERC20Upgradeable.safeTransfer(_asset, treasuryWallet, restEvent);
+        }
+        _tx = false;
+        emit FeesTransfer(CURRENT_EPOCH, restEvent);
         // Update Current Epoch
         DexWalletBalance();
         CurrentEpoch();
@@ -801,9 +817,7 @@ contract CalculumVault is
      */
     function settraderBotWallet(address _traderBotWallet) external onlyOwner {
         traderBotWallet = payable(_traderBotWallet);
-        Utils.linkVertexSigner(
-            endpointVertex, address(_asset), address(traderBotWallet)
-        );
+        Utils.linkVertexSigner(endpointVertex, address(_asset), address(traderBotWallet));
     }
 
     function isDepositWallet(address _wallet) public view returns (bool) {

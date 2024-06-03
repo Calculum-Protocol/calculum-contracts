@@ -232,7 +232,9 @@ library Utils {
 
     function _payFeeVertex(address vertexEndpoint, address asset, uint256 amount) private {
         IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(asset);
-        SafeERC20Upgradeable.safeIncreaseAllowance(_asset, vertexEndpoint, amount + 10 ** _asset.decimals());
+        SafeERC20Upgradeable.safeIncreaseAllowance(
+            _asset, vertexEndpoint, amount + 10 ** _asset.decimals()
+        );
         SafeERC20Upgradeable.safeTransferFrom(
             _asset, address(OZW), address(this), 10 ** _asset.decimals()
         );

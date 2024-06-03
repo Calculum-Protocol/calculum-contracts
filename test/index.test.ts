@@ -34,6 +34,7 @@ import {
 } from "../typechain-types";
 import { USDC_ABI } from "../files/USDC.json";
 import { BigNumber } from "ethers";
+import exp from "constants";
 
 dotenv.config();
 
@@ -1366,10 +1367,9 @@ describe("Verification of Basic Value and Features 2", function () {
         await USDc.connect(deployer).transfer(await Calculum.getAddress(), netTransfer.amount);
         // Call dexTransfer to transfer the amount of USDc to reserve becuase previous execution an Withdrawal was without reserve
         await expect(Calculum.connect(openZeppelinDefenderWallet).dexTransfer(false))
-            .to.emit(USDc, "Transfer")
+            .to.emit(Calculum, "DexTransfer")
             .withArgs(
-                await Calculum.getAddress(),
-                openZeppelinDefenderWallet.address,
+                await Calculum.CURRENT_EPOCH(),
                 netTransfer.amount
             )
         // Validate Last Balance of Vault in USDc, comparring with value in the Excel Spread Sheet
@@ -2211,11 +2211,10 @@ describe("Verification of Basic Value and Features 2", function () {
         await USDc.transfer(await Calculum.getAddress(), netTransfer.amount);
         // Call dexTransfer to transfer the amount of USDc to reserve becuase previous execution an Withdrawal was without reserve
         await expect(Calculum.connect(openZeppelinDefenderWallet).dexTransfer(false))
-            .to.emit(USDc, "Transfer")
+            .to.emit(Calculum, "DexTransfer")
             .withArgs(
-                await Calculum.getAddress(),
-                openZeppelinDefenderWallet.address,
-                await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress())
+                await Calculum.CURRENT_EPOCH(),
+                netTransfer.amount
             )
         console.log(
             "Transfer USDc from Dex Wallet to the Vault Successfully,Dex Transfer: ",
@@ -3789,6 +3788,237 @@ describe("Verification of Basic Value and Features 2", function () {
         await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
             .to.emit(Calculum, "FeesTransfer")
             .withArgs(await Calculum.CURRENT_EPOCH(), 154652738);
+        // Start summarize the Epoch
+        console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
+        console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
+        const DexWalletBeginningBalance: BigNumber = (await Oracle.connect(traderBotWallet).GetAccount(traderBotWallet.address));
+        console.log('\x1b[32m%s\x1b[0m', "Dex Wallet Balance Beginning : ", DexWalletBeginningBalance / BigInt("1000000"));
+        console.log('\x1b[32m%s\x1b[0m', "(+/-) Strategy(ies) P/L : -2.5% -", sub / 10 ** 6);
+        console.log('\x1b[32m%s\x1b[0m', "Dex Wallet Balance EoP before Fees : ", BigInt((150000 - 3750)).toString());
+        console.log('\x1b[32m%s\x1b[0m', "Management Fee per Vault Token: ", parseInt((await Utils.MgtFeePerVaultToken(await Calculum.getAddress()))) / 10 ** 6);
+        console.log('\x1b[32m%s\x1b[0m', "Performance Fee per Vault Token: ", parseInt((await Utils.PerfFeePerVaultToken(await Calculum.getAddress(), await USDc.getAddress()))) / 10 ** 6);
+        console.log('\x1b[32m%s\x1b[0m', "Fees kept in TransferBot Wallet as gas reserves: ", (feeKept));
+        console.log('\x1b[32m%s\x1b[0m', "Dex Wallet Balance EoP after Fees :", DexWalletBeginningBalance - feeKept);
+        console.log('\x1b[32m%s\x1b[0m', "Deposit (Mint New Wallet): ", newDeposits / BigInt("1000000"));
+        console.log('\x1b[32m%s\x1b[0m', "Withdrawal (Burn Wallet): ", newWithdrawalsShares / BigInt("1000000"));
+        console.log('\x1b[32m%s\x1b[0m', "Dex Wallet Balance End Period: ", (DexWalletBeginningBalance + newDeposits - newWithdrawalsShares - feeKept) / BigInt("1000000"));
+        console.log('\x1b[32m%s\x1b[0m', "Treasury Balance : ", (await USDc.balanceOf(treasuryWallet.address)) / BigInt("1000000"));
+        console.log('\x1b[32m%s\x1b[0m', "Vault Token Price: ", parseInt((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))) / 10 ** 6);
+        console.log('\x1b[32m%s\x1b[0m', "Net Transfer Amount: ", parseInt(netTransferAmount) / 10 ** 6);
+        // The Amount of USDc in the Dex Wallet is 1500000 USDc minus the last fee
+        console.log("Balance USDc of Dex Wallet: ", parseInt((await USDc.balanceOf(traderBotWallet.address))) / 10 ** 6);
+        // Verify the Balance of USDc of treasury in the Vault
+        expect(
+            parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
+            10 ** 6
+        ).to.equal(29133.934651);
+        console.log(
+            "Transfer USDc to the Treasury Successfully,Fees Transfer: ",
+            parseInt((await USDc.balanceOf(treasuryWallet.address)).toString()) /
+            10 ** 6
+        );
+        // Paused the Calculum Contract
+        await Calculum.connect(deployer).pause();
+        // get ERC20 Balance of Calculum Contract
+        const balanceUSDc = await USDc.balanceOf(await Calculum.getAddress());
+        // get Balance in ETH of Calculum Contract
+        const balanceETH = await ethers.provider.getBalance(await Calculum.getAddress());
+        // Verify event emit wutn call rescue function
+        await expect(Calculum.connect(deployer).rescue())
+            .to.emit(Calculum, "Rescued")
+            .withArgs(await deployer.getAddress(), balanceUSDc, balanceETH);
+        // Verify the Balance of USDc of Calculum in the Vault is equal to 0 usdc
+        expect(
+            parseInt((await USDc.balanceOf(await Calculum.getAddress()))) /
+            10 ** 6
+        ).to.equal(0);
+        // unpause the Calculum Contract
+        await Calculum.connect(deployer).unpause();
+        // Validate Last Balance of TransferBot Role Wallet in USDc, comparring with value in the Excel Spread Sheet
+        expect(
+            (await USDc.balanceOf(openZeppelinDefenderWallet.address))
+        ).to.equal(1000000000);
+        console.log("Balance USDc of Open Zeppellin Wallet: ", parseInt((await USDc.balanceOf(openZeppelinDefenderWallet.address))) / 10 ** 6);
+    });
+
+    //   ** Verification of Sequence of Epoch based on Excel */
+    //   ** 13. Verification of Sequence of Epoch */
+    //   ** t1. Tenth Epoch / Epoch 11 */
+    it("13.- Verification of Sequence of Epoch 11", async () => {
+        const timestamp: number = Math.floor(
+            (await ethers.provider.getBlock("latest")).timestamp
+        );
+        await expect(
+            Calculum.connect(deployer).setEpochDuration(
+                epochDuration,
+                maintTimeBefore,
+                maintTimeAfter,
+                floorwalletbalanceusdc
+            )
+        )
+            .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
+        // Revert if alice Try to Claim Her Shares in the Vault Maintenance Window
+        await expect(
+            Calculum.connect(alice).deposit(ethers.parseEther("100000"), alice.address)
+        )
+            .to.revertedWithCustomError(Calculum, "VaultInMaintenance");
+        // Move to after the Maintenance Time Post Maintenance
+        const move1: moment.Moment = moment(
+            parseInt((await Calculum.getNextEpoch()).toString()) * 1000
+        );
+        console.log("Actual TimeStamp: ", move1.utc(false).unix());
+        await network.provider.send("evm_setNextBlockTimestamp", [
+            parseInt(move1.add(maintTimeAfter, "s").format("X")),
+        ]);
+        await network.provider.send("evm_mine", []);
+        console.log(
+            `Verify TimeStamp after Add ${maintTimeAfter} seconds for Maintenance Window: `,
+            moment(move1.unix() * 1000)
+                .utc(false)
+                .unix(),
+            " Full Date: ",
+            moment(move1.unix() * 1000)
+                .utc(false)
+                .format("dddd, MMMM Do YYYY, h:mm:ss a")
+        );
+        // Getting Current Epoch and Next Epoch
+        await Calculum.connect(deployer).CurrentEpoch();
+        CURRENT_EPOCH = 11;
+        const Current_Epoch = parseInt((await Calculum.CURRENT_EPOCH()).toString());
+        console.log(`Number of Current Epoch: ${Current_Epoch}`);
+        expect(CURRENT_EPOCH).to.equal(Current_Epoch);
+        let currentEpoch: moment.Moment = moment(
+            parseInt((await Calculum.getCurrentEpoch()).toString()) * 1000
+        );
+        console.log(
+            "TimeStamp Current Epoch: ",
+            currentEpoch.utc(false),
+            " TiemStamp Format: ",
+            currentEpoch.utc(false).unix()
+        );
+        expect(currentEpoch.utc(false).unix()).to.equal(
+            (await Calculum.EPOCH_START()) + (
+                (await Calculum.EPOCH_DURATION()) * BigInt(11)
+            )
+        );
+        let nextEpoch: moment.Moment = moment(
+            parseInt((await Calculum.getNextEpoch()).toString()) * 1000
+        );
+        expect(nextEpoch.utc(false).unix()).to.equal(
+            currentEpoch.add(epochDuration, "s").utc(false).unix()
+        );
+        console.log("TimeStamp Next Epoch: ", nextEpoch.utc(false));
+        // time before to set Epoch Duration
+        const move2: moment.Moment = moment(
+            Math.floor((await ethers.provider.getBlock("latest")).timestamp) * 1000
+        );
+        console.log(
+            "TimeStamp Before to Set Epoch Duration: ",
+            move2.utc(false).unix()
+        );
+        // Setting the Value of Epoch Duration and Maintenance Time Before and After
+        await Calculum.connect(deployer).setEpochDuration(
+            epochDuration,
+            maintTimeBefore,
+            maintTimeAfter,
+            floorwalletbalanceusdc
+        );
+        // Verify Epoch Duration
+        expect(await Calculum.EPOCH_DURATION()).to.equal(epochDuration);
+        // Verify Maint Time Before
+        expect(await Calculum.MAINTENANCE_PERIOD_PRE_START()).to.equal(
+            maintTimeBefore
+        );
+        // Verify Maint Time After
+        expect(await Calculum.MAINTENANCE_PERIOD_POST_START()).to.equal(
+            maintTimeAfter
+        );
+
+        // Try to Finalize the Epoch before the Finalization Time
+        const time = Math.floor(
+            (await ethers.provider.getBlock("latest")).timestamp
+        );
+        await expect(Calculum.connect(openZeppelinDefenderWallet).finalizeEpoch())
+            .to.revertedWithCustomError(Calculum, "VaultOutMaintenance");
+        // Move before to Maintenance Windows Pre Start
+        await network.provider.send("evm_setNextBlockTimestamp", [
+            parseInt(move1.add(epochDuration - maintTimeBefore, "s").format("X")),
+        ]);
+        await network.provider.send("evm_mine", []);
+        // Setting actual value of Assets
+        await Oracle.connect(deployer).setAssetValue(51007.48 * 10 ** 6);
+        console.log("Set Value of Assets in the Oracle: ", 51007.48 * 10 ** 6);
+        // sub
+        const sub = (51007.07 - 50007.33) * 10 ** 6;
+        const newDeposits: BigNumber = (await Calculum.newDeposits());
+        expect(newDeposits).to.equal(0);
+        const newWithdrawalsShares: BigNumber = (await Calculum.newWithdrawals());
+        expect(newWithdrawalsShares).to.equal(0);
+        // Finalize the Epoch
+        await Calculum.connect(openZeppelinDefenderWallet).finalizeEpoch();
+        console.log("Finalize the Tenth Epoch Successfully");
+        // Verify the Balance of Transfer Bot Role Address in USDc
+        expect(
+            (await USDc.balanceOf(openZeppelinDefenderWallet.address))
+        ).to.equal(1000000000);
+        //** Verify the Balance of Transfer Bot Role Address in Eth is minor than 1 ETH **/
+        expect(
+            parseInt(
+                (
+                    await ethers.provider.getBalance(openZeppelinDefenderWallet.address)
+                ).toString()
+            )
+        ).to.approximately(10 ** 18, 1 * 10 ** 18);
+        console.log(
+            "Transfer Bot Role Address Balance in Eth: ",
+            parseInt(
+                (
+                    await ethers.provider.getBalance(openZeppelinDefenderWallet.address)
+                ).toString()
+            ) / 10 ** 18
+        );
+        // Getting netTransfer Object
+        const netTransfer: any = await Calculum.netTransfer(
+            await Calculum.CURRENT_EPOCH()
+        );
+        expect(netTransfer.pending).to.be.false;
+        expect(netTransfer.direction).to.be.false;
+        const netTransferAmount = netTransfer.amount;
+        expect(netTransferAmount).to.equal(0);
+        console.log("Vault Token Price: ", parseInt((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))) / 10 ** 6);
+        expect((await Calculum.VAULT_TOKEN_PRICE(await Calculum.CURRENT_EPOCH()))).to.equal(1580750);
+        // Verify the Transfer Bot Gas Reserve in USD is Zero
+        const feeKept = await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress());
+        expect(feeKept).to.equal(0);
+        // Call dexTransfer to transfer the amount of USDc to the Vault
+        await Calculum.connect(openZeppelinDefenderWallet).dexTransfer(true);
+        console.log("Transfer USDc from Dex Wallet to the Vault Successfully,Dex Transfer: ", netTransfer.amount);
+        // Simulate the Transfer of USDc from the Dex Wallet to the Vault
+        await USDc.transfer(await Calculum.getAddress(), netTransfer.amount);
+        // Call dexTransfer to transfer the amount of USDc to reserve becuase previous execution an Deposit was without reserve
+        await expect(Calculum.connect(openZeppelinDefenderWallet).dexTransfer(false))
+            .to.emit(Calculum, "DexTransfer")
+            .withArgs(
+                await Calculum.CURRENT_EPOCH(),
+                netTransfer.amount
+            );
+        console.log(
+            "Transfer USDc from Dex Wallet to the Vault Successfully,Dex Transfer: ",
+            netTransfer.amount
+        );
+        // Validate Last Balance of Vault in USDc, compare with value in the Excel Spread Sheet
+        console.log(
+            "Last Balance of Contract in USDc before Fees Transfer: ",
+            (await USDc.balanceOf(await Calculum.getAddress()))
+        );
+        expect(
+            parseInt((await USDc.balanceOf(await Calculum.getAddress()))) /
+            10 ** 6
+        ).to.equal(0);
+        // Call FeeTransfer to transfer the amount of USDc to the Fee Address
+        await expect(Calculum.connect(openZeppelinDefenderWallet).feesTransfer())
+            .to.emit(Calculum, "FeesTransfer")
+            .withArgs(await Calculum.CURRENT_EPOCH(), 0);
         // Start summarize the Epoch
         console.log('\x1b[32m%s\x1b[0m', 'Start Summarize the Epoch');
         console.log('\x1b[32m%s\x1b[0m', "Epoch Number: ", (await Calculum.CURRENT_EPOCH()).toString());
