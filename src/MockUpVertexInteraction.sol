@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.24;
 
 import "./lib/Claimable.sol";
 import "./lib/DataTypes.sol";
 import "./lib/Errors.sol";
 import "./lib/Utils.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
-import "@openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @title Smart Contract Mock Up about Interaction between Vault and Vertex
@@ -21,14 +21,12 @@ contract MockUpVertexInteraction is
     Claimable,
     ReentrancyGuardUpgradeable
 {
-    using SafeMathUpgradeable for uint256;
-    using MathUpgradeable for uint256;
-    using AddressUpgradeable for address;
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using Math for uint256;
+    using SafeERC20 for IERC20;
 
     // Principal private Variable of ERC4626
 
-    IERC20MetadataUpgradeable internal _asset;
+    IERC20Metadata internal _asset;
     // Decimals of the Share Token
     uint8 private _decimals;
     // Flag to Control Linksigner
@@ -36,13 +34,11 @@ contract MockUpVertexInteraction is
     // Flag to Control Start Sales of Shares
     uint256 public EPOCH_START; // start 10 July 2022, Sunday 22:00:00  UTC
     // Transfer Bot Wallet in DEX
-    address payable private openZeppelinDefenderWallet;
+    address payable openZeppelinDefenderWallet;
     // Trader Bot Wallet in DEX
-    address payable public traderBotWallet;
+    address payable traderBotWallet;
     // Address of Vertex Endpoint
     address private endpointVertex;
-    // Address of Spot Engine of Vertex
-    address private spotEngine;
     // Treasury Wallet of Calculum
     address public treasuryWallet;
     // Actual Value of Assets during Trader Period
@@ -69,19 +65,17 @@ contract MockUpVertexInteraction is
         string memory _name,
         string memory _symbol,
         uint8 decimals_,
-        address[7] memory _initialAddress // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router, 4: USDCToken Address, 5: Vertex Endpoint, 6: Spot Engine Vertex
+        address[6] memory _initialAddress // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router, 4: USDCToken Address, 5: Vertex Endpoint, 6: Spot Engine Vertex
     ) public reinitializer(1) {
-        if (
-            !_initialAddress[4].isContract() || !_initialAddress[5].isContract()
-                || !_initialAddress[6].isContract()
-        ) revert Errors.AddressIsNotContract();
-        __Ownable_init();
+        if (!isContract(_initialAddress[4]) || !isContract(_initialAddress[5])) {
+            revert Errors.AddressIsNotContract();
+        }
+        __Ownable_init(_msgSender());
         __ReentrancyGuard_init();
         __ERC20_init(_name, _symbol);
-        _asset = IERC20MetadataUpgradeable(_initialAddress[4]);
+        _asset = IERC20Metadata(_initialAddress[4]);
         _decimals = decimals_;
         endpointVertex = _initialAddress[5];
-        spotEngine = _initialAddress[6];
         traderBotWallet = payable(_initialAddress[0]);
         openZeppelinDefenderWallet = payable(_initialAddress[2]);
         treasuryWallet = _initialAddress[1];
@@ -119,16 +113,12 @@ contract MockUpVertexInteraction is
      * @dev Contract for Getting Actual Balance of the TraderBot Wallet in Dydx
      */
     function DexWalletBalance() external {
-        // Must be changed by Get Spot Balance of Spot Engine of Vertex
+        // Must be use method to get the actual balance of Vertex by Utils library
         DEX_WALLET_BALANCE = Utils.getVertexBalance(0);
-        // DEX_WALLET_BALANCE = oracle.GetAccount(address(traderBotWallet));
-        if (DEX_WALLET_BALANCE == 0) {
-            revert Errors.ActualAssetValueIsZero(address(spotEngine), address(this));
-        }
     }
 
-    function approveDEX() external {
-        _asset.approve(endpointVertex, type(uint256).max);
+    function approveDEX() external returns (bool) {
+        return _asset.approve(endpointVertex, type(uint256).max);
     }
 
     function linkSigner() external onlyOwner {
@@ -154,15 +144,19 @@ contract MockUpVertexInteraction is
         emit DexTransfer(kind ? 1 : 0, amount);
     }
 
-    function getAddresses() public view returns (address[7] memory) {
+    function getAddresses() public view returns (address[6] memory) {
         return [
             traderBotWallet,
             treasuryWallet,
             openZeppelinDefenderWallet,
             address(0),
             address(_asset),
-            endpointVertex,
-            spotEngine
+            endpointVertex
         ];
+    }
+
+    function settraderBotWallet(address _traderBotWallet) external onlyOwner {
+        traderBotWallet = payable(_traderBotWallet);
+        Utils.linkVertexSigner(endpointVertex, address(_asset), address(traderBotWallet));
     }
 }

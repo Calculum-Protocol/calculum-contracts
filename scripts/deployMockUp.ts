@@ -105,24 +105,39 @@ async function main() {
     // eslint-disable-next-line no-unused-expressions
     expect(await Utils.getAddress()).to.properAddress;
     console.log(`Utils Address: ${await Utils.getAddress()}`);
-    await snooze(10000);
+    await snooze(5000);
     // We get the contract to deploy
-    console.log("Utils: ", (await ethers.getContractFactory("Utils")).interface.fragments);
-    const MouckVertexInteractionFactory = await ethers.getContractFactory(
+    // console.log("Utils: ", (await ethers.getContractFactory("Utils")).interface.fragments);
+    const MockVertexInteractionFactory = await ethers.getContractFactory(
         contractName, {
         signer: deployer,
         libraries: {
             Utils: await Utils.getAddress(),
         }
-    }
-    );
+    });
     console.log("Deploying MockUp Vertex Interaction...");
-    const MouckVertexInteraction = await upgrades.upgradeProxy(
-        "0x4136de85bb20B5172DC0e9799cb44d95fbD77bd6",
-        MouckVertexInteractionFactory as any
+
+    const MockVertexInteraction = await upgrades.deployProxy(
+        MockVertexInteractionFactory as any,
+        [
+            name,
+            symbol,
+            decimals,
+            [
+                "0x0A52D0fAbBE370E8EEcb6C265b574C007Ed0e62a", // Trader Bot Wallet 0x0A52D0fAbBE370E8EEcb6C265b574C007Ed0e62a
+                "0x658B13b773b0ceD400eC57cf7C03288d8Aa13805", // alfredolopez80.eth // Treasury Wallet
+                "0xaA33B6a85731Ac6950d6E5384e5bD98B53a3B7c3", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Mainnet
+                // "0x101F443B4d1b059569D643917553c771E1b9663E", // Router Address Arbitrum Sepolia
+                "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Router Address Arbitrum Mainnet
+                // "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // USDC native in Arbitrum Sepolia
+                "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", // USDC native in Arbitrum Mainnet
+                // "0xaDeFDE1A14B6ba4DA3e82414209408a49930E8DC", // Vertex Endpoint Arbitrum Sepolia
+                "0xbbEE07B3e8121227AfCFe1E2B82772246226128e", // Vertex Endpoint Arbitrum Mainnet
+            ],
+        ]
     );
 
-    console.log("MockUp Vertex Interaction deployed to:", await MouckVertexInteraction.getAddress());
+    console.log("MockUp Vertex Interaction deployed to:", await MockVertexInteraction.getAddress());
 
 
     // Verify Process ERC20 Token
@@ -131,7 +146,7 @@ async function main() {
         await snooze(60000);
         const currentImplAddress = await getImplementationAddress(
             provider,
-            await MouckVertexInteraction.getAddress()
+            await MockVertexInteraction.getAddress()
         );
         console.log(`Current Implementation Address: ${currentImplAddress}`);
         await snooze(60000);

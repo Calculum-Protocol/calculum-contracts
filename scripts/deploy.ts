@@ -41,8 +41,8 @@ const decimals = 18;
 const EPOCH_TIME: moment.Moment = moment().utc();
 const ZERO_ADDRESS = `0x` + `0`.repeat(40);
 const epochDuration = 60 * 60; // 1 hour
-const maintTimeBefore = 60 * 5; // 5 minutes
-const maintTimeAfter = 60 * 5; // 5 minutes
+const maintTimeBefore = 210; // 3.5 minutes
+const maintTimeAfter = 210; // 3.5 minutes
 
 async function main() {
     // Hardhat always runs the compile task when running scripts with its command
