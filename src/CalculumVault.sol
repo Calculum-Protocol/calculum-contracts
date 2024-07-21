@@ -138,7 +138,7 @@ contract CalculumVault is
         uint256[7] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value
     ) public reinitializer(1) {
         if (
-            !isContract(_initialAddress[4]) || !isContract(_initialAddress[5])
+            !isContract(_initialAddress[0]) || !isContract(_initialAddress[4]) || !isContract(_initialAddress[5])
                 || !isContract(_initialAddress[6])
         ) revert Errors.AddressIsNotContract();
         __Ownable_init(_msgSender());
@@ -797,7 +797,7 @@ contract CalculumVault is
     function addDropWhitelist(address _wallet, bool status) external onlyOwner {
         whitelist[_wallet] = status;
     }
-    
+
     /**
      * @dev Set Limit to Withdraw till timestamp
      * @param pct Percentage to Limit any withdraw
