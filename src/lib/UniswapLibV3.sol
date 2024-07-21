@@ -15,8 +15,7 @@ library UniswapLibV3 {
     using SafeERC20 for IERC20;
 
     uint256 private constant TWAP_INTERVAL = 60 * 15; // 15 minutes twap;
-    // address public constant OZW = 0xaA33B6a85731Ac6950d6E5384e5bD98B53a3B7c3; // OpenZeppelin Defender Wallet Arbitrum Mainnet
-    address public constant OZW = 0xc6B04026Ad05981840aD6bD77c924c67bAeCf0DC; // OpenZeppelin Defender Wallet Unit Test
+    address public constant OZW = 0xB8df119948e3bb1cf2255EBAfc4b9CE35b11CA22; // OpenZeppelin Defender Wallet Arbitrum Mainnet
 
     /// @dev Method to get the price of 1 token of tokenAddress if swapped for paymentToken
     /// @param tokenAddress ERC20 token address of a whitelisted ERC20 token

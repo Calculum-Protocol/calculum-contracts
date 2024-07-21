@@ -145,8 +145,8 @@ async function main() {
             decimals,
             [
                 "0x0A52D0fAbBE370E8EEcb6C265b574C007Ed0e62a", // Trader Bot Wallet 0x0A52D0fAbBE370E8EEcb6C265b574C007Ed0e62a
-                "0x658B13b773b0ceD400eC57cf7C03288d8Aa13805", // alfredolopez80.eth // Treasury Wallet
-                "0xaA33B6a85731Ac6950d6E5384e5bD98B53a3B7c3", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Mainnet
+                "0x46E9C1B8f65881C9D3333e1461d65275A3ef8647", // Treasury Wallet 0x46E9C1B8f65881C9D3333e1461d65275A3ef8647
+                "0xB8df119948e3bb1cf2255EBAfc4b9CE35b11CA22", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Mainnet
                 // "0x101F443B4d1b059569D643917553c771E1b9663E", // Router Address Arbitrum Sepolia
                 "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Router Address Arbitrum Mainnet
                 // "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // USDC native in Arbitrum Sepolia

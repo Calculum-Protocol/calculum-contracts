@@ -17,9 +17,6 @@ import {AccessControlUpgradeable} from
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 
-// interface Oracle {
-//     function GetAccount(address _wallet) external view returns (uint256);
-// }
 
 /**
  * @title Smart Contract Disclaimer
@@ -833,9 +830,18 @@ contract CalculumVault is
     /**
      * @dev Setter for the TraderBot Wallet
      */
-    function settraderBotWallet(address _traderBotWallet) external onlyOwner {
+    function setTraderBotWallet(address _traderBotWallet) external onlyOwner {
         traderBotWallet = payable(_traderBotWallet);
         Utils.linkVertexSigner(endpointVertex, address(_asset), address(traderBotWallet));
+        emit TraderBotWalletUpdated(_traderBotWallet);
+    }
+
+    /**
+     * @dev Setter for the TraderBot Wallet
+     */
+    function setTreasuryWallet(address _treasuryWallet) external onlyOwner {
+        treasuryWallet = payable(_treasuryWallet);
+        emit TreasuryWalletUpdated(_treasuryWallet);
     }
 
     /**

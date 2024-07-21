@@ -61,4 +61,14 @@ abstract contract Events {
      * @dev Rescued Emercency Funds
      */
     event Rescued(address indexed owner, uint256 amountAssets, uint256 amountEth);
+
+    /**
+     * @dev Events when change Trader Bot Address
+     */
+    event TraderBotWalletUpdated(address indexed newAddress);
+
+    /**
+     * @dev Events when change Treasury Address
+     */
+    event TreasuryWalletUpdated(address indexed newAddress);
 }
