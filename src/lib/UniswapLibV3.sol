@@ -5,20 +5,17 @@ import "./Errors.sol";
 import "./IRouter.sol";
 import "./TickMath.sol";
 import "./FullMath.sol";
-import "@openzeppelin-contracts-upgradeable/contracts/utils/math/SafeMathUpgradeable.sol";
-import "@openzeppelin-contracts-upgradeable/contracts/utils/math/MathUpgradeable.sol";
-import
-    "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @custom:oz-upgrades-unsafe-allow external-library-linking
 library UniswapLibV3 {
-    using SafeMathUpgradeable for uint256;
-    using MathUpgradeable for uint256;
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using Math for uint256;
+    using SafeERC20 for IERC20;
 
     uint256 private constant TWAP_INTERVAL = 60 * 15; // 15 minutes twap;
-    // address public constant OZW = 0xB19b03Bf35bBdd30CF154bef41c19621a17068f2; // OpenZeppelin Defender Wallet Arbitrum Mainnet
+    // address public constant OZW = 0xaA33B6a85731Ac6950d6E5384e5bD98B53a3B7c3; // OpenZeppelin Defender Wallet Arbitrum Mainnet
     address public constant OZW = 0xc6B04026Ad05981840aD6bD77c924c67bAeCf0DC; // OpenZeppelin Defender Wallet Unit Test
 
     /// @dev Method to get the price of 1 token of tokenAddress if swapped for paymentToken
@@ -66,7 +63,7 @@ library UniswapLibV3 {
             tick--;
         }
 
-        uint256 baseAmount = 10 ** IERC20MetadataUpgradeable(tokenAddress).decimals();
+        uint256 baseAmount = 10 ** IERC20Metadata(tokenAddress).decimals();
 
         price = uint256(_getQuoteAtTick(tick, baseAmount, tokenAddress, address(router.WETH9())));
     }
@@ -76,18 +73,17 @@ library UniswapLibV3 {
     /// @param routerAddress Amount of tokens to be swapped with UniSwap v2 router to payment Token
     function _swapTokensForETH(address tokenAddress, address routerAddress) public {
         IRouter router = IRouter(routerAddress);
-        IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(tokenAddress);
+        IERC20Metadata _asset = IERC20Metadata(tokenAddress);
         uint256 assetsDecimals = 10 ** _asset.decimals();
         uint256 tokenAmount = _asset.balanceOf(OZW) - assetsDecimals; // pay 1 USDc fee for Vertex Protocol
         uint256 expectedAmount = tokenAmount.mulDiv(
             getPriceInPaymentToken(address(_asset), address(router)), assetsDecimals
         );
-        SafeERC20Upgradeable.safeTransferFrom(_asset, address(OZW), address(this), tokenAmount);
-        uint256 currentAllowance =
-            IERC20Upgradeable(tokenAddress).allowance(address(this), address(router));
+        SafeERC20.safeTransferFrom(_asset, address(OZW), address(this), tokenAmount);
+        uint256 currentAllowance = IERC20(tokenAddress).allowance(address(this), address(router));
         if (currentAllowance <= tokenAmount) {
-            SafeERC20Upgradeable.safeIncreaseAllowance(
-                IERC20Upgradeable(tokenAddress), address(router), tokenAmount - currentAllowance
+            SafeERC20.safeIncreaseAllowance(
+                IERC20(tokenAddress), address(router), tokenAmount - currentAllowance
             );
         }
 

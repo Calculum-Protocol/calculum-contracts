@@ -32,6 +32,12 @@ library DataTypes {
         bool direction; // true = deposit, false = withdrawal
         uint256 amount;
     }
+    /// Limitter
+
+    struct Limit {
+        uint256 amountBlock;
+        uint256 timestamp;
+    }
 
     // Transaction Type
     // events that we parse transactions into

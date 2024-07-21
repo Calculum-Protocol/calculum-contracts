@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
-import "../../utils/introspection/IERC165Upgradeable.sol";
-import "../../proxy/utils/Initializable.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {Initializable} from "../../proxy/utils/Initializable.sol";
 
 /**
  * https://eips.ethereum.org/EIPS/eip-214#specification
@@ -15,7 +15,7 @@ import "../../proxy/utils/Initializable.sol";
  * therefore, because this contract is staticcall'd we need to not emit events (which is how solidity-coverage works)
  * solidity-coverage ignores the /mocks folder, so we duplicate its implementation here to avoid instrumenting it
  */
-contract SupportsInterfaceWithLookupMockUpgradeable is Initializable, IERC165Upgradeable {
+contract SupportsInterfaceWithLookupMockUpgradeable is Initializable, IERC165 {
     /*
      * bytes4(keccak256('supportsInterface(bytes4)')) == 0x01ffc9a7
      */
@@ -24,7 +24,7 @@ contract SupportsInterfaceWithLookupMockUpgradeable is Initializable, IERC165Upg
     /**
      * @dev A mapping of interface id to whether or not it's supported.
      */
-    mapping(bytes4 => bool) private _supportedInterfaces;
+    mapping(bytes4 interfaceId => bool) private _supportedInterfaces;
 
     /**
      * @dev A contract implementing SupportsInterfaceWithLookup
@@ -52,13 +52,6 @@ contract SupportsInterfaceWithLookupMockUpgradeable is Initializable, IERC165Upg
         require(interfaceId != 0xffffffff, "ERC165InterfacesSupported: invalid interface id");
         _supportedInterfaces[interfaceId] = true;
     }
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[49] private __gap;
 }
 
 contract ERC165InterfacesSupportedUpgradeable is Initializable, SupportsInterfaceWithLookupMockUpgradeable {
@@ -72,11 +65,4 @@ contract ERC165InterfacesSupportedUpgradeable is Initializable, SupportsInterfac
             _registerInterface(interfaceIds[i]);
         }
     }
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[50] private __gap;
 }

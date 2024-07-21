@@ -90,7 +90,6 @@ const UNISWAP_ARB_ROUTER3 = "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45";
 const USDCe_ARB_BIG_HOLDER = "0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7";
 const VERTEX_ENDPOINT = "0xbbEE07B3e8121227AfCFe1E2B82772246226128e";
 const CLEARING_HOUSE = "0xAE1ec28d6225dCE2ff787dcb8CE11cF6D3AE064f";
-const SPOT_ENGINE = "0x32d91Af2B17054D575A7bF1ACfa7615f41CCEfaB";
 
 const snooze = (ms: any) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -1126,7 +1125,9 @@ describe("Verification of Basic Value and Features 2", function () {
                 await Calculum.getAddress(),
                 VERTEX_ENDPOINT,
                 1 * 10 ** 6); // cost for link Signer;
-        await Calculum.connect(openZeppelinDefenderWallet).dexTransfer(false)
+        await expect(Calculum.connect(openZeppelinDefenderWallet).dexTransfer(false))
+            .to.emit(Calculum, "DexTransfer")
+            .withArgs(await Calculum.CURRENT_EPOCH(), 150000 * 10 ** 6);
         console.log(
             "Transfer USDc from the Vault Successfully,to Dex Wallet, Dex Transfer: ",
             netTransfer.amount / BigInt("1000000")
@@ -1372,6 +1373,11 @@ describe("Verification of Basic Value and Features 2", function () {
                 await Calculum.CURRENT_EPOCH(),
                 netTransfer.amount
             )
+            .to.emit(Calculum, "DexTransfer")
+            .withArgs(
+                await Calculum.CURRENT_EPOCH(),
+                netTransfer.amount
+            );
         // Validate Last Balance of Vault in USDc, comparring with value in the Excel Spread Sheet
         lastBalanceOfVault += (await USDc.balanceOf(await Calculum.getAddress())) / BigInt("1000000");
         console.log(
@@ -1610,6 +1616,11 @@ describe("Verification of Basic Value and Features 2", function () {
                 openZeppelinDefenderWallet.address,
                 await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress())
             )
+            .to.emit(Calculum, "DexTransfer")
+            .withArgs(
+                await Calculum.CURRENT_EPOCH(),
+                netTransfer.amount
+            );
         console.log(
             "Transfer USDc from the Vault to Dex Wallet Successfully,Dex Transfer: ",
             netTransfer.amount / BigInt("1000000")
@@ -1899,7 +1910,7 @@ describe("Verification of Basic Value and Features 2", function () {
         const feeKept = await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress());
         // Verify Dex Wallet Balance
         // Call dexTransfer to transfer the amount of USDc to the Vault
-        await Calculum.connect(openZeppelinDefenderWallet).dexTransfer(true);
+        await Calculum.connect(openZeppelinDefenderWallet).dexTransfer(true)
         console.log("Execute First Dex Transfer Successfully");
         // Call dexTransfer to transfer the amount of USDc to reserve becuase previous execution an Deposit was without reserve
         await expect(Calculum.connect(openZeppelinDefenderWallet).dexTransfer(false))
@@ -1909,6 +1920,11 @@ describe("Verification of Basic Value and Features 2", function () {
                 openZeppelinDefenderWallet.address,
                 await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress())
             )
+            .to.emit(Calculum, "DexTransfer")
+            .withArgs(
+                await Calculum.CURRENT_EPOCH(),
+                netTransfer.amount
+            );
         console.log(
             "Transfer USDc from the Vault to Dex Wallet Successfully,Dex Transfer: ",
             parseInt(netTransfer.amount) / 10 ** 6
@@ -2216,6 +2232,11 @@ describe("Verification of Basic Value and Features 2", function () {
                 await Calculum.CURRENT_EPOCH(),
                 netTransfer.amount
             )
+            .to.emit(Calculum, "DexTransfer")
+            .withArgs(
+                await Calculum.CURRENT_EPOCH(),
+                netTransfer.amount
+            );
         console.log(
             "Transfer USDc from Dex Wallet to the Vault Successfully,Dex Transfer: ",
             parseInt(netTransfer.amount.toString()) / 10 ** 6
@@ -2399,7 +2420,9 @@ describe("Verification of Basic Value and Features 2", function () {
         // TODO: need to fix the smart contract of the vault, to handle the transfer to the dex wallet (deposit or withdraw)
         console.log("Adjust Balance of Dex Wallet to Real Value: ", sub);
         const newDeposits: BigNumber = (await Calculum.newDeposits());
+        console.log("newDeposits: ", newDeposits);
         const newWithdrawalsShares: BigNumber = (await Calculum.newWithdrawals());
+        console.log("newWithdrawalsShares: ", newWithdrawalsShares);
         // Finalize the Epoch
         await Calculum.connect(openZeppelinDefenderWallet).finalizeEpoch();
         console.log("Finalize the Fifth Epoch Successfully");
@@ -2433,6 +2456,11 @@ describe("Verification of Basic Value and Features 2", function () {
                 openZeppelinDefenderWallet.address,
                 await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress())
             )
+            .to.emit(Calculum, "DexTransfer")
+            .withArgs(
+                await Calculum.CURRENT_EPOCH(),
+                netTransfer.amount
+            );
         console.log(
             "Transfer USDc from Dex Wallet to the Vault Successfully,Dex Transfer: ",
             netTransfer.amount / BigInt("1000000")
@@ -2950,6 +2978,11 @@ describe("Verification of Basic Value and Features 2", function () {
                 openZeppelinDefenderWallet.address,
                 await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress())
             )
+            .to.emit(Calculum, "DexTransfer")
+            .withArgs(
+                await Calculum.CURRENT_EPOCH(),
+                netTransfer.amount
+            );
         console.log(
             "Transfer USDc from Dex Wallet to the Vault Successfully,Dex Transfer: ",
             netTransfer.amount / BigInt("1000000")
@@ -3513,7 +3546,7 @@ describe("Verification of Basic Value and Features 2", function () {
         const feeKept = await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress());
         expect(feeKept).to.equal(0);
         // Call dexTransfer to transfer the amount of USDc to the Vault
-        await Calculum.connect(openZeppelinDefenderWallet).dexTransfer(true);
+        await Calculum.connect(openZeppelinDefenderWallet).dexTransfer(true)
         // Call dexTransfer to transfer the amount of USDc to reserve becuase previous execution an Deposit was without reserve
         await expect(Calculum.connect(openZeppelinDefenderWallet).dexTransfer(false))
             .to.emit(USDc, "Transfer")
@@ -3754,7 +3787,7 @@ describe("Verification of Basic Value and Features 2", function () {
         const feeKept = await Utils.CalculateTransferBotGasReserveDA(await Calculum.getAddress(), await USDc.getAddress());
         expect(feeKept).to.equal(922175);
         // Call dexTransfer to transfer the amount of USDc to the Vault
-        await Calculum.connect(openZeppelinDefenderWallet).dexTransfer(true);
+        await Calculum.connect(openZeppelinDefenderWallet).dexTransfer(true)
         console.log("Transfer USDc from Dex Wallet to the Vault Successfully,Dex Transfer: ", netTransfer.amount);
         // Simulate the Transfer of USDc from the Dex Wallet to the Vault
         await USDc.transfer(await Calculum.getAddress(), netTransfer.amount);

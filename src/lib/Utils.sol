@@ -6,20 +6,17 @@ import "./DataTypes.sol";
 import "./Errors.sol";
 import "./IEndpoint.sol";
 import "./IFQuerier.sol";
-import
-    "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import "@openzeppelin-contracts-upgradeable/contracts/utils/math/SafeMathUpgradeable.sol";
-import "@openzeppelin-contracts-upgradeable/contracts/utils/math/MathUpgradeable.sol";
-import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 library Utils {
-    using SafeMathUpgradeable for uint256;
-    using MathUpgradeable for uint256;
+    using Math for uint256;
 
     // address public constant OZW =
 
     address public constant FQuerier = 0x1693273B443699bee277eCbc60e2C8027E91995d; // Arbitrum Mainnet
-    // address public constant OZW = 0xB19b03Bf35bBdd30CF154bef41c19621a17068f2; // OpenZeppelin Defender Wallet Arbitrum Mainnet
+    // address public constant OZW = 0xaA33B6a85731Ac6950d6E5384e5bD98B53a3B7c3; // OpenZeppelin Defender Wallet Arbitrum Mainnet
     address public constant OZW = 0xc6B04026Ad05981840aD6bD77c924c67bAeCf0DC; // OpenZeppelin Defender Wallet Unit Test
 
     bytes12 private constant defaultSubaccountName = bytes12(abi.encodePacked("default"));
@@ -35,7 +32,7 @@ library Utils {
     {
         ICalculumVault Calculum = ICalculumVault(calculum);
         uint256 calDecimals = 10 ** Calculum.decimals();
-        IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(asset);
+        IERC20Metadata _asset = IERC20Metadata(asset);
         uint256 currentEpoch = Calculum.CURRENT_EPOCH();
         if (currentEpoch == 0) return 0;
         uint256 targetBalance = Calculum.TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT();
@@ -46,11 +43,11 @@ library Utils {
 
         // Calculate the total fees to be collected for the current epoch
         uint256 totalFees = getPnLPerVaultToken(calculum, asset)
-            ? (MgtFeePerVaultToken(calculum).add(PerfFeePerVaultToken(calculum, asset))).mulDiv(
-                Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch.sub(1)), calDecimals
+            ? (MgtFeePerVaultToken(calculum) + PerfFeePerVaultToken(calculum, asset)).mulDiv(
+                Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1), calDecimals
             )
             : MgtFeePerVaultToken(calculum).mulDiv(
-                Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch.sub(1)), calDecimals
+                Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1), calDecimals
             );
 
         // Take the smallest amount between the missing USDC and the total fees
@@ -64,19 +61,19 @@ library Utils {
      */
     function getPnLPerVaultToken(address calculum, address asset) public view returns (bool) {
         ICalculumVault Calculum = ICalculumVault(calculum);
-        IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(asset);
+        IERC20Metadata _asset = IERC20Metadata(asset);
         uint256 assetDecimals = 10 ** _asset.decimals();
         uint256 currentEpoch = Calculum.CURRENT_EPOCH();
-        if ((currentEpoch == 0) || (Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch.sub(1)) == 0)) {
+        if ((currentEpoch == 0) || (Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1) == 0)) {
             return false;
         }
         return (
             Calculum.DEX_WALLET_BALANCE().mulDiv(
                 assetDecimals,
-                Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch.sub(1)).mulDiv(
+                Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1).mulDiv(
                     assetDecimals, 10 ** Calculum.decimals()
                 )
-            ) >= Calculum.VAULT_TOKEN_PRICE(currentEpoch.sub(1))
+            ) >= Calculum.VAULT_TOKEN_PRICE(currentEpoch - 1)
         );
     }
 
@@ -86,10 +83,10 @@ library Utils {
         if (currentEpoch == 0) {
             return 0;
         } else {
-            return Calculum.VAULT_TOKEN_PRICE(currentEpoch.sub(1)).mulDiv(
+            return Calculum.VAULT_TOKEN_PRICE(currentEpoch - 1).mulDiv(
                 Calculum.MANAGEMENT_FEE_PERCENTAGE().mulDiv(Calculum.EPOCH_DURATION(), 31556926), // the constants is the more appropriate way to indicate a years (equivalent 365.24 days)
                 10 ** Calculum.decimals(),
-                MathUpgradeable.Rounding.Up
+                Math.Rounding.Ceil
             );
         }
     }
@@ -99,9 +96,7 @@ library Utils {
         if (Calculum.CURRENT_EPOCH() == 0) return 0;
         if (getPnLPerVaultToken(calculum, asset)) {
             return PnLPerVaultToken(calculum, asset).mulDiv(
-                Calculum.PERFORMANCE_FEE_PERCENTAGE(),
-                10 ** Calculum.decimals(),
-                MathUpgradeable.Rounding.Up
+                Calculum.PERFORMANCE_FEE_PERCENTAGE(), 10 ** Calculum.decimals(), Math.Rounding.Ceil
             );
         } else {
             return 0;
@@ -114,31 +109,32 @@ library Utils {
     function PnLPerVaultToken(address calculum, address asset) public view returns (uint256) {
         ICalculumVault Calculum = ICalculumVault(calculum);
         uint256 CalDecimals = 10 ** Calculum.decimals();
-        IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(asset);
+        IERC20Metadata _asset = IERC20Metadata(asset);
         uint256 assetDecimals = 10 ** _asset.decimals();
         uint256 currentEpoch = Calculum.CURRENT_EPOCH();
-        if ((currentEpoch == 0) || (Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch.sub(1)) == 0)) {
+        if ((currentEpoch == 0) || (Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1) == 0)) {
             return 0;
         }
         if (getPnLPerVaultToken(calculum, asset)) {
             return (
                 Calculum.DEX_WALLET_BALANCE().mulDiv(
                     assetDecimals,
-                    Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch.sub(1)).mulDiv(
+                    Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1).mulDiv(
                         assetDecimals, CalDecimals
                     )
-                ).sub(Calculum.VAULT_TOKEN_PRICE(currentEpoch.sub(1)))
+                ) - (Calculum.VAULT_TOKEN_PRICE(currentEpoch - 1))
             );
         } else {
             return (
-                Calculum.VAULT_TOKEN_PRICE(currentEpoch.sub(1)).sub(
-                    Calculum.DEX_WALLET_BALANCE().mulDiv(
-                        assetDecimals,
-                        Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch.sub(1)).mulDiv(
-                            assetDecimals, CalDecimals
+                Calculum.VAULT_TOKEN_PRICE(currentEpoch - 1)
+                    - (
+                        Calculum.DEX_WALLET_BALANCE().mulDiv(
+                            assetDecimals,
+                            Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1).mulDiv(
+                                assetDecimals, CalDecimals
+                            )
                         )
                     )
-                )
             );
         }
     }
@@ -148,11 +144,11 @@ library Utils {
         uint256 perfFee = PerfFeePerVaultToken(calculum, asset);
         uint256 pnLVT = PnLPerVaultToken(calculum, asset);
         ICalculumVault Calculum = ICalculumVault(calculum);
-        uint256 tokenPrice = Calculum.VAULT_TOKEN_PRICE(Calculum.CURRENT_EPOCH().sub(1));
+        uint256 tokenPrice = Calculum.VAULT_TOKEN_PRICE(Calculum.CURRENT_EPOCH() - 1);
         if (getPnLPerVaultToken(calculum, asset)) {
-            return (tokenPrice.add(pnLVT)).sub(mgtFee.add(perfFee)).add(1);
+            return (tokenPrice + pnLVT) - (mgtFee + perfFee) + 1;
         } else {
-            return tokenPrice.sub(pnLVT.add(mgtFee.add(perfFee))).add(1);
+            return tokenPrice - (pnLVT + (mgtFee + perfFee)) + 1;
         }
     }
 
@@ -231,12 +227,8 @@ library Utils {
     }
 
     function _payFeeVertex(address vertexEndpoint, address asset, uint256 amount) private {
-        IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(asset);
-        SafeERC20Upgradeable.safeIncreaseAllowance(
-            _asset, vertexEndpoint, amount + 10 ** _asset.decimals()
-        );
-        SafeERC20Upgradeable.safeTransferFrom(
-            _asset, address(OZW), address(this), 10 ** _asset.decimals()
-        );
+        IERC20Metadata _asset = IERC20Metadata(asset);
+        SafeERC20.safeIncreaseAllowance(_asset, vertexEndpoint, amount + 10 ** _asset.decimals());
+        SafeERC20.safeTransferFrom(_asset, address(OZW), address(this), 10 ** _asset.decimals());
     }
 }

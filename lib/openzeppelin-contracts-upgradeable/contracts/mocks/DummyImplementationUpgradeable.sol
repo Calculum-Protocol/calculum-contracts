@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
-import "../proxy/utils/Initializable.sol";
+pragma solidity ^0.8.20;
+
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
+import {Initializable} from "../proxy/utils/Initializable.sol";
 
 abstract contract ImplUpgradeable is Initializable {
     function __Impl_init() internal onlyInitializing {
@@ -10,25 +13,18 @@ abstract contract ImplUpgradeable is Initializable {
     function __Impl_init_unchained() internal onlyInitializing {
     }
     function version() public pure virtual returns (string memory);
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[50] private __gap;
 }
 
 contract DummyImplementationUpgradeable is Initializable {
+    uint256 public value;
+    string public text;
+    uint256[] public values;
+
     function __DummyImplementation_init() internal onlyInitializing {
     }
 
     function __DummyImplementation_init_unchained() internal onlyInitializing {
     }
-    uint256 public value;
-    string public text;
-    uint256[] public values;
-
     function initializeNonPayable() public {
         value = 10;
     }
@@ -45,11 +41,7 @@ contract DummyImplementationUpgradeable is Initializable {
         value = _value;
     }
 
-    function initialize(
-        uint256 _value,
-        string memory _text,
-        uint256[] memory _values
-    ) public {
+    function initialize(uint256 _value, string memory _text, uint256[] memory _values) public {
         value = _value;
         text = _text;
         values = _values;
@@ -67,12 +59,10 @@ contract DummyImplementationUpgradeable is Initializable {
         require(false, "DummyImplementation reverted");
     }
 
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[47] private __gap;
+    // Use for forcing an unsafe TransparentUpgradeableProxy admin override
+    function unsafeOverrideAdmin(address newAdmin) public {
+        StorageSlot.getAddressSlot(ERC1967Utils.ADMIN_SLOT).value = newAdmin;
+    }
 }
 
 contract DummyImplementationV2Upgradeable is Initializable, DummyImplementationUpgradeable {
@@ -88,11 +78,4 @@ contract DummyImplementationV2Upgradeable is Initializable, DummyImplementationU
     function version() public pure override returns (string memory) {
         return "V2";
     }
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[50] private __gap;
 }

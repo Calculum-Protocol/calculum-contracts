@@ -55,4 +55,6 @@ library Errors {
     error DepositPendingClaim(address _caller);
     /// Have a Deposit Pending to Execute or Claim
     error WithdrawPendingClaim(address _caller);
+    /// Invalid Value
+    error InvalidValue();
 }

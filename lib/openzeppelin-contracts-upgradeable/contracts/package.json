@@ -1,14 +1,14 @@
 {
   "name": "@openzeppelin/contracts-upgradeable",
   "description": "Secure Smart Contract library for Solidity",
-  "version": "4.8.0",
+  "version": "5.0.0",
   "files": [
     "**/*.sol",
     "/build/contracts/*.json",
     "!/mocks/**/*"
   ],
   "scripts": {
-    "prepare": "bash ../scripts/prepare-contracts-package.sh",
+    "prepack": "bash ../scripts/prepack.sh",
     "prepare-docs": "cd ..; npm run prepare-docs"
   },
   "repository": {
@@ -26,7 +26,10 @@
   "author": "OpenZeppelin Community <maintainers@openzeppelin.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/issues"
+    "url": "https://github.com/OpenZeppelin/openzeppelin-contracts/issues"
   },
-  "homepage": "https://openzeppelin.com/contracts/"
+  "homepage": "https://openzeppelin.com/contracts/",
+  "peerDependencies": {
+    "@openzeppelin/contracts": "5.0.0"
+  }
 }

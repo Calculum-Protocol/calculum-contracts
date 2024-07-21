@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.24;
 
 import "./lib/IERC4626.sol";
 import "./lib/Claimable.sol";
 import "./lib/DataTypes.sol";
 import "./lib/Errors.sol";
-import "./lib/IRouter.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-import "@openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin-contracts-upgradeable/contracts/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title Test Vault Front
@@ -26,13 +25,11 @@ contract TestVaultFront is
     AccessControlUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    using SafeMathUpgradeable for uint256;
-    using MathUpgradeable for uint256;
-    using AddressUpgradeable for address;
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using Math for uint256;
+    using SafeERC20 for IERC20;
     // Principal private Variable of ERC4626
 
-    IERC20MetadataUpgradeable internal _asset;
+    IERC20Metadata internal _asset;
     // Decimals of the Share Token
     uint8 private _decimals;
     // Flag to Control Linksigner
@@ -106,14 +103,14 @@ contract TestVaultFront is
         address[4] memory _initialAddress, // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: USDCToken Address
         uint256[4] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value
     ) public reinitializer(1) {
-        if (!_initialAddress[3].isContract()) revert Errors.AddressIsNotContract();
-        __Ownable_init();
+        if (!isContract(_initialAddress[3])) revert Errors.AddressIsNotContract();
+        __Ownable_init(_msgSender());
         __ReentrancyGuard_init();
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        _setupRole(TRANSFER_BOT_ROLE, _initialAddress[2]);
-        _setupRole(TRANSFER_BOT_ROLE, _msgSender());
+        grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        grantRole(TRANSFER_BOT_ROLE, _initialAddress[2]);
+        grantRole(TRANSFER_BOT_ROLE, _msgSender());
         __ERC20_init(_name, _symbol);
-        _asset = IERC20MetadataUpgradeable(_initialAddress[3]);
+        _asset = IERC20Metadata(_initialAddress[3]);
         _decimals = decimals_;
         traderBotWallet = payable(_initialAddress[0]);
         openZeppelinDefenderWallet = payable(_initialAddress[2]);
@@ -211,15 +208,15 @@ contract TestVaultFront is
         if (_assets < MIN_DEPOSIT) {
             revert Errors.DepositAmountTooLow(_receiver, _assets);
         }
-        if (_assets > (MAX_DEPOSIT.sub(depositor.finalAmount.add(depositor.amountAssets)))) {
+        if (_assets > (MAX_DEPOSIT - (depositor.finalAmount + depositor.amountAssets))) {
             // Verify the maximun value per user
             revert Errors.DepositExceededMax(
-                _receiver, MAX_DEPOSIT.sub(depositor.finalAmount.add(depositor.amountAssets))
+                _receiver, MAX_DEPOSIT - (depositor.finalAmount + depositor.amountAssets)
             );
         }
-        if (totalAssets().add(_assets) > MAX_TOTAL_DEPOSIT) {
+        if ((totalAssets() + _assets) > MAX_TOTAL_DEPOSIT) {
             revert Errors.DepositExceedTotalVaultMax(
-                _receiver, totalAssets().add(_assets), MAX_TOTAL_DEPOSIT
+                _receiver, totalAssets() + _assets, MAX_TOTAL_DEPOSIT
             );
         }
         if (
@@ -233,7 +230,7 @@ contract TestVaultFront is
 
         // if _asset is ERC777, transferFrom can call reenter BEFORE the transfer happens through
         // the tokensToSend hook, so we need to transfer before we mint to keep the invariants.
-        SafeERC20Upgradeable.safeTransferFrom(_asset, _receiver, address(this), _assets);
+        SafeERC20.safeTransferFrom(_asset, _receiver, address(this), _assets);
         addDeposit(_receiver, shares, _assets);
 
         emit PendingDeposit(caller, _receiver, _assets, shares);
@@ -442,7 +439,7 @@ contract TestVaultFront is
             revert Errors.NotEnoughBalance(withdrawer.amountAssets, _asset.balanceOf(address(this)));
         }
         _burn(_owner, withdrawer.amountShares);
-        SafeERC20Upgradeable.safeTransfer(_asset, _receiver, withdrawer.amountAssets);
+        SafeERC20.safeTransfer(_asset, _receiver, withdrawer.amountAssets);
         emit Withdraw(caller, _receiver, _owner, withdrawer.amountShares, withdrawer.amountAssets);
         delete withdrawer.amountAssets;
         delete withdrawer.amountShares;
@@ -526,11 +523,10 @@ contract TestVaultFront is
      */
     function updateTotalSupply() private {
         if (CURRENT_EPOCH != 0) {
-            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)]
-                .add(newShares()) > newWithdrawalsShares()
-                ? TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH.sub(1)].add(newShares()).sub(
-                    newWithdrawalsShares()
-                )
+            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = (
+                TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] + newShares()
+            ) > newWithdrawalsShares()
+                ? TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] + (newShares() - newWithdrawalsShares())
                 : 0;
         } else {
             TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = newShares();
@@ -554,9 +550,7 @@ contract TestVaultFront is
                 ? (_shares * 10 ** _asset.decimals()) / 10 ** decimals()
                 : (_shares * totalAssets()) / supply;
         } else {
-            _assets = _shares.mulDiv(
-                10 ** _asset.decimals(), 10 ** decimals(), MathUpgradeable.Rounding.Up
-            );
+            _assets = _shares.mulDiv(10 ** _asset.decimals(), 10 ** decimals(), Math.Rounding.Ceil);
         }
     }
 
@@ -572,9 +566,8 @@ contract TestVaultFront is
                 ? (_assets * 10 ** decimals()) / 10 ** _asset.decimals()
                 : (_assets * supply) / totalAssets();
         } else {
-            _shares = _assets.mulDiv(
-                10 ** decimals(), 10 ** _asset.decimals(), MathUpgradeable.Rounding.Up
-            ).div(decimalsAdjust).mul(decimalsAdjust); // last part is to fixed the rounding issue with stable coins
+            _shares = _assets.mulDiv(10 ** decimals(), 10 ** _asset.decimals(), Math.Rounding.Ceil)
+                / (decimalsAdjust * decimalsAdjust); // last part is to fixed the rounding issue with stable coins
         }
     }
 
@@ -732,24 +725,19 @@ contract TestVaultFront is
         return balanceOf(_owner);
     }
 
-    function decimals()
-        public
-        view
-        override(ERC20Upgradeable, IERC20MetadataUpgradeable)
-        returns (uint8)
-    {
+    function decimals() public view override(ERC20Upgradeable, IERC20Metadata) returns (uint8) {
         return _decimals;
     }
 
     function isMaintenance() public view returns (bool, uint256) {
         if (
-            (block.timestamp > (getNextEpoch().sub(MAINTENANCE_PERIOD_PRE_START)))
-                || (block.timestamp < (getCurrentEpoch().add(MAINTENANCE_PERIOD_POST_START)))
+            (block.timestamp > (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START))
+                || (block.timestamp < (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START))
         ) {
-            uint256 pending = block.timestamp > (getNextEpoch().sub(MAINTENANCE_PERIOD_PRE_START))
-                ? block.timestamp - (getNextEpoch().sub(MAINTENANCE_PERIOD_PRE_START))
-                : block.timestamp < (getCurrentEpoch().add(MAINTENANCE_PERIOD_POST_START))
-                    ? getCurrentEpoch().add(MAINTENANCE_PERIOD_POST_START) - block.timestamp
+            uint256 pending = block.timestamp > (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START)
+                ? block.timestamp - (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START)
+                : block.timestamp < (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START)
+                    ? (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START) - block.timestamp
                     : 0;
             return (true, pending);
         }
@@ -757,28 +745,18 @@ contract TestVaultFront is
     }
 
     function _checkVaultInMaintenance() private view {
-        bool maintenance = (block.timestamp > (getNextEpoch().sub(MAINTENANCE_PERIOD_PRE_START)))
-            || (block.timestamp < (getCurrentEpoch().add(MAINTENANCE_PERIOD_POST_START)));
+        bool maintenance = (block.timestamp > (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START))
+            || (block.timestamp < (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START));
         if (maintenance) {
             revert Errors.VaultInMaintenance();
         }
     }
 
     function _checkVaultOutMaintenance() private view {
-        bool maintenance = (block.timestamp > (getNextEpoch().sub(MAINTENANCE_PERIOD_PRE_START)))
-            || (block.timestamp < (getCurrentEpoch().add(MAINTENANCE_PERIOD_POST_START)));
+        bool maintenance = (block.timestamp > (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START))
+            || (block.timestamp < (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START));
         if (!maintenance) {
             revert Errors.VaultOutMaintenance();
         }
-    }
-
-    function _beforeTokenTransfer(address from, address to, uint256 amount)
-        internal
-        override(ERC20Upgradeable)
-    {
-        require(
-            !paused(), "ERC20 Vault: can't create or transfer any shares or Assets while paused"
-        );
-        super._beforeTokenTransfer(from, to, amount);
     }
 }
