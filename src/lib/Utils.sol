@@ -15,8 +15,8 @@ library Utils {
 
     // address public constant OZW =
 
-    address public constant FQuerier = 0x1693273B443699bee277eCbc60e2C8027E91995d; // Arbitrum Mainnet
-    address public constant OZW = 0xB8df119948e3bb1cf2255EBAfc4b9CE35b11CA22; // OpenZeppelin Defender Wallet Arbitrum Mainnet
+    address public constant FQuerier = address(0x1693273B443699bee277eCbc60e2C8027E91995d); // Arbitrum Mainnet
+    address public constant OZW = address(0xB8df119948e3bb1cf2255EBAfc4b9CE35b11CA22); // OpenZeppelin Defender Wallet Arbitrum Mainnet
 
     bytes12 private constant defaultSubaccountName = bytes12(abi.encodePacked("default"));
     string constant DEFAULT_REFERRAL_CODE = "-1";
@@ -225,7 +225,7 @@ library Utils {
         IEndpoint(vertexEndpoint).submitSlowModeTransaction(txs);
     }
 
-    function _payFeeVertex(address vertexEndpoint, address asset, uint256 amount) private {
+    function _payFeeVertex(address vertexEndpoint, address asset, uint256 amount) internal {
         IERC20Metadata _asset = IERC20Metadata(asset);
         SafeERC20.safeIncreaseAllowance(_asset, vertexEndpoint, amount + 10 ** _asset.decimals());
         SafeERC20.safeTransferFrom(_asset, address(OZW), address(this), 10 ** _asset.decimals());

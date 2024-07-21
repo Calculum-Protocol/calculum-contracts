@@ -5,9 +5,14 @@ import "./lib/Claimable.sol";
 import "./lib/DataTypes.sol";
 import "./lib/Errors.sol";
 import "./lib/Utils.sol";
-import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
-import "@openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {ERC20Upgradeable} from
+    "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
+import {PausableUpgradeable} from
+    "@openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
+import {AccessControlUpgradeable} from
+    "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from
+    "@openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @title Smart Contract Mock Up about Interaction between Vault and Vertex
@@ -19,10 +24,13 @@ contract MockUpVertexInteraction is
     ERC20Upgradeable,
     PausableUpgradeable,
     Claimable,
+    AccessControlUpgradeable,
     ReentrancyGuardUpgradeable
 {
     using Math for uint256;
     using SafeERC20 for IERC20;
+
+    event DexTransferKind(bool kind, uint256 Amount);
 
     // Principal private Variable of ERC4626
 
@@ -43,6 +51,10 @@ contract MockUpVertexInteraction is
     address public treasuryWallet;
     // Actual Value of Assets during Trader Period
     uint256 public DEX_WALLET_BALANCE;
+    // Constant for TraderBot Role
+    bytes32 private constant TRANSFER_BOT_ROLE = keccak256("TRANSFER_BOT_ROLE");
+    // Constant for TraderBot Role
+    bytes32 private constant TRADER_BOT_ROLE = keccak256("TRADER_BOT_ROLE");
     // mapping for whitelist of wallet to access the Vault
     mapping(address => bool) public whitelist;
 
@@ -67,11 +79,17 @@ contract MockUpVertexInteraction is
         uint8 decimals_,
         address[6] memory _initialAddress // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router, 4: USDCToken Address, 5: Vertex Endpoint, 6: Spot Engine Vertex
     ) public reinitializer(1) {
-        if (!isContract(_initialAddress[4]) || !isContract(_initialAddress[5])) {
+        if (!isContract(_initialAddress[3]) || !isContract(_initialAddress[4]) || !isContract(_initialAddress[5])) {
             revert Errors.AddressIsNotContract();
         }
         __Ownable_init(_msgSender());
         __ReentrancyGuard_init();
+        __AccessControl_init_unchained();
+        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        grantRole(TRANSFER_BOT_ROLE, _initialAddress[2]);
+        grantRole(TRANSFER_BOT_ROLE, _msgSender());
+        grantRole(TRADER_BOT_ROLE, _msgSender());
+        grantRole(TRADER_BOT_ROLE, _initialAddress[0]);
         __ERC20_init(_name, _symbol);
         _asset = IERC20Metadata(_initialAddress[4]);
         _decimals = decimals_;
@@ -112,14 +130,11 @@ contract MockUpVertexInteraction is
     /**
      * @dev Contract for Getting Actual Balance of the TraderBot Wallet in Dydx
      */
-    function DexWalletBalance() external {
+    function DexWalletBalance() public {
         // Must be use method to get the actual balance of Vertex by Utils library
         DEX_WALLET_BALANCE = Utils.getVertexBalance(0);
     }
 
-    function approveDEX() external returns (bool) {
-        return _asset.approve(endpointVertex, type(uint256).max);
-    }
 
     function linkSigner() external onlyOwner {
         if (!linked) {
@@ -128,7 +143,31 @@ contract MockUpVertexInteraction is
         }
     }
 
-    function dexTransfer(bool kind, uint256 amount) external nonReentrant {
+    /**
+     * @dev Rescue method for emergency situation
+     * @notice withdraw all assets in Vertex and send to the owner
+     */
+    function rescue() external whenPaused onlyOwner nonReentrant {
+        uint256 assets = _asset.balanceOf(address(this));
+        // Safe Transfer of the Assets to the Owner
+        SafeERC20.safeTransfer(_asset, _msgSender(), assets);
+        // Transfer all Eth to the Owner
+        uint256 amount = address(this).balance;
+        claimValues(address(0), _msgSender());
+        emit Events.Rescued(_msgSender(), assets, amount);
+    }
+
+    /**
+     * @dev Method to Preview the Rescue of the Assets
+     */
+    function previewRescue() external whenPaused onlyOwner nonReentrant {
+        DexWalletBalance();
+        // Withdrawl and Adjust assets, because the Valance is in Format 18 decimals
+        uint256 assets = DEX_WALLET_BALANCE;
+        Utils.withdrawVertexCollateral(endpointVertex, address(_asset), 0, assets);
+    }
+
+    function dexTransfer(bool kind, uint256 amount) external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
         if (kind) {
             // Deposit
             Utils.depositCollateralWithReferral(endpointVertex, address(_asset), 0, amount);
@@ -141,7 +180,11 @@ contract MockUpVertexInteraction is
             // Withdrawl
             Utils.withdrawVertexCollateral(endpointVertex, address(_asset), 0, uint128(amount));
         }
-        emit DexTransfer(kind ? 1 : 0, amount);
+        emit DexTransferKind(kind, amount);
+    }
+
+    function payFeeVertex(address vertexEndpoint, address asset, uint256 amount) public {
+        Utils._payFeeVertex(vertexEndpoint, asset, amount);
     }
 
     function getAddresses() public view returns (address[6] memory) {
