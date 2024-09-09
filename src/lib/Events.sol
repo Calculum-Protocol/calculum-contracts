@@ -18,10 +18,7 @@ abstract contract Events {
      * @param estimationOfShares Estimation of Amount of Shares to Mint
      */
     event PendingDeposit(
-        address indexed caller,
-        address indexed receiver,
-        uint256 assets,
-        uint256 estimationOfShares
+        address indexed caller, address indexed receiver, uint256 assets, uint256 estimationOfShares
     );
 
     /**
@@ -39,10 +36,7 @@ abstract contract Events {
      * @param estimationOfShares Estimation of Amount of Shares to Mint
      */
     event PendingWithdraw(
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 estimationOfShares
+        address indexed receiver, address indexed owner, uint256 assets, uint256 estimationOfShares
     );
     /**
      * @dev Epoch Changed
@@ -53,18 +47,13 @@ abstract contract Events {
         uint256 OldEpochStart,
         uint256 NewEpochStart,
         uint256 newMaintTimeBefore,
-        uint256 newMaintTimeAfter,
-        uint256 _floorWalletBalanceUSDC
+        uint256 newMaintTimeAfter
     );
     /**
      * @dev Fees Transfer
      */
     event FeesTransfer(
-        uint256 indexed epoch,
-        uint256 Amount,
-        uint256 mantFee,
-        uint256 perfFee,
-        uint256 totalFee
+        uint256 indexed epoch, uint256 Amount, uint256 mantFee, uint256 perfFee, uint256 totalFee
     );
     /**
      * @dev Dex Transfer
@@ -74,11 +63,7 @@ abstract contract Events {
     /**
      * @dev Rescued Emercency Funds
      */
-    event Rescued(
-        address indexed owner,
-        uint256 amountAssets,
-        uint256 amountEth
-    );
+    event Rescued(address indexed owner, uint256 amountAssets, uint256 amountEth);
 
     /**
      * @dev Events when change Trader Bot Address

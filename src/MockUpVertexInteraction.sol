@@ -5,10 +5,14 @@ import "./lib/Claimable.sol";
 import "./lib/DataTypes.sol";
 import "./lib/Errors.sol";
 import "./lib/Utils.sol";
-import {ERC20Upgradeable} from "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {ERC20Upgradeable} from
+    "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
+import {PausableUpgradeable} from
+    "@openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
+import {AccessControlUpgradeable} from
+    "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from
+    "@openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @title Smart Contract Mock Up about Interaction between Vault and Vertex
@@ -81,9 +85,8 @@ contract MockUpVertexInteraction is
         address[6] memory _initialAddress // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router, 4: USDCToken Address, 5: Vertex Endpoint, 6: Spot Engine Vertex
     ) public reinitializer(1) {
         if (
-            !isContract(_initialAddress[3]) ||
-            !isContract(_initialAddress[4]) ||
-            !isContract(_initialAddress[5])
+            !isContract(_initialAddress[3]) || !isContract(_initialAddress[4])
+                || !isContract(_initialAddress[5])
         ) {
             revert Errors.AddressIsNotContract();
         }
@@ -140,7 +143,10 @@ contract MockUpVertexInteraction is
         DEX_WALLET_BALANCE = Utils.getVertexBalance(0);
     }
 
-    function getUnHealthBalance() public returns (IFQuerier.SubaccountInfo memory, IFQuerier.PerpProduct memory, uint256, uint256) {
+    function getUnHealthBalance()
+        public
+        returns (IFQuerier.SubaccountInfo memory, IFQuerier.PerpProduct memory, uint256, uint256)
+    {
         // Get Unhealth Balance from Vertex for productId 0, USDC
         (subaccountInfo, perpProduct, balance, usdcPrice) = Utils.getUnhealthBalance(0);
         return Utils.getUnhealthBalance(0);
@@ -148,11 +154,7 @@ contract MockUpVertexInteraction is
 
     function linkSigner() external onlyOwner {
         if (!linked) {
-            Utils.linkVertexSigner(
-                endpointVertex,
-                address(_asset),
-                address(traderBotWallet)
-            );
+            Utils.linkVertexSigner(endpointVertex, address(_asset), address(traderBotWallet));
             linked = true;
         }
     }
@@ -178,52 +180,30 @@ contract MockUpVertexInteraction is
         DexWalletBalance();
         // Withdrawl and Adjust assets, because the Valance is in Format 18 decimals
         uint256 assets = DEX_WALLET_BALANCE;
-        Utils.withdrawVertexCollateral(
-            endpointVertex,
-            address(_asset),
-            0,
-            assets
-        );
+        Utils.withdrawVertexCollateral(endpointVertex, address(_asset), 0, assets);
     }
 
-    function dexTransfer(
-        bool kind,
-        uint256 amount
-    ) external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
+    function dexTransfer(bool kind, uint256 amount)
+        external
+        onlyRole(TRANSFER_BOT_ROLE)
+        nonReentrant
+    {
         if (kind) {
             // Deposit
-            Utils.depositCollateralWithReferral(
-                endpointVertex,
-                address(_asset),
-                0,
-                amount
-            );
+            Utils.depositCollateralWithReferral(endpointVertex, address(_asset), 0, amount);
             // LinkSigner with EOA unique execution
             if (!linked) {
-                Utils.linkVertexSigner(
-                    endpointVertex,
-                    address(_asset),
-                    address(traderBotWallet)
-                );
+                Utils.linkVertexSigner(endpointVertex, address(_asset), address(traderBotWallet));
                 linked = true;
             }
         } else {
             // Withdrawl
-            Utils.withdrawVertexCollateral(
-                endpointVertex,
-                address(_asset),
-                0,
-                uint128(amount)
-            );
+            Utils.withdrawVertexCollateral(endpointVertex, address(_asset), 0, uint128(amount));
         }
         emit DexTransferKind(kind, amount);
     }
 
-    function payFeeVertex(
-        address vertexEndpoint,
-        address asset,
-        uint256 amount
-    ) public {
+    function payFeeVertex(address vertexEndpoint, address asset, uint256 amount) public {
         Utils._payFeeVertex(vertexEndpoint, asset, amount);
     }
 
@@ -240,11 +220,7 @@ contract MockUpVertexInteraction is
 
     function settraderBotWallet(address _traderBotWallet) external onlyOwner {
         traderBotWallet = payable(_traderBotWallet);
-        Utils.linkVertexSigner(
-            endpointVertex,
-            address(_asset),
-            address(traderBotWallet)
-        );
+        Utils.linkVertexSigner(endpointVertex, address(_asset), address(traderBotWallet));
     }
 
     /**

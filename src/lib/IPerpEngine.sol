@@ -34,39 +34,25 @@ interface IPerpEngine is IProductEngine {
         int128 lastCumulativeFundingX18;
     }
 
-    function getStateAndBalance(
-        uint32 productId,
-        bytes32 subaccount
-    ) external view returns (State memory, Balance memory);
-
-    function getBalance(
-        uint32 productId,
-        bytes32 subaccount
-    ) external view returns (Balance memory);
-
-    function getStatesAndBalances(
-        uint32 productId,
-        bytes32 subaccount
-    )
+    function getStateAndBalance(uint32 productId, bytes32 subaccount)
         external
         view
-        returns (
-            LpState memory,
-            LpBalance memory,
-            State memory,
-            Balance memory
-        );
+        returns (State memory, Balance memory);
+
+    function getBalance(uint32 productId, bytes32 subaccount)
+        external
+        view
+        returns (Balance memory);
+
+    function getStatesAndBalances(uint32 productId, bytes32 subaccount)
+        external
+        view
+        returns (LpState memory, LpBalance memory, State memory, Balance memory);
 
     /// @dev Returns amount settled and emits SettlePnl events for each product
-    function settlePnl(
-        bytes32 subaccount,
-        uint256 productIds
-    ) external returns (int128);
+    function settlePnl(bytes32 subaccount, uint256 productIds) external returns (int128);
 
-    function getSettlementState(
-        uint32 productId,
-        bytes32 subaccount
-    )
+    function getSettlementState(uint32 productId, bytes32 subaccount)
         external
         view
         returns (
@@ -88,13 +74,7 @@ interface IPerpEngine is IProductEngine {
 
     function manualAssert(int128[] calldata openInterests) external view;
 
-    function getPositionPnl(
-        uint32 productId,
-        bytes32 subaccount
-    ) external view returns (int128);
+    function getPositionPnl(uint32 productId, bytes32 subaccount) external view returns (int128);
 
-    function socializeSubaccount(
-        bytes32 subaccount,
-        int128 insurance
-    ) external returns (int128);
+    function socializeSubaccount(bytes32 subaccount, int128 insurance) external returns (int128);
 }

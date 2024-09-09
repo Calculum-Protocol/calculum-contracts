@@ -73,16 +73,11 @@ interface IFQuerier {
         PerpProduct[] perpProducts;
     }
 
-    function getSpotBalance(
-        bytes32 subaccount,
-        uint32 productId
-    ) external returns (SpotBalance memory);
+    function getSpotBalance(bytes32 subaccount, uint32 productId)
+        external
+        returns (SpotBalance memory);
 
-    function getSubaccountInfo(
-        bytes32 subaccount
-    ) external returns (SubaccountInfo memory);
+    function getSubaccountInfo(bytes32 subaccount) external returns (SubaccountInfo memory);
 
-    function getPerpProduct(
-        uint32 productId
-    ) external returns (PerpProduct memory);
+    function getPerpProduct(uint32 productId) external returns (PerpProduct memory);
 }

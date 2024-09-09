@@ -177,9 +177,20 @@ library Utils {
         balance = spotBalance.balance.amount < 0 ? 0 : uint256(uint128(spotBalance.balance.amount));
     }
 
-    function getUnhealthBalance(uint32 productId) public returns (IFQuerier.SubaccountInfo memory unhBalance, IFQuerier.PerpProduct memory perpProd, uint256 balance, uint256 usdcPrice) {
-        unhBalance = IFQuerier(FQuerier).getSubaccountInfo(bytes32(abi.encodePacked(uint160(address(this)), defaultSubaccountName)));
-        balance = unhBalance.healths[2].health < 0 ? 0 : uint256(uint128(unhBalance.healths[2].health));
+    function getUnhealthBalance(uint32 productId)
+        public
+        returns (
+            IFQuerier.SubaccountInfo memory unhBalance,
+            IFQuerier.PerpProduct memory perpProd,
+            uint256 balance,
+            uint256 usdcPrice
+        )
+    {
+        unhBalance = IFQuerier(FQuerier).getSubaccountInfo(
+            bytes32(abi.encodePacked(uint160(address(this)), defaultSubaccountName))
+        );
+        balance =
+            unhBalance.healths[2].health < 0 ? 0 : uint256(uint128(unhBalance.healths[2].health));
         perpProd = IFQuerier(FQuerier).getPerpProduct(productId);
         usdcPrice = uint256(uint128(perpProd.oraclePriceX18));
     }

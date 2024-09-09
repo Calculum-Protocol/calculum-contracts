@@ -119,8 +119,6 @@ contract CalculumVault is
     uint256 public TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT;
     // Minimal Wallet Balance of ETH in Transfer Bot
     uint256 public MIN_WALLET_BALANCE_ETH_TRANSFER_BOT;
-    // STABLECOIN Floor in USDC in Transfer Bot (TransferBotFloorWalletBalanceUSDC)
-    uint256 public FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT;
     // Factor Adjust for Decimals of the Share Token
     uint256 public DECIMAL_FACTOR; // 10^decimals()
     // Array of Wallet Addresses with Deposit
@@ -192,11 +190,10 @@ contract CalculumVault is
         MIN_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[4];
         TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[5];
         MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = _initialValue[6];
-        FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT = 5000000; // 5$ USDC by default
         // EPOCH_DURATION = 1 weeks; // 604800 seconds = 1 week
         // MAINTENANCE_PERIOD_PRE_START = 60 minutes; // 60 minutes
         // MAINTENANCE_PERIOD_POST_START = 30 minutes; // 30 minutes
-        EPOCH_DURATION = 4 * 60 minutes; // 4 hours
+        EPOCH_DURATION = 2 * 60 minutes; // 4 hours
         MAINTENANCE_PERIOD_PRE_START = 300 seconds; // 5 minutes
         MAINTENANCE_PERIOD_POST_START = 300 seconds; // 5 minutes
         CurrentEpoch();
@@ -298,10 +295,7 @@ contract CalculumVault is
      *
      * NOTE: most implementations will require pre-approval of the Vault with the Vault’s underlying asset token.
      */
-    function mint(
-        uint256 _shares,
-        address _receiver
-    ) external returns (uint256) {}
+    function mint(uint256 _shares, address _receiver) external returns (uint256) {}
 
     /**
      * @dev Burns shares from owner and sends exactly assets of underlying tokens to receiver.
@@ -485,8 +479,7 @@ contract CalculumVault is
     function setEpochDuration(
         uint256 _epochDuration,
         uint256 _maintTimeBefore,
-        uint256 _maintTimeAfter,
-        uint256 _floorWalletBalanceUSDC
+        uint256 _maintTimeAfter
     ) external onlyOwner {
         _checkVaultInMaintenance();
         if (_epochDuration < 1 minutes || _epochDuration > 12 weeks) {
@@ -499,15 +492,13 @@ contract CalculumVault is
         EPOCH_START = block.timestamp - (EPOCH_DURATION * CURRENT_EPOCH);
         MAINTENANCE_PERIOD_PRE_START = _maintTimeBefore;
         MAINTENANCE_PERIOD_POST_START = _maintTimeAfter;
-        FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT = _floorWalletBalanceUSDC;
         emit EpochChanged(
             oldEpochDuration,
             _epochDuration,
             oldEpochStart,
             EPOCH_START,
             _maintTimeBefore,
-            _maintTimeAfter,
-            _floorWalletBalanceUSDC
+            _maintTimeAfter
         );
     }
 
@@ -624,9 +615,6 @@ contract CalculumVault is
         }
     }
 
-    /**
-     * @dev FeesTranfer per Epoch
-     */
     function feesTransfer() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
         _checkVaultOutMaintenance();
         if (CURRENT_EPOCH == 0) {
@@ -642,14 +630,10 @@ contract CalculumVault is
             ? totalFees - Utils.CalculateTransferBotGasReserveDA(address(this), address(_asset))
             : 0;
         uint256 assetBalance = _asset.balanceOf(address(this));
-        uint256 adjustedBalance =
-            assetBalance > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT ? assetBalance : 0;
-        rest = rest > adjustedBalance
-            ? adjustedBalance
-            : (rest > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT ? rest : 0);
-        uint256 restEvent = rest;
-        if (rest > FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT) {
-            restEvent = rest - FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT;
+        rest = rest > assetBalance ? assetBalance : rest;
+        uint256 restEvent;
+        if (rest > 0) {
+            restEvent = rest;
             SafeERC20.safeTransfer(_asset, treasuryWallet, restEvent);
         }
         _tx = false;
@@ -1015,7 +999,6 @@ contract CalculumVault is
             }
         }
     }
-
 
     /**
      * @dev  Method for Update Total Supply
