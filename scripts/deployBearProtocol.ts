@@ -13,8 +13,8 @@ import dotenv from "dotenv";
 import moment from "moment";
 import chai from "chai";
 import {
-    CalculumVault__factory,
-    CalculumVault,
+    BearVault__factory,
+    BearVault,
     UniswapLibV3__factory,
     UniswapLibV3,
     Utils__factory,
@@ -40,29 +40,35 @@ const symbol = "vbUSDc";
 const decimals = 18;
 const EPOCH_TIME: moment.Moment = moment().utc();
 const ZERO_ADDRESS = `0x` + `0`.repeat(40);
-const epochDuration = 60 * 60; // 1 hour
-const maintTimeBefore = 210; // 3.5 minutes
-const maintTimeAfter = 210; // 3.5 minutes
 
 async function main() {
     // Hardhat always runs the compile task when running scripts with its command
     // line interface.
 
     // Round to the nearest hour in UTC
+    // Round to the nearest hour in UTC
     let roundedHour = EPOCH_TIME.clone().startOf('hour');
-    if (EPOCH_TIME.minutes() >= 30) {
-        roundedHour.add(1, 'hour');
+
+    // Ensure we are rounding to the nearest even hour
+    if (roundedHour.hours() % 2 !== 0) {
+        // If it's an odd hour, round down to the previous even hour
+        roundedHour.subtract(1, 'hour');
     }
 
-    // Calculate the difference in seconds to the rounded hour and one hour before it
+    // Calculate the difference in seconds to the rounded hour
     const diffToRoundedHour = Math.abs(EPOCH_TIME.unix() - roundedHour.unix());
-    const oneHourBefore = roundedHour.clone().subtract(1, 'hour');
 
-    // Determine the closest hour within a 30-minute difference
+    // Calculate the previous even hour within 2 hours
+    let oneHourBefore = roundedHour.clone().subtract(2, 'hours');
+
+    // Determine the closest even hour within a 2-hour difference
     let EPOCH_START;
-    if (diffToRoundedHour <= 1800) { // 1800 seconds = 30 minutes
+    if (diffToRoundedHour <= 3600) { // 3600 seconds = 1 hour
         EPOCH_START = roundedHour.unix();
+    } else if (diffToRoundedHour <= 7200) { // 7200 seconds = 2 hours
+        EPOCH_START = oneHourBefore.add(2, 'hours').unix();
     } else {
+        // If the closest even hour is more than 2 hours away, choose the previous even hour
         EPOCH_START = oneHourBefore.unix();
     }
     // If this script is run directly using `node` you may want to call compile
@@ -71,7 +77,7 @@ async function main() {
     const provider = network.provider;
     // const accounts: SignerWithAddress[] = await ethers.getSigners();
     // Getting from command Line de Contract Name
-    const contractName: string = "CalculumVault";
+    const contractName: string = "BearVaultTestnet";
     console.log(`Contract Name: ${contractName}`);
     console.log(`Epoch Start: ${EPOCH_START}`);
     const accounts = await ethers.getSigners();
@@ -109,14 +115,14 @@ async function main() {
     //   expect(Oracle.address).to.properAddress;
     //   console.log(`Oracle Address: ${Oracle.address}`);
     // Deploy all Libraries of Calculum , with not upgradeable version
-    UniswapLibV3Factory = (await ethers.getContractFactory(
-        "UniswapLibV3",
-        deployer
-    )) as UniswapLibV3__factory;
-    UniswapLibV3 = (await UniswapLibV3Factory.deploy()) as UniswapLibV3;
-    // eslint-disable-next-line no-unused-expressions
-    expect(await UniswapLibV3.getAddress()).to.properAddress;
-    console.log(`UniswapLibV3 Address: ${await UniswapLibV3.getAddress()}`);
+    // UniswapLibV3Factory = (await ethers.getContractFactory(
+    //     "UniswapLibV3",
+    //     deployer
+    // )) as UniswapLibV3__factory;
+    // UniswapLibV3 = (await UniswapLibV3Factory.deploy()) as UniswapLibV3;
+    // // eslint-disable-next-line no-unused-expressions
+    // expect(await UniswapLibV3.getAddress()).to.properAddress;
+    // console.log(`UniswapLibV3 Address: ${await UniswapLibV3.getAddress()}`);
     await snooze(10000);
     UtilsFactory = (await ethers.getContractFactory(
         "Utils",
@@ -128,17 +134,16 @@ async function main() {
     console.log(`Utils Address: ${await Utils.getAddress()}`);
     await snooze(10000);
     // We get the contract to deploy
-    const CalculumFactory = await ethers.getContractFactory(
+    const BearFactory = await ethers.getContractFactory(
         contractName, {
         signer: deployer,
         libraries: {
-            UniswapLibV3: await UniswapLibV3.getAddress(),
             Utils: await Utils.getAddress(),
         }
     }
     );
     const Calculum = await upgrades.deployProxy(
-        CalculumFactory,
+        BearFactory,
         [
             name,
             symbol,
@@ -146,19 +151,19 @@ async function main() {
             [
                 "0x0A52D0fAbBE370E8EEcb6C265b574C007Ed0e62a", // Trader Bot Wallet 0x0A52D0fAbBE370E8EEcb6C265b574C007Ed0e62a
                 "0x46E9C1B8f65881C9D3333e1461d65275A3ef8647", // Treasury Wallet 0x46E9C1B8f65881C9D3333e1461d65275A3ef8647
-                "0xB8df119948e3bb1cf2255EBAfc4b9CE35b11CA22", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Mainnet
+                "0xf196194986C39624143cD29B4864ef3C85c35542", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Sepolia
                 // "0x101F443B4d1b059569D643917553c771E1b9663E", // Router Address Arbitrum Sepolia
-                "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Router Address Arbitrum Mainnet
-                // "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // USDC native in Arbitrum Sepolia
-                "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", // USDC native in Arbitrum Mainnet
-                // "0xaDeFDE1A14B6ba4DA3e82414209408a49930E8DC", // Vertex Endpoint Arbitrum Sepolia
-                "0xbbEE07B3e8121227AfCFe1E2B82772246226128e", // Vertex Endpoint Arbitrum Mainnet
+                //"0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Router Address Arbitrum Mainnet
+                "0xD32ea1C76ef1c296F131DD4C5B2A0aac3b22485a", // USDC of Vertex in Arbitrum Sepolia
+                // "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", // USDC native in Arbitrum Mainnet
+                "0xaDeFDE1A14B6ba4DA3e82414209408a49930E8DC", // Vertex Endpoint Arbitrum Sepolia
+                // "0xbbEE07B3e8121227AfCFe1E2B82772246226128e", // Vertex Endpoint Arbitrum Mainnet
             ],
             [
                 EPOCH_START,
                 1 * 10 ** 6, // 1 $
-                200 * 10 ** 6, // 200 $
-                1000000 * 10 ** 6, // 1000000 $
+                10000 * 10 ** 6, // 100.000 $
+                '100000000000000000', // 100.000.000.000 $
                 3 * 10 ** 6, // 3 $
                 5 * 10 ** 6, // 5 $
                 ethers.parseEther("0.001")

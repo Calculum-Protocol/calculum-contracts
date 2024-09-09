@@ -15,8 +15,10 @@ library Utils {
 
     // address public constant OZW =
 
-    address public constant FQuerier = address(0x1693273B443699bee277eCbc60e2C8027E91995d); // Arbitrum Mainnet
-    address public constant OZW = address(0xB8df119948e3bb1cf2255EBAfc4b9CE35b11CA22); // OpenZeppelin Defender Wallet Arbitrum Mainnet
+    // address public constant FQuerier = address(0x1693273B443699bee277eCbc60e2C8027E91995d); // Arbitrum Mainnet
+    address public constant FQuerier = address(0x2F579046eC1e88Ff580ca5ED9373e91ece8894b0); // Arbitrum Testnet
+    // address public constant OZW = address(0xB8df119948e3bb1cf2255EBAfc4b9CE35b11CA22); // OpenZeppelin Defender Wallet Arbitrum Mainnet
+    address public constant OZW = address(0xf196194986C39624143cD29B4864ef3C85c35542); // OpenZeppelin Defender Wallet Arbitrum Testnet
 
     bytes12 private constant defaultSubaccountName = bytes12(abi.encodePacked("default"));
     string constant DEFAULT_REFERRAL_CODE = "-1";
@@ -173,6 +175,13 @@ library Utils {
             bytes32(abi.encodePacked(uint160(address(this)), defaultSubaccountName)), productId
         );
         balance = spotBalance.balance.amount < 0 ? 0 : uint256(uint128(spotBalance.balance.amount));
+    }
+
+    function getUnhealthBalance(uint32 productId) public returns (IFQuerier.SubaccountInfo memory unhBalance, IFQuerier.PerpProduct memory perpProd, uint256 balance, uint256 usdcPrice) {
+        unhBalance = IFQuerier(FQuerier).getSubaccountInfo(bytes32(abi.encodePacked(uint160(address(this)), defaultSubaccountName)));
+        balance = unhBalance.healths[2].health < 0 ? 0 : uint256(uint128(unhBalance.healths[2].health));
+        perpProd = IFQuerier(FQuerier).getPerpProduct(productId);
+        usdcPrice = uint256(uint128(perpProd.oraclePriceX18));
     }
 
     function linkVertexSigner(address vertexEndpoint, address asset, address externalAccount)

@@ -100,6 +100,11 @@
       "address": "0xEcb1B3676a929f46C723Ac76A7e17c472338e76C",
       "txHash": "0x8f6a7c082943b3254fe4883ff06eabc2fce58ca59aa085350bfb7cb979cf7b70",
       "kind": "transparent"
+    },
+    {
+      "address": "0x8D95d199b19De32bCd59cf02362249362f8aA614",
+      "txHash": "0x752c61dd8051b61af432f3f4713a1f301cbbd6c827385ceaf418dacf0713229d",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -17983,6 +17988,675 @@
             "numberOfBytes": "64"
           },
           "t_struct(NetTransfer)8227_storage": {
+            "label": "struct DataTypes.NetTransfer",
+            "members": [
+              {
+                "label": "pending",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "direction",
+                "type": "t_bool",
+                "offset": 1,
+                "slot": "0"
+              },
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.AccessControl": [
+            {
+              "contract": "AccessControlUpgradeable",
+              "label": "_roles",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)25_storage)",
+              "src": "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol:61",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Pausable": [
+            {
+              "contract": "PausableUpgradeable",
+              "label": "_paused",
+              "type": "t_bool",
+              "src": "@openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol:21",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC20": [
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_balances",
+              "type": "t_mapping(t_address,t_uint256)",
+              "src": "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol:38",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_allowances",
+              "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+              "src": "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol:40",
+              "offset": 0,
+              "slot": "1"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_totalSupply",
+              "type": "t_uint256",
+              "src": "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol:42",
+              "offset": 0,
+              "slot": "2"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_name",
+              "type": "t_string_storage",
+              "src": "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol:44",
+              "offset": 0,
+              "slot": "3"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_symbol",
+              "type": "t_string_storage",
+              "src": "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol:45",
+              "offset": 0,
+              "slot": "4"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "372679c2a0c73e28ff2ec8a98dec49f34bd568f52e891ed0634ae33fd7d76b6c": {
+      "address": "0xC7d15470d18002E78bC1CF5eB6A495EDFBD44a32",
+      "txHash": "0xba951d84e3fa0aa33ef6e70051dd66df4d55f719c5f5ecc828ec95a95ab49754",
+      "layout": {
+        "solcVersion": "0.8.24",
+        "storage": [
+          {
+            "label": "_asset",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IERC20Metadata)2258",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:74"
+          },
+          {
+            "label": "_decimals",
+            "offset": 20,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:76"
+          },
+          {
+            "label": "linked",
+            "offset": 21,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:78"
+          },
+          {
+            "label": "_tx",
+            "offset": 22,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:80"
+          },
+          {
+            "label": "EPOCH_START",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:82"
+          },
+          {
+            "label": "openZeppelinDefenderWallet",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_address_payable",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:84"
+          },
+          {
+            "label": "traderBotWallet",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address_payable",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:86"
+          },
+          {
+            "label": "endpointVertex",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_address",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:88"
+          },
+          {
+            "label": "treasuryWallet",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_address",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:90"
+          },
+          {
+            "label": "MANAGEMENT_FEE_PERCENTAGE",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:92"
+          },
+          {
+            "label": "PERFORMANCE_FEE_PERCENTAGE",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:94"
+          },
+          {
+            "label": "VAULT_TOKEN_PRICE",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_mapping(t_uint256,t_uint256)",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:96"
+          },
+          {
+            "label": "TOTAL_VAULT_TOKEN_SUPPLY",
+            "offset": 0,
+            "slot": "9",
+            "type": "t_mapping(t_uint256,t_uint256)",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:98"
+          },
+          {
+            "label": "router",
+            "offset": 0,
+            "slot": "10",
+            "type": "t_contract(IRouter)9310",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:100"
+          },
+          {
+            "label": "EPOCH_DURATION",
+            "offset": 0,
+            "slot": "11",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:102"
+          },
+          {
+            "label": "CURRENT_EPOCH",
+            "offset": 0,
+            "slot": "12",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:104"
+          },
+          {
+            "label": "MAINTENANCE_PERIOD_PRE_START",
+            "offset": 0,
+            "slot": "13",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:106"
+          },
+          {
+            "label": "MAINTENANCE_PERIOD_POST_START",
+            "offset": 0,
+            "slot": "14",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:108"
+          },
+          {
+            "label": "DEX_WALLET_BALANCE",
+            "offset": 0,
+            "slot": "15",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:110"
+          },
+          {
+            "label": "MAX_DEPOSIT",
+            "offset": 0,
+            "slot": "16",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:112"
+          },
+          {
+            "label": "MIN_DEPOSIT",
+            "offset": 0,
+            "slot": "17",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:114"
+          },
+          {
+            "label": "MAX_TOTAL_DEPOSIT",
+            "offset": 0,
+            "slot": "18",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:116"
+          },
+          {
+            "label": "MIN_WALLET_BALANCE_USDC_TRANSFER_BOT",
+            "offset": 0,
+            "slot": "19",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:118"
+          },
+          {
+            "label": "TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT",
+            "offset": 0,
+            "slot": "20",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:120"
+          },
+          {
+            "label": "MIN_WALLET_BALANCE_ETH_TRANSFER_BOT",
+            "offset": 0,
+            "slot": "21",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:122"
+          },
+          {
+            "label": "ETH_GAS_RESERVE_USDC_TRANSFER_BOT",
+            "offset": 0,
+            "slot": "22",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:124"
+          },
+          {
+            "label": "FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT",
+            "offset": 0,
+            "slot": "23",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:126"
+          },
+          {
+            "label": "DECIMAL_FACTOR",
+            "offset": 0,
+            "slot": "24",
+            "type": "t_uint256",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:128"
+          },
+          {
+            "label": "depositWallets",
+            "offset": 0,
+            "slot": "25",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:130"
+          },
+          {
+            "label": "DEPOSITS",
+            "offset": 0,
+            "slot": "26",
+            "type": "t_mapping(t_address,t_struct(Basics)7653_storage)",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:132"
+          },
+          {
+            "label": "withdrawWallets",
+            "offset": 0,
+            "slot": "27",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:134"
+          },
+          {
+            "label": "WITHDRAWALS",
+            "offset": 0,
+            "slot": "28",
+            "type": "t_mapping(t_address,t_struct(Basics)7653_storage)",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:136"
+          },
+          {
+            "label": "netTransfer",
+            "offset": 0,
+            "slot": "29",
+            "type": "t_mapping(t_uint256,t_struct(NetTransfer)7661_storage)",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:142"
+          },
+          {
+            "label": "whitelist",
+            "offset": 0,
+            "slot": "30",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:144"
+          },
+          {
+            "label": "limit",
+            "offset": 0,
+            "slot": "31",
+            "type": "t_struct(Limit)7667_storage",
+            "contract": "CalculumVault",
+            "src": "src/CalculumVault.sol:146"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(address => mapping(address => uint256))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)25_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(AccessControlStorage)34_storage": {
+            "label": "struct AccessControlUpgradeable.AccessControlStorage",
+            "members": [
+              {
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)25_storage)",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ERC20Storage)227_storage": {
+            "label": "struct ERC20Upgradeable.ERC20Storage",
+            "members": [
+              {
+                "label": "_balances",
+                "type": "t_mapping(t_address,t_uint256)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_allowances",
+                "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "_totalSupply",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "_name",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "_symbol",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_struct(InitializableStorage)147_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)97_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(PausableStorage)319_storage": {
+            "label": "struct PausableUpgradeable.PausableStorage",
+            "members": [
+              {
+                "label": "_paused",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)380_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoleData)25_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "hasRole",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_address_payable": {
+            "label": "address payable",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IERC20Metadata)2258": {
+            "label": "contract IERC20Metadata",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IRouter)9310": {
+            "label": "contract IRouter",
+            "numberOfBytes": "20"
+          },
+          "t_enum(Status)7642": {
+            "label": "enum DataTypes.Status",
+            "members": [
+              "Inactive",
+              "Pending",
+              "Claimet",
+              "Completed",
+              "PendingRedeem",
+              "PendingWithdraw"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_address,t_struct(Basics)7653_storage)": {
+            "label": "mapping(address => struct DataTypes.Basics)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(NetTransfer)7661_storage)": {
+            "label": "mapping(uint256 => struct DataTypes.NetTransfer)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_uint256)": {
+            "label": "mapping(uint256 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Basics)7653_storage": {
+            "label": "struct DataTypes.Basics",
+            "members": [
+              {
+                "label": "status",
+                "type": "t_enum(Status)7642",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "amountAssets",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "amountShares",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "finalAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_struct(Limit)7667_storage": {
+            "label": "struct DataTypes.Limit",
+            "members": [
+              {
+                "label": "amountBlock",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "timestamp",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(NetTransfer)7661_storage": {
             "label": "struct DataTypes.NetTransfer",
             "members": [
               {

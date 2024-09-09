@@ -18,7 +18,10 @@ abstract contract Events {
      * @param estimationOfShares Estimation of Amount of Shares to Mint
      */
     event PendingDeposit(
-        address indexed caller, address indexed receiver, uint256 assets, uint256 estimationOfShares
+        address indexed caller,
+        address indexed receiver,
+        uint256 assets,
+        uint256 estimationOfShares
     );
 
     /**
@@ -36,7 +39,10 @@ abstract contract Events {
      * @param estimationOfShares Estimation of Amount of Shares to Mint
      */
     event PendingWithdraw(
-        address indexed receiver, address indexed owner, uint256 assets, uint256 estimationOfShares
+        address indexed receiver,
+        address indexed owner,
+        uint256 assets,
+        uint256 estimationOfShares
     );
     /**
      * @dev Epoch Changed
@@ -44,6 +50,8 @@ abstract contract Events {
     event EpochChanged(
         uint256 OldPeriod,
         uint256 NewPeriod,
+        uint256 OldEpochStart,
+        uint256 NewEpochStart,
         uint256 newMaintTimeBefore,
         uint256 newMaintTimeAfter,
         uint256 _floorWalletBalanceUSDC
@@ -51,7 +59,13 @@ abstract contract Events {
     /**
      * @dev Fees Transfer
      */
-    event FeesTransfer(uint256 indexed epoch, uint256 Amount);
+    event FeesTransfer(
+        uint256 indexed epoch,
+        uint256 Amount,
+        uint256 mantFee,
+        uint256 perfFee,
+        uint256 totalFee
+    );
     /**
      * @dev Dex Transfer
      */
@@ -60,7 +74,11 @@ abstract contract Events {
     /**
      * @dev Rescued Emercency Funds
      */
-    event Rescued(address indexed owner, uint256 amountAssets, uint256 amountEth);
+    event Rescued(
+        address indexed owner,
+        uint256 amountAssets,
+        uint256 amountEth
+    );
 
     /**
      * @dev Events when change Trader Bot Address
@@ -71,4 +89,9 @@ abstract contract Events {
      * @dev Events when change Treasury Address
      */
     event TreasuryWalletUpdated(address indexed newAddress);
+
+    /**
+     * @dev Events when change OPZ Wallet Address
+     */
+    event OPZWalletUpdated(address indexed newAddress);
 }

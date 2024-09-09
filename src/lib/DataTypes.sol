@@ -35,7 +35,7 @@ library DataTypes {
     /// Limitter
 
     struct Limit {
-        uint256 amountBlock;
+        uint8 percentage;
         uint256 timestamp;
     }
 

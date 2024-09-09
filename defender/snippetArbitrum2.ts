@@ -3,44 +3,70 @@ const { ethers } = require('ethers');
 
 // Contract ABI
 const contractAbi = [
-  {
-    inputs: [],
-    name: "finalizeEpoch",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "bool",
-        name: "kind",
-        type: "bool",
-      },
-    ],
-    name: "dexTransfer",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "feesTransfer",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "isDexTxPending",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
-  },
+    {
+        inputs: [],
+        name: "finalizeEpoch",
+        outputs: [],
+        stateMutability: "nonpayable",
+        type: "function",
+    },
+    {
+        "inputs": [],
+        "name": "CURRENT_EPOCH",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "CurrentEpoch",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        inputs: [
+            {
+                internalType: "bool",
+                name: "kind",
+                type: "bool",
+            },
+        ],
+        name: "dexTransfer",
+        outputs: [],
+        stateMutability: "nonpayable",
+        type: "function",
+    },
+    {
+        inputs: [],
+        name: "feesTransfer",
+        outputs: [],
+        stateMutability: "nonpayable",
+        type: "function",
+    },
+    {
+        inputs: [],
+        name: "isDexTxPending",
+        outputs: [{ internalType: "bool", name: "", type: "bool" }],
+        stateMutability: "view",
+        type: "function",
+    },
 ];
 
 // Contract address
-const contractAddress = '0xEcb1B3676a929f46C723Ac76A7e17c472338e76C';
+const contractAddress = '0xF92b7c95A2f5F60Ba8127F7A2F10833Ca3431Ed7';
 
 // Snooze function to pause execution
 const snooze = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -59,11 +85,24 @@ exports.handler = async function (credentials) {
         const contract = new ethers.Contract(contractAddress, contractAbi, signer);
 
         // Pause to ensure the state is updated
-        await snooze(500); // Adjust the delay as necessary
+        await snooze(300); // Adjust the delay as necessary
+
+        // Call CurrentEpoch to force the contract to update the epoch value
+        const CURRENT_EPOCH = await contract.CURRENT_EPOCH();
+
+        if (CURRENT_EPOCH == 0) {
+            const currentEpochTx = await contract.CurrentEpoch();
+
+            await currentEpochTx.wait();
+            console.log('Transaction for Current Epoch confirmed:', currentEpochTx.hash);
+        }
+
+        // Pause to ensure the state is updated
+        await snooze(200); // Adjust the delay as necessary
 
         // Check if is pending
         if (await contract.isDexTxPending()) {
-            
+
             // Call dexTransfer with the argument true
             const dexTransferTx2 = await contract.dexTransfer(false);
             console.log('Transaction for dexTransfer sent:', dexTransferTx2.hash);
@@ -78,15 +117,17 @@ exports.handler = async function (credentials) {
         await snooze(30000); // Adjust the delay as necessary
 
         // Call CurrentEpoch to force the contract to update the epoch value
-        const feesTransferTx = await contract.feesTransfer();
-        console.log('Transaction for feesTransferTx sent:', feesTransferTx.hash);
+        let feesTransferTx;
+        // Fee transfer only executed if the current epoch is greater than 0
+        if (CURRENT_EPOCH > 0) {
+            const feesTransferTx = await contract.feesTransfer();
 
-        // Wait for the CurrentEpoch transaction to be confirmed
-        await feesTransferTx.wait();
-        console.log('Transaction for feesTransferTx confirmed.');
-
+            // Wait for the CurrentEpoch transaction to be confirmed
+            await feesTransferTx.wait();
+            console.log('Transaction for feesTransferTx confirmed:', feesTransferTx.hash);
+        }
         return {
-            feesTransferTxHash: feesTransferTx.hash,
+            feesTransferTxHash: feesTransferTx.hash ?? null,
             signerAddress: signerAddress
         };
     } catch (error) {

@@ -66,8 +66,6 @@ contract TestVaultFront is
     uint256 public MIN_DEPOSIT;
     // Max Total Assets
     uint256 public MAX_TOTAL_DEPOSIT;
-    // ETH Gas Reserve in USDC in Transfer Bot
-    uint256 public ETH_GAS_RESERVE_USDC_TRANSFER_BOT;
     // Array of Wallet Addresses with Deposit
     address[] private depositWallets;
     // Mapping Deposits
@@ -462,10 +460,21 @@ contract TestVaultFront is
             revert Errors.WrongEpochDuration(_epochDuration);
         }
         uint256 oldEpochDuration = EPOCH_DURATION;
+        uint256 oldEpochStart = EPOCH_START;
         EPOCH_DURATION = _epochDuration;
+        // Permit to Readjust Periods
+        EPOCH_START = block.timestamp - (EPOCH_DURATION * CURRENT_EPOCH);
         MAINTENANCE_PERIOD_PRE_START = _maintTimeBefore;
         MAINTENANCE_PERIOD_POST_START = _maintTimeAfter;
-        emit EpochChanged(oldEpochDuration, _epochDuration, _maintTimeBefore, _maintTimeAfter, 0);
+        emit EpochChanged(
+            oldEpochDuration,
+            _epochDuration,
+            oldEpochStart,
+            EPOCH_START,
+            _maintTimeBefore,
+            _maintTimeAfter,
+            0
+        );
     }
 
     /**

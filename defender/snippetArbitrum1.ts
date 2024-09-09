@@ -40,7 +40,7 @@ const contractAbi = [
 ];
 
 // Contract address
-const contractAddress = '0xEcb1B3676a929f46C723Ac76A7e17c472338e76C';
+const contractAddress = '0xF92b7c95A2f5F60Ba8127F7A2F10833Ca3431Ed7';
 
 // Snooze function to pause execution
 const snooze = ms => new Promise(resolve => setTimeout(resolve, ms));

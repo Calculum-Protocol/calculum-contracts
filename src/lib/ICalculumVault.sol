@@ -27,10 +27,6 @@ interface ICalculumVault {
 
     function MIN_WALLET_BALANCE_ETH_TRANSFER_BOT() external view returns (uint256);
 
-    function ETH_GAS_RESERVE_USDC_TRANSFER_BOT() external view returns (uint256);
-
-    function FLOOR_WALLET_BALANCE_USDC_TRANSFER_BOT() external view returns (uint256);
-
     function EPOCH_DURATION() external view returns (uint256);
 
     function CURRENT_EPOCH() external view returns (uint256);
@@ -38,6 +34,12 @@ interface ICalculumVault {
     function MAINTENANCE_PERIOD_PRE_START() external view returns (uint256);
 
     function MAINTENANCE_PERIOD_POST_START() external view returns (uint256);
+
+    function openZeppelinDefenderWallet() external view returns (uint256);
+
+    function traderBotWallet() external view returns (uint256);
+
+    function treasuryWallet() external view returns (uint256);
 
     // Methods
 
