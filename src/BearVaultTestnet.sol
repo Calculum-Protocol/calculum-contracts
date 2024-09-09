@@ -210,43 +210,6 @@ contract BearVaultTestnet is
     }
 
     /**
-     * @dev Returns the total amount of the underlying asset that is “managed” by Vault.
-     * TODO: About this guys the point is how reflect the real value of the asset in the Trader Bot during the  Trading Period,
-     * TODO: Because from this depend the amount of shares that can be mint/burn in the Deposit or Withdraw methods
-     * - SHOULD include any compounding that occurs from yield.
-     * - MUST be inclusive of any fees that are charged against assets in the Vault.
-     * - MUST NOT revert.
-     */
-    function totalAssets() public view override returns (uint256) {
-        return DEX_WALLET_BALANCE;
-    }
-
-    /**
-     * Method to Update Next Epoch starting timestamp
-     */
-    function NextEpoch() private returns (uint256) {
-        if (block.timestamp > EPOCH_START + (EPOCH_DURATION * (CURRENT_EPOCH + 1))) {
-            ++CURRENT_EPOCH;
-        }
-        return EPOCH_START + (EPOCH_DURATION * (CURRENT_EPOCH + 1));
-    }
-
-    /**
-     * @dev Method to Update Current Epoch starting timestamp
-     */
-    function CurrentEpoch() public onlyRole(TRANSFER_BOT_ROLE) returns (uint256) {
-        return NextEpoch() - EPOCH_DURATION;
-    }
-
-    function getCurrentEpoch() public view returns (uint256) {
-        return getNextEpoch() - EPOCH_DURATION;
-    }
-
-    function getNextEpoch() public view returns (uint256) {
-        return EPOCH_START + (EPOCH_DURATION * (CURRENT_EPOCH + 1));
-    }
-
-    /**
      * @dev Mints Vault shares to receiver by depositing exactly amount of underlying tokens.
      *
      * - MUST emit the Deposit event.
@@ -316,10 +279,7 @@ contract BearVaultTestnet is
      *
      * NOTE: most implementations will require pre-approval of the Vault with the Vault’s underlying asset token.
      */
-    // function mint(
-    //     uint256 _shares,
-    //     address _receiver
-    // ) external override returns (uint256) {}
+    function mint(uint256 _shares, address _receiver) external returns (uint256) {}
 
     /**
      * @dev Burns shares from owner and sends exactly assets of underlying tokens to receiver.
@@ -421,60 +381,6 @@ contract BearVaultTestnet is
     }
 
     /**
-     * @dev Add deposit wallet, assets and shares
-     * @param _wallet address of the wallet
-     * @param _shares amount of shares to add for minting
-     * @param _assets amount of assets the deposit
-     */
-    // Add Epoch Time
-    function addDeposit(address _wallet, uint256 _shares, uint256 _assets) private {
-        DataTypes.Basics storage depositor = DEPOSITS[_wallet];
-        if (!isDepositWallet(_wallet)) depositWallets.push(_wallet);
-        if (DEPOSITS[_wallet].status == DataTypes.Status.Inactive) {
-            DEPOSITS[_wallet] = DataTypes.Basics({
-                status: DataTypes.Status.Pending,
-                amountAssets: _assets,
-                amountShares: _shares,
-                finalAmount: uint256(0)
-            });
-        } else {
-            depositor.status = DataTypes.Status.Pending;
-            unchecked {
-                depositor.amountAssets += _assets;
-                depositor.amountShares += _shares;
-            }
-        }
-    }
-
-    /**
-     * @dev Add withdraws wallet, assets and shares
-     * @param _wallet address of the wallet
-     * @param _shares amount of shares to add for minting
-     * @param _assets amount of assets the deposit
-     */
-    function addWithdraw(address _wallet, uint256 _shares, uint256 _assets, bool _isWithdraw)
-        private
-    {
-        if (!isWithdrawWallet(_wallet)) withdrawWallets.push(_wallet);
-        DataTypes.Basics storage withdrawer = WITHDRAWALS[_wallet];
-        if (WITHDRAWALS[_wallet].status == DataTypes.Status.Inactive) {
-            WITHDRAWALS[_wallet] = DataTypes.Basics({
-                status: _isWithdraw ? DataTypes.Status.PendingWithdraw : DataTypes.Status.PendingRedeem,
-                amountAssets: _assets,
-                amountShares: _shares,
-                finalAmount: uint256(0)
-            });
-        } else {
-            withdrawer.status =
-                _isWithdraw ? DataTypes.Status.PendingWithdraw : DataTypes.Status.PendingRedeem;
-            unchecked {
-                withdrawer.amountAssets += _assets;
-                withdrawer.amountShares += _shares;
-            }
-        }
-    }
-
-    /**
      * @dev Method to Claim Shares of the Vault (Mint)
      * @param _owner Owner of the Vault Shares to be claimed
      */
@@ -552,7 +458,7 @@ contract BearVaultTestnet is
         uint256 _epochDuration,
         uint256 _maintTimeBefore,
         uint256 _maintTimeAfter
-    ) public onlyOwner {
+    ) external onlyOwner {
         _checkVaultInMaintenance();
         if (_epochDuration < 1 minutes || _epochDuration > 12 weeks) {
             revert Errors.WrongEpochDuration(_epochDuration);
@@ -572,19 +478,6 @@ contract BearVaultTestnet is
             _maintTimeBefore,
             _maintTimeAfter
         );
-    }
-
-    /**
-     * @dev Contract for Getting Actual Balance of the TraderBot Wallet in Dydx
-     */
-    function DexWalletBalance() public {
-        if ((totalSupply() == 0) && (CURRENT_EPOCH == 0)) {
-            DEX_WALLET_BALANCE = newDeposits();
-        } else {
-            // Get the Balance of the Wallet in the DEX Vertex Through FQuerier Contract of Vertex,
-            // and Adjust the Decimals for the Asset of the Vault
-            DEX_WALLET_BALANCE = Utils.getVertexBalance(0).mulDiv(10 ** _asset.decimals(), 1 ether);
-        }
     }
 
     /**
@@ -656,64 +549,6 @@ contract BearVaultTestnet is
             }
             unchecked {
                 ++i;
-            }
-        }
-    }
-
-    /**
-     * @dev  Method for Update Total Supply
-     */
-    function updateTotalSupply() private {
-        if (CURRENT_EPOCH != 0) {
-            // Partial fix if Finalize epoch fail in some point
-            unchecked {
-                if (CURRENT_EPOCH >= 1) {
-                    if (TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] == 0) {
-                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] = totalSupply();
-                    }
-                }
-            }
-            // rewrite the total supply of the vault token to avoid underflow errors
-            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1]
-                + newShares() > newWithdrawalsShares()
-                ? (TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] + newShares()) - newWithdrawalsShares()
-                : 0;
-        } else {
-            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = newShares();
-        }
-    }
-
-    function netTransferBalance() private {
-        DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
-        actualTx.pending = true;
-        if ((totalSupply() == 0) && (CURRENT_EPOCH == 0)) {
-            actualTx.direction = true;
-            actualTx.amount = newDeposits();
-        } else if (!_tx) {
-            actualTx.pending = false;
-        } else {
-            uint256 deposits = newDeposits();
-            uint256 withdrawals = newWithdrawals();
-            uint256 mgtFee = Utils.MgtFeePerVaultToken(address(this));
-            uint256 perfFee = Utils.PerfFeePerVaultToken(address(this), address(_asset));
-            if (
-                deposits
-                    > withdrawals
-                        + (mgtFee + perfFee).mulDiv(
-                            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1], DECIMAL_FACTOR
-                        )
-            ) {
-                actualTx.direction = true;
-                actualTx.amount = deposits - withdrawals
-                    - (mgtFee + perfFee).mulDiv(
-                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1], DECIMAL_FACTOR
-                    );
-            } else {
-                actualTx.direction = false;
-                actualTx.amount = withdrawals
-                    + (mgtFee + perfFee).mulDiv(
-                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1], DECIMAL_FACTOR
-                    ) - deposits;
             }
         }
     }
@@ -811,6 +646,46 @@ contract BearVaultTestnet is
     }
 
     /**
+     * @dev Contract for Getting Actual Balance of the TraderBot Wallet in Dydx
+     */
+    function DexWalletBalance() public {
+        if ((totalSupply() == 0) && (CURRENT_EPOCH == 0)) {
+            DEX_WALLET_BALANCE = newDeposits();
+        } else {
+            // Get the Balance of the Wallet in the DEX Vertex Through FQuerier Contract of Vertex,
+            // and Adjust the Decimals for the Asset of the Vault
+            DEX_WALLET_BALANCE = Utils.getVertexBalance(0).mulDiv(10 ** _asset.decimals(), 1 ether);
+        }
+    }
+
+    /**
+     * @dev Returns the total amount of the underlying asset that is “managed” by Vault.
+     * TODO: About this guys the point is how reflect the real value of the asset in the Trader Bot during the  Trading Period,
+     * TODO: Because from this depend the amount of shares that can be mint/burn in the Deposit or Withdraw methods
+     * - SHOULD include any compounding that occurs from yield.
+     * - MUST be inclusive of any fees that are charged against assets in the Vault.
+     * - MUST NOT revert.
+     */
+    function totalAssets() public view override returns (uint256) {
+        return DEX_WALLET_BALANCE;
+    }
+
+    /**
+     * @dev Method to Update Current Epoch starting timestamp
+     */
+    function CurrentEpoch() public onlyRole(TRANSFER_BOT_ROLE) returns (uint256) {
+        return NextEpoch() - EPOCH_DURATION;
+    }
+
+    function getCurrentEpoch() public view returns (uint256) {
+        return getNextEpoch() - EPOCH_DURATION;
+    }
+
+    function getNextEpoch() public view returns (uint256) {
+        return EPOCH_START + (EPOCH_DURATION * (CURRENT_EPOCH + 1));
+    }
+
+    /**
      * @dev See {IERC4262-convertToAssets}
      */
     function convertToAssets(uint256 _shares) public view override returns (uint256 _assets) {
@@ -901,18 +776,6 @@ contract BearVaultTestnet is
         }
     }
 
-    function newShares() private view returns (uint256 _total) {
-        for (uint256 i; i < depositWallets.length;) {
-            DataTypes.Basics storage depositor = DEPOSITS[depositWallets[i]];
-            if (depositor.status == DataTypes.Status.Pending) {
-                _total += depositor.amountShares;
-            }
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
     function newWithdrawals() public view returns (uint256 _total) {
         for (uint256 i; i < withdrawWallets.length;) {
             DataTypes.Basics storage withdrawer = WITHDRAWALS[withdrawWallets[i]];
@@ -921,21 +784,6 @@ contract BearVaultTestnet is
                     || (withdrawer.status == DataTypes.Status.PendingWithdraw)
             ) {
                 _total += withdrawer.amountAssets;
-            }
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    function newWithdrawalsShares() private view returns (uint256 _total) {
-        for (uint256 i; i < withdrawWallets.length;) {
-            DataTypes.Basics storage withdrawer = WITHDRAWALS[withdrawWallets[i]];
-            if (
-                (withdrawer.status == DataTypes.Status.PendingRedeem)
-                    || (withdrawer.status == DataTypes.Status.PendingWithdraw)
-            ) {
-                _total += withdrawer.amountShares;
             }
             unchecked {
                 ++i;
@@ -960,7 +808,7 @@ contract BearVaultTestnet is
     /**
      * @dev See {IERC4262-previewMint}
      */
-    // function previewMint(uint256 shares) public view returns (uint256) {}
+    function previewMint(uint256 shares) public view returns (uint256) {}
 
     /**
      * @dev See {IERC4262-previewWithdraw}
@@ -996,7 +844,7 @@ contract BearVaultTestnet is
     /**
      * @dev See {IERC4262-maxMint}
      */
-    // function maxMint(address) public pure virtual override returns (uint256) {}
+    function maxMint(address) public pure virtual returns (uint256) {}
 
     /**
      * @dev See {IERC4262-maxWithdraw}
@@ -1030,6 +878,155 @@ contract BearVaultTestnet is
             return (true, pending);
         }
         return (false, 0);
+    }
+
+    /**
+     * Method to Update Next Epoch starting timestamp
+     */
+    function NextEpoch() private returns (uint256) {
+        if (block.timestamp > EPOCH_START + (EPOCH_DURATION * (CURRENT_EPOCH + 1))) {
+            ++CURRENT_EPOCH;
+        }
+        return EPOCH_START + (EPOCH_DURATION * (CURRENT_EPOCH + 1));
+    }
+
+    /**
+     * @dev Add deposit wallet, assets and shares
+     * @param _wallet address of the wallet
+     * @param _shares amount of shares to add for minting
+     * @param _assets amount of assets the deposit
+     */
+    // Add Epoch Time
+    function addDeposit(address _wallet, uint256 _shares, uint256 _assets) private {
+        DataTypes.Basics storage depositor = DEPOSITS[_wallet];
+        if (!isDepositWallet(_wallet)) depositWallets.push(_wallet);
+        if (DEPOSITS[_wallet].status == DataTypes.Status.Inactive) {
+            DEPOSITS[_wallet] = DataTypes.Basics({
+                status: DataTypes.Status.Pending,
+                amountAssets: _assets,
+                amountShares: _shares,
+                finalAmount: uint256(0)
+            });
+        } else {
+            depositor.status = DataTypes.Status.Pending;
+            unchecked {
+                depositor.amountAssets += _assets;
+                depositor.amountShares += _shares;
+            }
+        }
+    }
+
+    /**
+     * @dev Add withdraws wallet, assets and shares
+     * @param _wallet address of the wallet
+     * @param _shares amount of shares to add for minting
+     * @param _assets amount of assets the deposit
+     */
+    function addWithdraw(address _wallet, uint256 _shares, uint256 _assets, bool _isWithdraw)
+        private
+    {
+        if (!isWithdrawWallet(_wallet)) withdrawWallets.push(_wallet);
+        DataTypes.Basics storage withdrawer = WITHDRAWALS[_wallet];
+        if (WITHDRAWALS[_wallet].status == DataTypes.Status.Inactive) {
+            WITHDRAWALS[_wallet] = DataTypes.Basics({
+                status: _isWithdraw ? DataTypes.Status.PendingWithdraw : DataTypes.Status.PendingRedeem,
+                amountAssets: _assets,
+                amountShares: _shares,
+                finalAmount: uint256(0)
+            });
+        } else {
+            withdrawer.status =
+                _isWithdraw ? DataTypes.Status.PendingWithdraw : DataTypes.Status.PendingRedeem;
+            unchecked {
+                withdrawer.amountAssets += _assets;
+                withdrawer.amountShares += _shares;
+            }
+        }
+    }
+
+    /**
+     * @dev  Method for Update Total Supply
+     */
+    function updateTotalSupply() private {
+        if (CURRENT_EPOCH != 0) {
+            // Partial fix if Finalize epoch fail in some point
+            unchecked {
+                if (CURRENT_EPOCH >= 1) {
+                    if (TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] == 0) {
+                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] = totalSupply();
+                    }
+                }
+            }
+            // rewrite the total supply of the vault token to avoid underflow errors
+            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1]
+                + newShares() > newWithdrawalsShares()
+                ? (TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] + newShares()) - newWithdrawalsShares()
+                : 0;
+        } else {
+            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = newShares();
+        }
+    }
+
+    function netTransferBalance() private {
+        DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
+        actualTx.pending = true;
+        if ((totalSupply() == 0) && (CURRENT_EPOCH == 0)) {
+            actualTx.direction = true;
+            actualTx.amount = newDeposits();
+        } else if (!_tx) {
+            actualTx.pending = false;
+        } else {
+            uint256 deposits = newDeposits();
+            uint256 withdrawals = newWithdrawals();
+            uint256 mgtFee = Utils.MgtFeePerVaultToken(address(this));
+            uint256 perfFee = Utils.PerfFeePerVaultToken(address(this), address(_asset));
+            if (
+                deposits
+                    > withdrawals
+                        + (mgtFee + perfFee).mulDiv(
+                            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1], DECIMAL_FACTOR
+                        )
+            ) {
+                actualTx.direction = true;
+                actualTx.amount = deposits - withdrawals
+                    - (mgtFee + perfFee).mulDiv(
+                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1], DECIMAL_FACTOR
+                    );
+            } else {
+                actualTx.direction = false;
+                actualTx.amount = withdrawals
+                    + (mgtFee + perfFee).mulDiv(
+                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1], DECIMAL_FACTOR
+                    ) - deposits;
+            }
+        }
+    }
+
+    function newShares() private view returns (uint256 _total) {
+        for (uint256 i; i < depositWallets.length;) {
+            DataTypes.Basics storage depositor = DEPOSITS[depositWallets[i]];
+            if (depositor.status == DataTypes.Status.Pending) {
+                _total += depositor.amountShares;
+            }
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function newWithdrawalsShares() private view returns (uint256 _total) {
+        for (uint256 i; i < withdrawWallets.length;) {
+            DataTypes.Basics storage withdrawer = WITHDRAWALS[withdrawWallets[i]];
+            if (
+                (withdrawer.status == DataTypes.Status.PendingRedeem)
+                    || (withdrawer.status == DataTypes.Status.PendingWithdraw)
+            ) {
+                _total += withdrawer.amountShares;
+            }
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     function _checkVaultInMaintenance() private view {
