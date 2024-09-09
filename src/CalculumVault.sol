@@ -160,8 +160,8 @@ contract CalculumVault is
         string memory _name,
         string memory _symbol,
         uint8 decimals_,
-        address[6] memory _initialAddress, // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router, 4: USDCToken Address, 5: Vertex Endpoint
-        uint256[7] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value
+        address[6] memory _initialAddress, // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router Uniswap, 4: USDCToken Address, 5: Vertex Endpoint
+        uint256[7] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value, 4: Min Wallet Balance USDC Transfer Bot, 5: Target Wallet Balance USDC Transfer Bot, 6: Min Wallet Balance ETH Transfer Bot
     ) public reinitializer(1) {
         if (
             !isContract(_initialAddress[3]) || !isContract(_initialAddress[4])
@@ -190,15 +190,12 @@ contract CalculumVault is
         MIN_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[4];
         TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[5];
         MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = _initialValue[6];
-        // EPOCH_DURATION = 1 weeks; // 604800 seconds = 1 week
-        // MAINTENANCE_PERIOD_PRE_START = 60 minutes; // 60 minutes
-        // MAINTENANCE_PERIOD_POST_START = 30 minutes; // 30 minutes
         EPOCH_DURATION = 2 * 60 minutes; // 4 hours
         MAINTENANCE_PERIOD_PRE_START = 300 seconds; // 5 minutes
         MAINTENANCE_PERIOD_POST_START = 300 seconds; // 5 minutes
         CurrentEpoch();
-        MANAGEMENT_FEE_PERCENTAGE = 1 ether / 100; // Represent 1%
-        PERFORMANCE_FEE_PERCENTAGE = 0; // 15 ether / 100; // Represent 15%
+        MANAGEMENT_FEE_PERCENTAGE = 1 ether / 100; // Represent 1% Maintenance Fee Annually
+        PERFORMANCE_FEE_PERCENTAGE = 0; // 15 ether / 100; // Represent 15% Performance Fee Annually
         DECIMAL_FACTOR = 10 ** decimals();
 
         // Set the Limitter
@@ -462,6 +459,8 @@ contract CalculumVault is
 
     /**
      * @dev Method to Preview the Rescue of the Assets
+     * @notice call method to call withdraw all assets in Vertex and send to the owner
+     * @notice but not execute the transfer, becuase hits operation is offchain call
      */
     function previewRescue() external whenPaused onlyOwner nonReentrant {
         DexWalletBalance();
@@ -472,6 +471,8 @@ contract CalculumVault is
 
     /**
      * @dev Setting epoch duration
+     * @notice This method in case of set a new epoch duration, different to actual, recalculates the epoch start,
+     * @notice and avoid any conflict with the actual epoch
      * @param _epochDuration New epoch duration
      * @param _maintTimeBefore New maintenance time before start epoch
      * @param _maintTimeAfter New maintenance time after end epoch
@@ -506,9 +507,7 @@ contract CalculumVault is
      * @dev Method to Finalize the Epoch, and Update all parameters and prepare for start the new Epoch
      */
     function finalizeEpoch() external onlyRole(TRANSFER_BOT_ROLE) {
-        /**
-         * Follow the Initial Vault Mechanics Define by Simplified Implementation
-         */
+        /// Follow the Initial Vault Mechanics Define by Simplified Implementation
         _checkVaultOutMaintenance();
         DexWalletBalance();
         // Partial fix if Finalize epoch fail in some point
@@ -578,6 +577,8 @@ contract CalculumVault is
 
     /**
      * @dev Method to Transfer to DEX, in two stage (because the Vertex, use a offchain platform)
+     * @param kind Flag to control the stage of the Process, because is a process in to steps
+     * @notice kind = true, is the first stage, and in case of withdraw we need to wait at least 4 minutes to execute the second stage
      */
     function dexTransfer(bool kind) external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
         DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
