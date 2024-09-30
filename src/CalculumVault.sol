@@ -708,7 +708,7 @@ contract CalculumVault is
         } else {
             // Get the Balance of the Wallet in the DEX Vertex Through FQuerier Contract of Vertex,
             // and Adjust the Decimals for the Asset of the Vault
-            DEX_WALLET_BALANCE = Utils.getVertexBalance(0).mulDiv(10 ** _asset.decimals(), 1 ether);
+            DEX_WALLET_BALANCE = Utils.getVertexBalance().mulDiv(10 ** _asset.decimals(), 1 ether);
         }
     }
 

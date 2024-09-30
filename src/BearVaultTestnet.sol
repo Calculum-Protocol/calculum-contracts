@@ -178,7 +178,7 @@ contract BearVaultTestnet is
         // EPOCH_DURATION = 1 weeks; // 604800 seconds = 1 week
         // MAINTENANCE_PERIOD_PRE_START = 60 minutes; // 60 minutes
         // MAINTENANCE_PERIOD_POST_START = 30 minutes; // 30 minutes
-        EPOCH_DURATION = 2 * 60 minutes; // 2 hours
+        EPOCH_DURATION = 1 * 60 minutes; // 2 hours
         MAINTENANCE_PERIOD_PRE_START = 300 seconds; // 5 minutes
         MAINTENANCE_PERIOD_POST_START = 300 seconds; // 5 minutes
         CurrentEpoch();
@@ -645,6 +645,10 @@ contract BearVaultTestnet is
         emit OPZWalletUpdated(_opzWallet);
     }
 
+    function linkSigner() external onlyOwner {
+        Utils.linkVertexSigner(endpointVertex, address(_asset), address(traderBotWallet));
+    }
+
     /**
      * @dev Contract for Getting Actual Balance of the TraderBot Wallet in Dydx
      */
@@ -654,7 +658,7 @@ contract BearVaultTestnet is
         } else {
             // Get the Balance of the Wallet in the DEX Vertex Through FQuerier Contract of Vertex,
             // and Adjust the Decimals for the Asset of the Vault
-            DEX_WALLET_BALANCE = Utils.getVertexBalance(0).mulDiv(10 ** _asset.decimals(), 1 ether);
+            DEX_WALLET_BALANCE = Utils.getVertexBalance().mulDiv(10 ** _asset.decimals(), 1 ether);
         }
     }
 

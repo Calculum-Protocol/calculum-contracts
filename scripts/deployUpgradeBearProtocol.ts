@@ -47,26 +47,28 @@ async function main() {
 
     // Round to the nearest hour in UTC
     // Round to the nearest hour in UTC
-    let roundedHour = EPOCH_TIME.clone().add(1, 'hour').startOf('hour');
+    let roundedHour = EPOCH_TIME.clone().startOf("hour");
 
     // Ensure we are rounding to the nearest even hour
     if (roundedHour.hours() % 2 !== 0) {
         // If it's an odd hour, round down to the previous even hour
-        roundedHour.subtract(1, 'hour');
+        roundedHour.subtract(1, "hour");
     }
 
     // Calculate the difference in seconds to the rounded hour
     const diffToRoundedHour = Math.abs(EPOCH_TIME.unix() - roundedHour.unix());
 
     // Calculate the previous even hour within 2 hours
-    let oneHourBefore = roundedHour.clone().subtract(2, 'hours');
+    let oneHourBefore = roundedHour.clone().subtract(2, "hours");
 
     // Determine the closest even hour within a 2-hour difference
     let EPOCH_START;
-    if (diffToRoundedHour <= 3600) { // 3600 seconds = 1 hour
+    if (diffToRoundedHour <= 3600) {
+        // 3600 seconds = 1 hour
         EPOCH_START = roundedHour.unix();
-    } else if (diffToRoundedHour <= 7200) { // 7200 seconds = 2 hours
-        EPOCH_START = oneHourBefore.add(2, 'hours').unix();
+    } else if (diffToRoundedHour <= 7200) {
+        // 7200 seconds = 2 hours
+        EPOCH_START = oneHourBefore.add(2, "hours").unix();
     } else {
         // If the closest even hour is more than 2 hours away, choose the previous even hour
         EPOCH_START = oneHourBefore.unix();
@@ -77,11 +79,9 @@ async function main() {
     const provider = network.provider;
     // const accounts: SignerWithAddress[] = await ethers.getSigners();
     // Getting from command Line de Contract Name
-    const EPOCH_DURATION = 3600;
     const contractName: string = "BearVaultTestnet";
     console.log(`Contract Name: ${contractName}`);
     console.log(`Epoch Start: ${EPOCH_START}`);
-    console.log(`Next Epoch: ${EPOCH_START + EPOCH_DURATION}`);
     const accounts = await ethers.getSigners();
     const deployer = accounts[0];
     traderBotWallet = accounts[1];
@@ -136,44 +136,20 @@ async function main() {
     console.log(`Utils Address: ${await Utils.getAddress()}`);
     await snooze(10000);
     // We get the contract to deploy
-    const BearFactory = await ethers.getContractFactory(
-        contractName, {
+    const BearFactory = await ethers.getContractFactory(contractName, {
         signer: deployer,
         libraries: {
             Utils: await Utils.getAddress(),
-        }
-    }
-    );
-    const Calculum = await upgrades.deployProxy(
-        BearFactory,
-        [
-            name,
-            symbol,
-            decimals,
-            [
-                "0x0A52D0fAbBE370E8EEcb6C265b574C007Ed0e62a", // Trader Bot Wallet 0x0A52D0fAbBE370E8EEcb6C265b574C007Ed0e62a
-                "0x46E9C1B8f65881C9D3333e1461d65275A3ef8647", // Treasury Wallet 0x46E9C1B8f65881C9D3333e1461d65275A3ef8647
-                "0x60153ec0A8151f11f8c0b32D069782bf0D366a3A", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Sepolia
-                // "0x101F443B4d1b059569D643917553c771E1b9663E", // Router Address Arbitrum Sepolia
-                //"0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Router Address Arbitrum Mainnet
-                "0xD32ea1C76ef1c296F131DD4C5B2A0aac3b22485a", // USDC of Vertex in Arbitrum Sepolia
-                // "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", // USDC native in Arbitrum Mainnet
-                "0xaDeFDE1A14B6ba4DA3e82414209408a49930E8DC", // Vertex Endpoint Arbitrum Sepolia
-                // "0xbbEE07B3e8121227AfCFe1E2B82772246226128e", // Vertex Endpoint Arbitrum Mainnet
-            ],
-            [
-                EPOCH_START,
-                1 * 10 ** 6, // 1 $
-                10000 * 10 ** 6, // 100.000 $
-                '100000000000000000', // 100.000.000.000 $
-                3 * 10 ** 6, // 3 $
-                5 * 10 ** 6, // 5 $
-                ethers.parseEther("0.001")
-            ]
-        ]
+        },
+    });
+
+    const BearUpgradeable = await upgrades.upgradeProxy(
+        "0xC62d64Cd77d91B45DB94dc8a8bf7DB069320CcbD",
+        BearFactory as any
     );
 
-    console.log("Bear Protocol Vault deployed to:", await Calculum.getAddress());
+
+    console.log("Bear Protocol Vault deployed to:", await BearUpgradeable.getAddress());
 
     // Verify Process ERC20 Token
     if (network.name !== "hardhat") {
@@ -181,7 +157,7 @@ async function main() {
         await snooze(60000);
         const currentImplAddress = await getImplementationAddress(
             provider,
-            await Calculum.getAddress()
+            await BearUpgradeable.getAddress()
         );
         console.log(`Current Implementation Address: ${currentImplAddress}`);
         await snooze(60000);

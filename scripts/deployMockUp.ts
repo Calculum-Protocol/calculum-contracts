@@ -128,7 +128,7 @@ async function main() {
       [
         "0x0A52D0fAbBE370E8EEcb6C265b574C007Ed0e62a", // Trader Bot Wallet 0x0A52D0fAbBE370E8EEcb6C265b574C007Ed0e62a
         "0x46E9C1B8f65881C9D3333e1461d65275A3ef8647", // Treasury Wallet 0x46E9C1B8f65881C9D3333e1461d65275A3ef8647
-        "0xf196194986C39624143cD29B4864ef3C85c35542", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Sepolia
+        "0x60153ec0A8151f11f8c0b32D069782bf0D366a3A", // Open Zeppelin Defender Wallet Transfer Bot Arbitrum Sepolia
         "0x101F443B4d1b059569D643917553c771E1b9663E", // Router Address Arbitrum Sepolia
         //"0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Router Address Arbitrum Mainnet
         "0xD32ea1C76ef1c296F131DD4C5B2A0aac3b22485a", // USDC of Vertex in Arbitrum Sepolia

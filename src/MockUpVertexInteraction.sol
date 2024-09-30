@@ -59,8 +59,6 @@ contract MockUpVertexInteraction is
     mapping(address => bool) public whitelist;
 
     uint256 public balance;
-    uint256 public usdcPrice;
-    IFQuerier.PerpProduct perpProduct;
     IFQuerier.SubaccountInfo subaccountInfo;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -140,23 +138,20 @@ contract MockUpVertexInteraction is
      */
     function DexWalletBalance() public {
         // Must be use method to get the actual balance of Vertex by Utils library
-        DEX_WALLET_BALANCE = Utils.getVertexBalance(0);
+        DEX_WALLET_BALANCE = Utils.getVertexBalance().mulDiv(10 ** _asset.decimals(), 1 ether);
     }
 
     function getUnHealthBalance()
         public
-        returns (IFQuerier.SubaccountInfo memory, IFQuerier.PerpProduct memory, uint256, uint256)
+        returns (IFQuerier.SubaccountInfo memory, uint256)
     {
         // Get Unhealth Balance from Vertex for productId 0, USDC
-        (subaccountInfo, perpProduct, balance, usdcPrice) = Utils.getUnhealthBalance(0);
-        return Utils.getUnhealthBalance(0);
+        (subaccountInfo, balance) = Utils.getUnhealthBalance();
+        return Utils.getUnhealthBalance();
     }
 
     function linkSigner() external onlyOwner {
-        if (!linked) {
-            Utils.linkVertexSigner(endpointVertex, address(_asset), address(traderBotWallet));
-            linked = true;
-        }
+        Utils.linkVertexSigner(endpointVertex, address(_asset), address(traderBotWallet));
     }
 
     /**
@@ -229,10 +224,6 @@ contract MockUpVertexInteraction is
     function setOPZWallet(address _opzWallet) external onlyOwner {
         openZeppelinDefenderWallet = payable(_opzWallet);
         emit OPZWalletUpdated(_opzWallet);
-    }
-
-    function getPerProduct() public view returns (IFQuerier.PerpProduct memory) {
-        return perpProduct;
     }
 
     function getSubaccountInfo() public view returns (IFQuerier.SubaccountInfo memory) {

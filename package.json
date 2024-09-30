@@ -17,7 +17,9 @@
     "deploy:arbitrumOne": "npx hardhat run ./scripts/deploy.ts --network arbitrumOne",
     "upgrade:arbitrumOne": "npx hardhat run ./scripts/upgrade.ts --network arbitrumOne",
     "deployMockUp:arbitrumOne": "npx hardhat run ./scripts/deployMockUp.ts --network arbitrumOne",
-    "deployMockUp:arbSepolia": "npx hardhat run ./scripts/deployMockUp.ts --network arbitrumSepolia"
+    "deployMockUp:arbSepolia": "npx hardhat run ./scripts/deployMockUp.ts --network arbitrumSepolia",
+    "deployUpgradeMockUp:arbSepolia": "npx hardhat run ./scripts/deployUpgradeMockUp.ts --network arbitrumSepolia",
+    "deployUpgradeBearTestnet:arbSepolia": "npx hardhat run ./scripts/deployUpgradeBearProtocol.ts --network arbitrumSepolia"
   },
   "importSort": {
     ".js, .jsx, .ts, .tsx": {
