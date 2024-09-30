@@ -143,6 +143,14 @@ contract BearVaultTestnet is
         _disableInitializers();
     }
 
+    /**
+     * @dev Method to Inicialize the Initial Parameters of the Vault
+     * @param _name Name of the ERC20 Share / Vault Token
+     * @param _symbol Symbol of the ERC20 Share / Vault Token
+     * @param decimals_ Decimals of the ERC20 Share / Vault Token
+     * @param _initialAddress Array of Initial Addresses 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: USDCToken Address, 4: Vertex Endpoint
+     * @param _initialValue Array of Initial Values 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value, 4: Min Wallet Balance USDC Transfer Bot, 5: Target Wallet Balance USDC Transfer Bot, 6: Min Wallet Balance ETH Transfer Bot
+     */
     function initialize(
         string memory _name,
         string memory _symbol,
@@ -175,9 +183,6 @@ contract BearVaultTestnet is
         MIN_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[4];
         TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[5];
         MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = _initialValue[6];
-        // EPOCH_DURATION = 1 weeks; // 604800 seconds = 1 week
-        // MAINTENANCE_PERIOD_PRE_START = 60 minutes; // 60 minutes
-        // MAINTENANCE_PERIOD_POST_START = 30 minutes; // 30 minutes
         EPOCH_DURATION = 1 * 60 minutes; // 2 hours
         MAINTENANCE_PERIOD_PRE_START = 300 seconds; // 5 minutes
         MAINTENANCE_PERIOD_POST_START = 300 seconds; // 5 minutes
@@ -194,7 +199,7 @@ contract BearVaultTestnet is
     }
 
     /**
-     * @notice called by the admin to pause, triggers stopped state
+     * @notice called by the admin to pause, triggers stopped state  - onlyOwner
      * @dev Callable by admin or operator
      */
     function pause() external whenNotPaused onlyOwner {
@@ -202,8 +207,8 @@ contract BearVaultTestnet is
     }
 
     /**
-     * @notice called by the admin to unpause, returns to normal state
-     * Reset genesis state. Once paused, the rounds would need to be kickstarted by genesis
+     * @notice called by the admin to unpause, returns to normal state  - onlyOwner
+     * @dev Reset genesis state. Once paused, the rounds would need to be kickstarted by genesis
      */
     function unpause() external whenPaused onlyOwner {
         _unpause();
@@ -211,6 +216,8 @@ contract BearVaultTestnet is
 
     /**
      * @dev Mints Vault shares to receiver by depositing exactly amount of underlying tokens.
+     * @param _assets Amount of underlying tokens to deposit.
+     * @param _receiver Address of the receiver wallet.
      *
      * - MUST emit the Deposit event.
      * - MAY support an additional flow in which the underlying tokens are owned by the Vault contract before the
@@ -270,6 +277,8 @@ contract BearVaultTestnet is
 
     /**
      * @dev Mints exactly Vault shares to receiver by depositing amount of underlying tokens.
+     * @param _shares Amount of Vault shares to mint.
+     * @param _receiver Address of the receiver wallet.
      *
      * - MUST emit the Deposit event.
      * - MAY support an additional flow in which the underlying tokens are owned by the Vault contract before the mint
@@ -283,6 +292,9 @@ contract BearVaultTestnet is
 
     /**
      * @dev Burns shares from owner and sends exactly assets of underlying tokens to receiver.
+     * @param _assets Amount of underlying (assets) tokens to withdraw.
+     * @param _receiver Address of the receiver wallet.
+     * @param _owner Owner of the Vault Shares to be claimed
      *
      * - MUST emit the Withdraw event.
      * - MAY support an additional flow in which the underlying tokens are owned by the Vault contract before the
@@ -332,6 +344,9 @@ contract BearVaultTestnet is
 
     /**
      * @dev Burns exactly shares from owner and sends assets of underlying tokens to receiver.
+     * @param _shares Amount of Vault shares to burn, and convert to assets to send to receiver.
+     * @param _receiver Address of the receiver wallet.
+     * @param _owner Owner of the Vault Assets to be claimed
      *
      * - MUST emit the Withdraw event.
      * - MAY support an additional flow in which the underlying tokens are owned by the Vault contract before the
@@ -425,7 +440,7 @@ contract BearVaultTestnet is
     }
 
     /**
-     * @dev Rescue method for emergency situation
+     * @dev Rescue method for emergency situation  - onlyOwner
      * @notice withdraw all assets in Vertex and send to the owner
      */
     function rescue() external whenPaused onlyOwner nonReentrant {
@@ -439,7 +454,9 @@ contract BearVaultTestnet is
     }
 
     /**
-     * @dev Method to Preview the Rescue of the Assets
+     * @dev Method to Preview the Rescue of the Assets  - onlyOwner
+     * @dev This method is to preview the rescue of the assets in the Vault, to call thw withdrawl of the assets in the Vertex
+     * @dev the method of Vertex are off-chain, so require to wait some time to the withdrawl of the assets.
      */
     function previewRescue() external whenPaused onlyOwner nonReentrant {
         DexWalletBalance();
@@ -449,7 +466,7 @@ contract BearVaultTestnet is
     }
 
     /**
-     * @dev Setting epoch duration
+     * @dev Method to Setting epoch duration - onlyOwner
      * @param _epochDuration New epoch duration
      * @param _maintTimeBefore New maintenance time before start epoch
      * @param _maintTimeAfter New maintenance time after end epoch
@@ -481,7 +498,9 @@ contract BearVaultTestnet is
     }
 
     /**
-     * @dev Method to Finalize the Epoch, and Update all parameters and prepare for start the new Epoch
+     * @dev Method to Finalize the Epoch, and Update all parameters and prepare for start the new Epoch  - onlyOwner
+     * @dev This method is to finalize the epoch, and update all the parameters of the Vault, and prepare for the start of the new epoch
+     * @dev additional require Role of Transfer Bot (openZeppelinDefenderWallet)
      */
     function finalizeEpoch() external onlyRole(TRANSFER_BOT_ROLE) {
         /**
@@ -553,6 +572,13 @@ contract BearVaultTestnet is
         }
     }
 
+    /**
+     * @dev Method to Transfer Assets to the Vertex, will be depost or withdrawl of the assets in the Vertex - onlyRole(TRANSFER_BOT_ROLE)
+     * @dev depend on the kind of the transfer, because this method is called twice, because the Vertex is a withdrawl through
+     * @dev off-chain method, and the second call is with withdrawl of the assets in the Vertex,
+     * @dev recalculate the Gas Reserve, and emit the event of the Transfer
+     * @param kind Flag to control the direction of the transfer, true for Deposit, false for Withdrawl
+\     */
     function dexTransfer(bool kind) external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
         DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
         _checkVaultOutMaintenance();
@@ -591,6 +617,7 @@ contract BearVaultTestnet is
 
     /**
      * @dev FeesTranfer per Epoch
+     * @dev This method calculate the fees per epoch, and transfer to the Treasury Wallet
      */
     function feesTransfer() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
         _checkVaultOutMaintenance();
@@ -621,7 +648,8 @@ contract BearVaultTestnet is
     }
 
     /**
-     * @dev Setter for the TraderBot Wallet
+     * @dev Setter for the TraderBot Wallet - onlyOwner
+     * @param _traderBotWallet address of the TraderBot Wallet
      */
     function setTraderBotWallet(address _traderBotWallet) external onlyOwner {
         traderBotWallet = payable(_traderBotWallet);
@@ -630,7 +658,8 @@ contract BearVaultTestnet is
     }
 
     /**
-     * @dev Setter for the TraderBot Wallet
+     * @dev Setter for the TraderBot Wallet - onlyOwner
+     * @param _treasuryWallet address of the Treasury Wallet
      */
     function setTreasuryWallet(address _treasuryWallet) external onlyOwner {
         treasuryWallet = payable(_treasuryWallet);
@@ -638,19 +667,23 @@ contract BearVaultTestnet is
     }
 
     /**
-     * @dev Setter for the TraderBot Wallet
+     * @dev Setter for the TraderBot Wallet - onlyOwner
+     * @param _opzWallet address of the Uniswap Router
      */
     function setOPZWallet(address _opzWallet) external onlyOwner {
         openZeppelinDefenderWallet = payable(_opzWallet);
         emit OPZWalletUpdated(_opzWallet);
     }
 
+    /**
+     * @dev Setter the LinkSigner on Vertex Endpoint - onlyOwner
+     */
     function linkSigner() external onlyOwner {
         Utils.linkVertexSigner(endpointVertex, address(_asset), address(traderBotWallet));
     }
 
     /**
-     * @dev Contract for Getting Actual Balance of the TraderBot Wallet in Dydx
+     * @dev Contract for Getting Actual Balance of the TraderBot Wallet in Vertex
      */
     function DexWalletBalance() public {
         if ((totalSupply() == 0) && (CURRENT_EPOCH == 0)) {
@@ -681,16 +714,25 @@ contract BearVaultTestnet is
         return NextEpoch() - EPOCH_DURATION;
     }
 
+    /**
+     * @dev Method to get Current Epoch starting timestamp
+     */
     function getCurrentEpoch() public view returns (uint256) {
         return getNextEpoch() - EPOCH_DURATION;
     }
 
+    /**
+     * @dev Method to Get the Next Epoch starting timestamp
+     */
     function getNextEpoch() public view returns (uint256) {
         return EPOCH_START + (EPOCH_DURATION * (CURRENT_EPOCH + 1));
     }
 
     /**
      * @dev See {IERC4262-convertToAssets}
+     * @dev Convert Vault shares to underlying assets.
+     * @param _shares Amount of Vault shares to convert to assets.
+     * @return _assets Amount of underlying assets that can be withdrawn.
      */
     function convertToAssets(uint256 _shares) public view override returns (uint256 _assets) {
         if (CURRENT_EPOCH == 0) {
@@ -706,6 +748,9 @@ contract BearVaultTestnet is
 
     /**
      * @dev See {IERC4262-convertToAssets}
+     * @dev Convert Vault shares to underlying assets.
+     * @param _assets Amount of underlying assets to convert to shares.
+     * @return _shares Amount of Vault shares equivalent to assets.
      */
     function convertToShares(uint256 _assets) public view override returns (uint256 _shares) {
         // decimalsAdjust to fixed the rounding issue with stable coins
@@ -723,6 +768,11 @@ contract BearVaultTestnet is
         }
     }
 
+    /**
+     * @dev Method to Verify if have any Pending Transaction in the Vault
+     * @dev This method is to avoid additional transaction in the maintenance process, of each epoch
+     * @return bool if have any pending transaction
+     */
     function isDexTxPending() public view returns (bool) {
         (bool isMant,) = isMaintenance();
         return isMant && (netTransfer[CURRENT_EPOCH].amount > 0 || _tx);
@@ -731,6 +781,7 @@ contract BearVaultTestnet is
     /**
      * @dev Method for Verify if any caller is a Claimer of Pending Deposit
      * @param _claimer address of the wallet
+     * @return bool if the caller is a Claimer of Pending Deposit
      */
     function isClaimerMint(address _claimer) public view returns (bool) {
         return DEPOSITS[_claimer].status == DataTypes.Status.Claimet;
@@ -739,11 +790,17 @@ contract BearVaultTestnet is
     /**
      * @dev Method for Verify if any caller is a Claimer of Pending Deposit
      * @param _claimer address of the wallet
+     * @return bool if the caller is a Claimer of Pending Deposit
      */
     function isClaimerWithdraw(address _claimer) public view returns (bool) {
         return WITHDRAWALS[_claimer].status == DataTypes.Status.Claimet;
     }
 
+    /**
+     * @dev Method to Verify if any Wallet was enrolled in the Deposit Wallets
+     * @param _wallet address of the wallet
+     * @return bool if the wallet is a Deposit Wallet
+     */
     function isDepositWallet(address _wallet) public view returns (bool) {
         for (uint256 i; i < depositWallets.length;) {
             if (depositWallets[i] == _wallet) {
@@ -756,6 +813,11 @@ contract BearVaultTestnet is
         return false;
     }
 
+    /**
+     * @dev Method to Verify if any Wallet was enrolled in the Withdraw Wallets
+     * @param _wallet address of the wallet
+     * @return bool if the wallet is a Withdraw Wallet
+     */
     function isWithdrawWallet(address _wallet) public view returns (bool) {
         for (uint256 i; i < withdrawWallets.length;) {
             if (withdrawWallets[i] == _wallet) {
@@ -768,6 +830,10 @@ contract BearVaultTestnet is
         return false;
     }
 
+    /**
+     * @dev Method calculate Total of Deposit in the Current Epoch
+     * @return _total Total of Deposit in the Current Epoch
+     */
     function newDeposits() public view returns (uint256 _total) {
         for (uint256 i; i < depositWallets.length;) {
             DataTypes.Basics storage depositor = DEPOSITS[depositWallets[i]];
@@ -780,6 +846,10 @@ contract BearVaultTestnet is
         }
     }
 
+    /**
+     * @dev Method calculate Total of Withdrawals in the Current Epoch
+     * @return _total Total of Withdrawals in the Current Epoch
+     */
     function newWithdrawals() public view returns (uint256 _total) {
         for (uint256 i; i < withdrawWallets.length;) {
             DataTypes.Basics storage withdrawer = WITHDRAWALS[withdrawWallets[i]];
@@ -797,6 +867,8 @@ contract BearVaultTestnet is
 
     /**
      * @dev See {IERC4262-asset}
+     * @dev Method to return the address of the underlying asset of the Vault
+     * @return address of the underlying asset of the Vault
      */
     function asset() public view virtual override returns (address) {
         return address(_asset);
@@ -804,6 +876,9 @@ contract BearVaultTestnet is
 
     /**
      * @dev See {IERC4262-previewDeposit}
+     * @dev Preview the amount of Vault shares to mint, but this value can change after to Finalize the Epoch.
+     * @param _assets Amount of underlying tokens to deposit.
+     * @return _shares Amount of Vault shares to mint.
      */
     function previewDeposit(uint256 _assets) public view returns (uint256) {
         return convertToShares(_assets);
@@ -811,11 +886,15 @@ contract BearVaultTestnet is
 
     /**
      * @dev See {IERC4262-previewMint}
+     * @dev Preview the amount of Vault shares to mint, but this value can change after to Finalize the Epoch.
+     * @param shares Amount of Vault shares to mint.
+     * @return _assets Amount of underlying tokens to deposit.
      */
     function previewMint(uint256 shares) public view returns (uint256) {}
 
     /**
      * @dev See {IERC4262-previewWithdraw}
+     
      */
     function previewWithdraw(uint256 assets) public view returns (uint256) {
         uint256 shares = convertToShares(assets);
