@@ -8,14 +8,10 @@ import "./lib/Errors.sol";
 import {IRouter} from "./lib/IRouter.sol";
 import "./lib/UniswapLibV3.sol";
 import "./lib/Utils.sol";
-import {ERC20Upgradeable} from
-    "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
-import {PausableUpgradeable} from
-    "@openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
-import {AccessControlUpgradeable} from
-    "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from
-    "@openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {ERC20Upgradeable} from "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @title Smart Contract Disclaimer
@@ -145,6 +141,9 @@ contract CalculumVault is
         _disableInitializers();
     }
 
+    // Modifier to check if the caller is whitelisted and is the owner
+    // This is crucial for access control in deposit, withdraw, and other sensitive operations
+    // It ensures that only authorized users can interact with their own funds in the vault
     modifier whitelisted(address caller, address _owner) {
         if (_owner != caller) {
             revert Errors.CallerIsNotOwner(caller, _owner);
@@ -154,8 +153,30 @@ contract CalculumVault is
         }
         _;
     }
-    /// TODO: update address of OpenZeppelin Defender Wallet
 
+    /**
+     * @dev Initializes the contract with provided parameters.
+     * @param _name Name of the vault token.
+     * @param _symbol Symbol of the vault token.
+     * @param decimals_ Decimals for the vault token.
+     * @param _initialAddress Array of initial addresses:
+     *        [0]: Trader Bot Wallet
+     *        [1]: Treasury Wallet
+     *        [2]: OpenZeppelin Defender Wallet
+     *        [3]: Uniswap Router
+     *        [4]: USDC Token Address
+     *        [5]: Vertex Endpoint
+     * @param _initialValue Array of initial values:
+     *        [0]: Epoch start timestamp
+     *        [1]: Minimum deposit amount
+     *        [2]: Maximum deposit amount
+     *        [3]: Maximum total supply value
+     *        [4]: Minimum wallet balance USDC for Transfer Bot
+     *        [5]: Target wallet balance USDC for Transfer Bot
+     *        [6]: Minimum wallet balance ETH for Transfer Bot
+     * @notice Sets up roles, initializes token parameters, and configures vault settings.
+     * @notice Implements a limiter for withdrawals and sets initial epoch parameters.
+     */
     function initialize(
         string memory _name,
         string memory _symbol,
@@ -164,8 +185,9 @@ contract CalculumVault is
         uint256[7] memory _initialValue // 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value, 4: Min Wallet Balance USDC Transfer Bot, 5: Target Wallet Balance USDC Transfer Bot, 6: Min Wallet Balance ETH Transfer Bot
     ) public reinitializer(1) {
         if (
-            !isContract(_initialAddress[3]) || !isContract(_initialAddress[4])
-                || !isContract(_initialAddress[5])
+            !isContract(_initialAddress[3]) ||
+            !isContract(_initialAddress[4]) ||
+            !isContract(_initialAddress[5])
         ) revert Errors.AddressIsNotContract();
         __Ownable_init(_msgSender());
         __ReentrancyGuard_init();
@@ -206,16 +228,21 @@ contract CalculumVault is
     }
 
     /**
-     * @notice called by the admin to pause, triggers stopped state
-     * @dev Callable by admin or operator
+     * @notice Pauses all vault operations, triggering a stopped state
+     * @dev Only callable by the contract owner
+     * @dev This function is part of the emergency stop mechanism
+     * @dev Integrates with OpenZeppelin's PausableUpgradeable contract
      */
     function pause() external whenNotPaused onlyOwner {
         _pause();
     }
 
     /**
-     * @notice called by the admin to unpause, returns to normal state
-     * Reset genesis state. Once paused, the rounds would need to be kickstarted by genesis
+     * @notice Unpauses the contract, allowing normal operations to resume
+     * @dev Only callable by the contract owner when the contract is paused
+     * @dev Resumes all vault operations, including deposits, withdrawals, and epoch transitions
+     * @dev Does not reset any state variables or epoch counters
+     * @dev Integrates with OpenZeppelin's PausableUpgradeable contract
      */
     function unpause() external whenPaused onlyOwner {
         _unpause();
@@ -224,15 +251,31 @@ contract CalculumVault is
     /**
      * @dev Mints Vault shares to receiver by depositing exactly amount of underlying tokens.
      *
-     * - MUST emit the Deposit event.
-     * - MAY support an additional flow in which the underlying tokens are owned by the Vault contract before the
-     *   deposit execution, and are accounted for during deposit.
-     * - MUST revert if all of assets cannot be deposited (due to deposit limit being reached, slippage, the user not
-     *   approving enough underlying tokens to the Vault contract, etc).
+     * @notice This function is part of the ERC4626 standard implementation.
+     * @notice It includes additional checks for whitelist, maintenance periods, and deposit limits.
      *
-     * NOTE: most implementations will require pre-approval of the Vault with the Vault’s underlying asset token.
+     * @dev Implements the following key features:
+     * - Whitelisted access control
+     * - Deposit amount validation (min/max limits)
+     * - Total supply limit check
+     * - Pending claim status verification
+     *
+     * @dev Important contract states affected:
+     * - Updates deposit mapping
+     * - Transfers assets from user to vault
+     * - Sets transaction flag for Vertex integration
+     *
+     * @dev MUST emit the PendingDeposit event instead of Deposit.
+     * @dev Actual minting of shares occurs in the claimShares function.
+     *
+     * @param _assets The amount of underlying tokens to deposit
+     * @param _receiver The address to receive the minted vault shares
+     * @return The amount of vault shares to be minted (claimable)
      */
-    function deposit(uint256 _assets, address _receiver)
+    function deposit(
+        uint256 _assets,
+        address _receiver
+    )
         external
         override
         whitelisted(_msgSender(), _receiver)
@@ -244,25 +287,35 @@ contract CalculumVault is
         address caller = _msgSender();
         DataTypes.Basics storage depositor = DEPOSITS[_receiver];
         if (_receiver != caller) {
-            revert Errors.CallerIsNotOwnerOrReceiver(caller, _receiver, _receiver);
+            revert Errors.CallerIsNotOwnerOrReceiver(
+                caller,
+                _receiver,
+                _receiver
+            );
         }
         if (_assets < MIN_DEPOSIT) {
             revert Errors.DepositAmountTooLow(_receiver, _assets);
         }
-        if (_assets > (MAX_DEPOSIT - (depositor.finalAmount + depositor.amountAssets))) {
+        if (
+            _assets >
+            (MAX_DEPOSIT - (depositor.finalAmount + depositor.amountAssets))
+        ) {
             // Verify the maximun value per user
             revert Errors.DepositExceededMax(
-                _receiver, MAX_DEPOSIT - (depositor.finalAmount + depositor.amountAssets)
+                _receiver,
+                MAX_DEPOSIT - (depositor.finalAmount + depositor.amountAssets)
             );
         }
         if ((totalAssets() + _assets) > MAX_TOTAL_DEPOSIT) {
             revert Errors.DepositExceedTotalVaultMax(
-                _receiver, totalAssets() + _assets, MAX_TOTAL_DEPOSIT
+                _receiver,
+                totalAssets() + _assets,
+                MAX_TOTAL_DEPOSIT
             );
         }
         if (
-            depositor.status == DataTypes.Status.Claimet
-                || depositor.status == DataTypes.Status.Pending
+            depositor.status == DataTypes.Status.Claimet ||
+            depositor.status == DataTypes.Status.Pending
         ) {
             revert Errors.DepositPendingClaim(_receiver);
         }
@@ -282,31 +335,64 @@ contract CalculumVault is
     }
 
     /**
-     * @dev Mints exactly Vault shares to receiver by depositing amount of underlying tokens.
+     * @dev Mints exact Vault shares to receiver by depositing specified amount of underlying tokens.
      *
-     * - MUST emit the Deposit event.
-     * - MAY support an additional flow in which the underlying tokens are owned by the Vault contract before the mint
-     *   execution, and are accounted for during mint.
-     * - MUST revert if all of shares cannot be minted (due to deposit limit being reached, slippage, the user not
-     *   approving enough underlying tokens to the Vault contract, etc).
+     * @notice This function is part of the ERC4626 standard implementation.
+     * @notice It includes additional checks for whitelist, maintenance periods, and deposit limits.
      *
-     * NOTE: most implementations will require pre-approval of the Vault with the Vault’s underlying asset token.
+     * @dev Key features:
+     * - Whitelisted access control
+     * - Deposit amount validation (min/max limits)
+     * - Total supply limit check
+     * - Pending claim status verification
+     *
+     * @dev Important contract states affected:
+     * - Updates deposit mapping
+     * - Transfers assets from user to vault
+     * - Sets transaction flag for Vertex integration
+     *
+     * @dev MUST emit the Deposit event.
+     * @dev MUST revert if shares cannot be minted due to limits, slippage, or insufficient approval.
+     *
+     * @param _shares The amount of vault shares to mint
+     * @param _receiver The address to receive the minted vault shares
+     * @return The amount of assets deposited
      */
-    function mint(uint256 _shares, address _receiver) external returns (uint256) {}
+    function mint(
+        uint256 _shares,
+        address _receiver
+    ) external returns (uint256) {}
 
     /**
      * @dev Burns shares from owner and sends exactly assets of underlying tokens to receiver.
      *
-     * - MUST emit the Withdraw event.
-     * - MAY support an additional flow in which the underlying tokens are owned by the Vault contract before the
-     *   withdraw execution, and are accounted for during withdraw.
-     * - MUST revert if all of assets cannot be withdrawn (due to withdrawal limit being reached, slippage, the owner
-     *   not having enough shares, etc).
+     * This function is part of the ERC4626 standard implementation and includes additional
+     * checks for whitelist, maintenance periods, and withdrawal limits.
      *
-     * Note that some implementations will require pre-requesting to the Vault before a withdrawal may be performed.
-     * Those methods should be performed separately.
+     * Key features:
+     * - Whitelisted access control
+     * - Withdrawal amount validation
+     * - Pending claim status verification
+     * - Withdrawal limit checks
+     *
+     * Important contract states affected:
+     * - Updates withdrawal mapping
+     * - Sets transaction flag for Vertex integration
+     *
+     * @dev MUST emit the PendingWithdraw event instead of Withdraw.
+     * @dev Actual transfer of assets occurs in the claimAssets function.
+     * @dev MUST revert if assets cannot be withdrawn due to limits, slippage, or insufficient balance.
+     * @param _assets The amount of underlying tokens to withdraw
+     * @param _receiver The address to receive the withdrawn assets
+     * @param _owner The address of the owner of the shares to burn
+     *
+     * Note: This implementation requires pre-requesting to the Vault before a withdrawal can be performed.
      */
-    function withdraw(uint256 _assets, address _receiver, address _owner)
+    function withdraw(
+        uint256 _assets,
+        address _receiver,
+        address _owner
+    )
         external
         override
         whitelisted(_msgSender(), _owner)
@@ -325,9 +411,9 @@ contract CalculumVault is
         }
         DataTypes.Basics storage withdrawer = WITHDRAWALS[_owner];
         if (
-            withdrawer.status == DataTypes.Status.Claimet
-                || withdrawer.status == DataTypes.Status.PendingRedeem
-                || withdrawer.status == DataTypes.Status.PendingWithdraw
+            withdrawer.status == DataTypes.Status.Claimet ||
+            withdrawer.status == DataTypes.Status.PendingRedeem ||
+            withdrawer.status == DataTypes.Status.PendingWithdraw
         ) {
             revert Errors.WithdrawPendingClaim(_owner);
         }
@@ -347,16 +433,33 @@ contract CalculumVault is
     /**
      * @dev Burns exactly shares from owner and sends assets of underlying tokens to receiver.
      *
-     * - MUST emit the Withdraw event.
-     * - MAY support an additional flow in which the underlying tokens are owned by the Vault contract before the
-     *   redeem execution, and are accounted for during redeem.
-     * - MUST revert if all of shares cannot be redeemed (due to withdrawal limit being reached, slippage, the owner
-     *   not having enough shares, etc).
+     * This function is part of the ERC4626 standard implementation and includes additional
+     * checks for whitelist, maintenance periods, and withdrawal limits.
      *
-     * NOTE: some implementations will require pre-requesting to the Vault before a withdrawal may be performed.
-     * Those methods should be performed separately.
+     * Key features:
+     * - Whitelisted access control
+     * - Withdrawal amount validation
+     * - Pending claim status verification
+     * - Withdrawal limit checks
+     *
+     * Important contract states affected:
+     * - Updates withdrawal mapping
+     * - Sets transaction flag for Vertex integration
+     *
+     * @dev MUST emit the PendingWithdraw event instead of Withdraw.
+     * @dev Actual transfer of assets occurs in the claimAssets function.
+     * @dev MUST revert if shares cannot be redeemed due to limits, slippage, or insufficient balance.
+     * @param _shares The amount of vault shares to burn
+     * @param _receiver The address to receive the withdrawn assets
+     * @param _owner The address of the owner of the shares to burn
+     *
+     * Note: This implementation requires pre-requesting to the Vault before a withdrawal can be performed.
      */
-    function redeem(uint256 _shares, address _receiver, address _owner)
+    function redeem(
+        uint256 _shares,
+        address _receiver,
+        address _owner
+    )
         external
         override
         whitelisted(_msgSender(), _owner)
@@ -375,9 +478,9 @@ contract CalculumVault is
         }
         DataTypes.Basics storage withdrawer = WITHDRAWALS[_owner];
         if (
-            withdrawer.status == DataTypes.Status.Claimet
-                || withdrawer.status == DataTypes.Status.PendingRedeem
-                || withdrawer.status == DataTypes.Status.PendingWithdraw
+            withdrawer.status == DataTypes.Status.Claimet ||
+            withdrawer.status == DataTypes.Status.PendingRedeem ||
+            withdrawer.status == DataTypes.Status.PendingWithdraw
         ) {
             revert Errors.WithdrawPendingClaim(_owner);
         }
@@ -396,10 +499,19 @@ contract CalculumVault is
     }
 
     /**
-     * @dev Method to Claim Shares of the Vault (Mint)
-     * @param _owner Owner of the Vault Shares to be claimed
+     * @dev Method to claim and mint shares of the Vault for a depositor
+     * @param _owner Address of the owner claiming the shares
+     * @notice This function is part of the two-step deposit process:
+     *         1. User deposits assets (deposit function)
+     *         2. User claims shares (this function)
+     * @notice Only callable during non-maintenance periods
+     * @notice Requires the caller to be whitelisted and the owner of the deposit
+     * @notice Updates the Vertex integration flag
+     * @notice Emits a Deposit event upon successful minting
      */
-    function claimShares(address _owner) external whitelisted(_msgSender(), _owner) nonReentrant {
+    function claimShares(
+        address _owner
+    ) external whitelisted(_msgSender(), _owner) nonReentrant {
         _checkVaultInMaintenance();
         address caller = _msgSender();
         DataTypes.Basics storage depositor = DEPOSITS[_owner];
@@ -409,21 +521,32 @@ contract CalculumVault is
         _mint(_owner, depositor.amountShares);
         // flag to control the transfer to Vertex
         _tx = true;
-        emit Deposit(caller, _owner, depositor.finalAmount, depositor.amountShares);
+        emit Deposit(
+            caller,
+            _owner,
+            depositor.finalAmount,
+            depositor.amountShares
+        );
         delete depositor.amountShares;
         depositor.status = DataTypes.Status.Completed;
     }
 
     /**
-     * @dev Method to Claim Assets of the Vault (Redeem)
-     * @param _receiver address of the receiver wallet
-     * @param _owner Owner of the Vault Assets to be claimed
+     * @dev Method to claim assets from the vault (redeem)
+     * @notice This function is part of the two-step withdrawal process:
+     *         1. User requests withdrawal (withdraw or redeem function)
+     *         2. User claims assets (this function)
+     * @notice Only callable during non-maintenance periods
+     * @notice Requires the caller to be whitelisted and the owner of the withdrawal
+     * @notice Burns shares and transfers assets to the receiver
+     * @notice Updates the Vertex integration flag
+     * @param _receiver Address to receive the withdrawn assets
+     * @param _owner Owner of the vault assets to be claimed
      */
-    function claimAssets(address _receiver, address _owner)
-        external
-        whitelisted(_msgSender(), _owner)
-        nonReentrant
-    {
+    function claimAssets(
+        address _receiver,
+        address _owner
+    ) external whitelisted(_msgSender(), _owner) nonReentrant {
         _checkVaultInMaintenance();
         address caller = _msgSender();
         DataTypes.Basics storage withdrawer = WITHDRAWALS[_owner];
@@ -431,21 +554,33 @@ contract CalculumVault is
             revert Errors.CalletIsNotClaimerToRedeem(_owner);
         }
         if (withdrawer.amountAssets >= _asset.balanceOf(address(this))) {
-            revert Errors.NotEnoughBalance(withdrawer.amountAssets, _asset.balanceOf(address(this)));
+            revert Errors.NotEnoughBalance(
+                withdrawer.amountAssets,
+                _asset.balanceOf(address(this))
+            );
         }
         _burn(_owner, withdrawer.amountShares);
         SafeERC20.safeTransfer(_asset, _receiver, withdrawer.amountAssets);
         // flag to control the transfer to Vertex
         _tx = true;
-        emit Withdraw(caller, _receiver, _owner, withdrawer.amountShares, withdrawer.amountAssets);
+        emit Withdraw(
+            caller,
+            _receiver,
+            _owner,
+            withdrawer.amountShares,
+            withdrawer.amountAssets
+        );
         delete withdrawer.amountAssets;
         delete withdrawer.amountShares;
         withdrawer.status = DataTypes.Status.Completed;
     }
 
     /**
-     * @dev Rescue method for emergency situation
-     * @notice withdraw all assets in Vertex and send to the owner
+     * @dev Emergency rescue method to withdraw all assets from Vertex and transfer to the contract owner
+     * @notice This function can only be called when the contract is paused and by the owner
+     * @notice It transfers both ERC20 assets and ETH balance to the owner
+     * @notice Emits a Rescued event with details of the transferred amounts
+     * @notice This is a last resort function and should be used with extreme caution
      */
     function rescue() external whenPaused onlyOwner nonReentrant {
         uint256 assets = _asset.balanceOf(address(this));
@@ -458,24 +593,33 @@ contract CalculumVault is
     }
 
     /**
-     * @dev Method to Preview the Rescue of the Assets
-     * @notice call method to call withdraw all assets in Vertex and send to the owner
-     * @notice but not execute the transfer, becuase hits operation is offchain call
+     * @dev Previews the rescue operation for assets in Vertex
+     * @notice Simulates withdrawal of all assets from Vertex without executing the transfer
+     * @notice This is an offchain operation and does not affect the contract state
+     * @notice Only callable when the contract is paused and by the owner
+     * @notice Utilizes the DexWalletBalance function to update the DEX_WALLET_BALANCE
+     * @notice Interacts with Vertex through the Utils library
      */
     function previewRescue() external whenPaused onlyOwner nonReentrant {
         DexWalletBalance();
         // Withdrawl and Adjust assets, because the Valance is in Format 18 decimals
         uint256 assets = DEX_WALLET_BALANCE;
-        Utils.withdrawVertexCollateral(endpointVertex, address(_asset), 0, assets);
+        Utils.withdrawVertexCollateral(
+            endpointVertex,
+            address(_asset),
+            0,
+            assets
+        );
     }
 
     /**
-     * @dev Setting epoch duration
-     * @notice This method in case of set a new epoch duration, different to actual, recalculates the epoch start,
-     * @notice and avoid any conflict with the actual epoch
-     * @param _epochDuration New epoch duration
-     * @param _maintTimeBefore New maintenance time before start epoch
-     * @param _maintTimeAfter New maintenance time after end epoch
+     * @dev Updates the epoch duration and maintenance times
+     * @notice Recalculates the epoch start to avoid conflicts with the current epoch
+     * @notice Only callable by the contract owner during non-maintenance periods
+     * @param _epochDuration New epoch duration (between 1 minute and 12 weeks)
+     * @param _maintTimeBefore New maintenance time before epoch start
+     * @param _maintTimeAfter New maintenance time after epoch end
+     * @dev Emits an EpochChanged event with old and new values
      */
     function setEpochDuration(
         uint256 _epochDuration,
@@ -504,7 +648,15 @@ contract CalculumVault is
     }
 
     /**
-     * @dev Method to Finalize the Epoch, and Update all parameters and prepare for start the new Epoch
+     * @dev Finalizes the current epoch, updates critical parameters, and prepares for the next epoch
+     * @notice This function is a core part of the vault's cycle, handling:
+     * - DEX wallet balance updates
+     * - Vault token price calculations
+     * - Deposit and withdrawal processing
+     * - Total supply updates
+     * - Net transfer balance calculations
+     * @notice Only callable by addresses with TRANSFER_BOT_ROLE
+     * @notice Must be called outside of maintenance periods
      */
     function finalizeEpoch() external onlyRole(TRANSFER_BOT_ROLE) {
         /// Follow the Initial Vault Mechanics Define by Simplified Implementation
@@ -514,28 +666,38 @@ contract CalculumVault is
         unchecked {
             if (CURRENT_EPOCH >= 2) {
                 if (VAULT_TOKEN_PRICE[CURRENT_EPOCH - 1] == 0) {
-                    VAULT_TOKEN_PRICE[CURRENT_EPOCH - 1] = VAULT_TOKEN_PRICE[CURRENT_EPOCH - 2];
+                    VAULT_TOKEN_PRICE[CURRENT_EPOCH - 1] = VAULT_TOKEN_PRICE[
+                        CURRENT_EPOCH - 2
+                    ];
                 }
             }
         }
         VAULT_TOKEN_PRICE[CURRENT_EPOCH] = convertToAssets(1 ether);
         // Update Value such Token Price Updated
-        for (uint256 i; i < depositWallets.length;) {
+        for (uint256 i; i < depositWallets.length; ) {
             DataTypes.Basics storage depositor = DEPOSITS[depositWallets[i]];
             if (depositor.status == DataTypes.Status.Pending) {
-                depositor.amountShares = convertToShares(depositor.amountAssets);
+                depositor.amountShares = convertToShares(
+                    depositor.amountAssets
+                );
             }
             unchecked {
                 ++i;
             }
         }
-        for (uint256 i; i < withdrawWallets.length;) {
-            DataTypes.Basics storage withdrawer = WITHDRAWALS[withdrawWallets[i]];
+        for (uint256 i; i < withdrawWallets.length; ) {
+            DataTypes.Basics storage withdrawer = WITHDRAWALS[
+                withdrawWallets[i]
+            ];
             if (withdrawer.status == DataTypes.Status.PendingWithdraw) {
-                withdrawer.amountShares = convertToShares(withdrawer.amountAssets);
+                withdrawer.amountShares = convertToShares(
+                    withdrawer.amountAssets
+                );
             }
             if (withdrawer.status == DataTypes.Status.PendingRedeem) {
-                withdrawer.amountAssets = convertToAssets(withdrawer.amountShares);
+                withdrawer.amountAssets = convertToAssets(
+                    withdrawer.amountShares
+                );
             }
             unchecked {
                 ++i;
@@ -544,10 +706,12 @@ contract CalculumVault is
         updateTotalSupply();
         netTransferBalance();
         // Update State of Assest and Share pending to Claim
-        for (uint256 i; i < depositWallets.length;) {
+        for (uint256 i; i < depositWallets.length; ) {
             DataTypes.Basics storage depositor = DEPOSITS[depositWallets[i]];
             if (depositor.status == DataTypes.Status.Pending) {
-                depositor.amountShares = convertToShares(depositor.amountAssets);
+                depositor.amountShares = convertToShares(
+                    depositor.amountAssets
+                );
                 depositor.status = DataTypes.Status.Claimet;
                 depositor.finalAmount += depositor.amountAssets;
                 delete depositor.amountAssets;
@@ -556,15 +720,21 @@ contract CalculumVault is
                 ++i;
             }
         }
-        for (uint256 i; i < withdrawWallets.length;) {
-            DataTypes.Basics storage withdrawer = WITHDRAWALS[withdrawWallets[i]];
+        for (uint256 i; i < withdrawWallets.length; ) {
+            DataTypes.Basics storage withdrawer = WITHDRAWALS[
+                withdrawWallets[i]
+            ];
             if (withdrawer.status == DataTypes.Status.PendingWithdraw) {
-                withdrawer.amountShares = convertToShares(withdrawer.amountAssets);
+                withdrawer.amountShares = convertToShares(
+                    withdrawer.amountAssets
+                );
                 withdrawer.status = DataTypes.Status.Claimet;
                 withdrawer.finalAmount += withdrawer.amountAssets;
             }
             if (withdrawer.status == DataTypes.Status.PendingRedeem) {
-                withdrawer.amountAssets = convertToAssets(withdrawer.amountShares);
+                withdrawer.amountAssets = convertToAssets(
+                    withdrawer.amountShares
+                );
                 withdrawer.status = DataTypes.Status.Claimet;
                 withdrawer.finalAmount += withdrawer.amountAssets;
             }
@@ -576,39 +746,65 @@ contract CalculumVault is
     }
 
     /**
-     * @dev Method to Transfer to DEX, in two stage (because the Vertex, use a offchain platform)
-     * @param kind Flag to control the stage of the Process, because is a process in to steps
-     * @notice kind = true, is the first stage, and in case of withdraw we need to wait at least 4 minutes to execute the second stage
+     * @dev Executes transfers to and from the DEX (Vertex) in a two-stage process
+     * @param kind Boolean flag to control the stage of the process
+     * @notice When kind is true, it initiates the first stage:
+     *         - For deposits: Transfers assets to Vertex and links the signer if necessary
+     *         - For withdrawals: Initiates the withdrawal from Vertex
+     * @notice When kind is false, it executes the second stage:
+     *         - Transfers gas reserve to the OpenZeppelin Defender wallet if needed
+     *         - Emits a DexTransfer event
+     * @notice This two-stage process is necessary due to Vertex's off-chain nature
+     * @notice For withdrawals, a minimum 4-minute wait is required between stages
      */
-    function dexTransfer(bool kind) external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
+    function dexTransfer(
+        bool kind
+    ) external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
         DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
         _checkVaultOutMaintenance();
         if (actualTx.pending && kind && (actualTx.amount > 0)) {
             if (actualTx.direction) {
                 // Deposit
                 Utils.depositCollateralWithReferral(
-                    endpointVertex, address(_asset), 0, actualTx.amount
+                    endpointVertex,
+                    address(_asset),
+                    0,
+                    actualTx.amount
                 );
                 // LinkSigner with EOA unique execution
                 if (!linked) {
                     Utils.linkVertexSigner(
-                        endpointVertex, address(_asset), address(traderBotWallet)
+                        endpointVertex,
+                        address(_asset),
+                        address(traderBotWallet)
                     );
                     linked = true;
                 }
             } else {
                 // Withdrawl
-                Utils.withdrawVertexCollateral(endpointVertex, address(_asset), 0, actualTx.amount);
+                Utils.withdrawVertexCollateral(
+                    endpointVertex,
+                    address(_asset),
+                    0,
+                    actualTx.amount
+                );
             }
             actualTx.pending = false;
         }
-        uint256 reserveGas = Utils.CalculateTransferBotGasReserveDA(address(this), address(_asset));
+        uint256 reserveGas = Utils.CalculateTransferBotGasReserveDA(
+            address(this),
+            address(_asset)
+        );
         uint256 assetBalance = _asset.balanceOf(address(this));
         if (reserveGas > 0 && !kind && _tx) {
             if (assetBalance < reserveGas) {
                 revert Errors.NotEnoughBalance(reserveGas, assetBalance);
             }
-            SafeERC20.safeTransfer(_asset, openZeppelinDefenderWallet, reserveGas);
+            SafeERC20.safeTransfer(
+                _asset,
+                openZeppelinDefenderWallet,
+                reserveGas
+            );
         }
         if (!kind) {
             // Avoid Duplicate Event
@@ -616,19 +812,44 @@ contract CalculumVault is
         }
     }
 
+    /**
+     * @dev Executes the transfer of management and performance fees to the treasury wallet
+     * @notice Must be called outside of maintenance periods by an address with TRANSFER_BOT_ROLE
+     * @notice Calculates fees based on the current epoch and total vault token supply
+     * @notice Updates the current epoch and resets the transaction flag
+     * @notice Emits a FeesTransfer event with detailed fee information
+     */
     function feesTransfer() external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
         _checkVaultOutMaintenance();
         if (CURRENT_EPOCH == 0) {
             revert Errors.FirstEpochNoFeeTransfer();
         }
         uint256 mgtFee = Utils.MgtFeePerVaultToken(address(this));
-        uint256 perfFee = _tx ? Utils.PerfFeePerVaultToken(address(this), address(_asset)) : 0;
-        uint256 totalFees = Utils.getPnLPerVaultToken(address(this), address(_asset))
-            ? (mgtFee + perfFee).mulDiv(TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1], DECIMAL_FACTOR)
-            : mgtFee.mulDiv(TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1], DECIMAL_FACTOR);
-        uint256 rest = totalFees
-            > Utils.CalculateTransferBotGasReserveDA(address(this), address(_asset))
-            ? totalFees - Utils.CalculateTransferBotGasReserveDA(address(this), address(_asset))
+        uint256 perfFee = _tx
+            ? Utils.PerfFeePerVaultToken(address(this), address(_asset))
+            : 0;
+        uint256 totalFees = Utils.getPnLPerVaultToken(
+            address(this),
+            address(_asset)
+        )
+            ? (mgtFee + perfFee).mulDiv(
+                TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                DECIMAL_FACTOR
+            )
+            : mgtFee.mulDiv(
+                TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                DECIMAL_FACTOR
+            );
+        uint256 rest = totalFees >
+            Utils.CalculateTransferBotGasReserveDA(
+                address(this),
+                address(_asset)
+            )
+            ? totalFees -
+                Utils.CalculateTransferBotGasReserveDA(
+                    address(this),
+                    address(_asset)
+                )
             : 0;
         uint256 assetBalance = _asset.balanceOf(address(this));
         rest = rest > assetBalance ? assetBalance : rest;
@@ -645,23 +866,41 @@ contract CalculumVault is
     }
 
     /**
-     * @dev Fucntion to add wallet in the mapping of whitelist
+     * @dev Function to add or remove a wallet from the whitelist
+     * @notice This function is crucial for access control, allowing only whitelisted addresses to interact with the vault
+     * @param _wallet Address to be added or removed from the whitelist
+     * @param status Boolean indicating whether to add (true) or remove (false) the wallet from the whitelist
+     * @notice Only callable by the contract owner, as it's a sensitive operation affecting user access
      */
     function addDropWhitelist(address _wallet, bool status) external onlyOwner {
         whitelist[_wallet] = status;
     }
 
     /**
-     * @dev Setter for the TraderBot Wallet
+     * @dev Updates the TraderBot wallet address and links it to Vertex
+     * @notice This function is crucial for maintaining the vault's trading capabilities
+     * @param _traderBotWallet The new address for the TraderBot wallet
+     * @notice Only callable by the contract owner
+     * @notice Emits a TraderBotWalletUpdated event
+     * @notice Interacts with Vertex to link the new signer
      */
     function setTraderBotWallet(address _traderBotWallet) external onlyOwner {
         traderBotWallet = payable(_traderBotWallet);
-        Utils.linkVertexSigner(endpointVertex, address(_asset), address(traderBotWallet));
+        Utils.linkVertexSigner(
+            endpointVertex,
+            address(_asset),
+            address(traderBotWallet)
+        );
         emit TraderBotWalletUpdated(_traderBotWallet);
     }
 
     /**
-     * @dev Setter for the Treasury Wallet
+     * @dev Updates the treasury wallet address
+     * @notice This function is crucial for managing the vault's fee distribution
+     * @param _treasuryWallet The new address for the treasury wallet
+     * @notice Only callable by the contract owner
+     * @notice Emits a TreasuryWalletUpdated event
+     * @notice Affects fee collection and distribution processes
      */
     function setTreasuryWallet(address _treasuryWallet) external onlyOwner {
         treasuryWallet = payable(_treasuryWallet);
@@ -669,7 +908,12 @@ contract CalculumVault is
     }
 
     /**
-     * @dev Setter for the Open Zeppelin Wallet
+     * @dev Updates the OpenZeppelin Defender wallet address
+     * @notice This function is crucial for managing automated transactions and gas costs
+     * @param _opzWallet The new address for the OpenZeppelin Defender wallet
+     * @notice Only callable by the contract owner
+     * @notice Emits an OPZWalletUpdated event
+     * @notice Affects gas management and automated transaction processes
      */
     function setOPZWallet(address _opzWallet) external onlyOwner {
         openZeppelinDefenderWallet = payable(_opzWallet);
@@ -677,20 +921,33 @@ contract CalculumVault is
     }
 
     /**
-     * @dev Set Min and Max Value of the Deposit and Max Total Supply of Value
+     * @dev Updates deposit limits and maximum total supply of the vault
+     * @notice This function is crucial for managing the vault's capacity and individual deposit sizes
+     * @param _initialValue An array containing [MIN_DEPOSIT, MAX_DEPOSIT, MAX_TOTAL_DEPOSIT]
+     * @notice Only callable by the contract owner
+     * @notice Affects deposit validation in the deposit function
+     * @notice Critical for maintaining the vault's economic balance and risk management
      */
-    function setInitialValue(uint256[3] memory _initialValue) external onlyOwner {
+    function setInitialValue(
+        uint256[3] memory _initialValue
+    ) external onlyOwner {
         MIN_DEPOSIT = _initialValue[0];
         MAX_DEPOSIT = _initialValue[1];
         MAX_TOTAL_DEPOSIT = _initialValue[2];
     }
 
     /**
-     * @dev Set Limit to Withdraw till timestamp
-     * @param pct Percentage to Limit any withdraw
-     * @param timestamp block will be enable till timstamp
+     * @dev Sets a withdrawal limit for the vault until a specified timestamp
+     * @notice This function is crucial for risk management and liquidity control
+     * @param pct Percentage of total assets that can be withdrawn (0-100)
+     * @param timestamp Unix timestamp until which the limit is active
+     * @notice Only callable by addresses with TRADER_BOT_ROLE
+     * @notice Affects the _checkLimit function in withdraw and redeem operations
      */
-    function setLimitter(uint8 pct, uint256 timestamp) external onlyRole(TRADER_BOT_ROLE) {
+    function setLimitter(
+        uint8 pct,
+        uint256 timestamp
+    ) external onlyRole(TRADER_BOT_ROLE) {
         if (pct <= 0) revert Errors.InvalidValue();
         if (pct > 100) revert Errors.InvalidValue();
         if (timestamp <= block.timestamp) revert Errors.InvalidValue();
@@ -700,7 +957,11 @@ contract CalculumVault is
     }
 
     /**
-     * @dev Contract for Getting Actual Balance of the TraderBot Wallet in Dydx
+     * @dev Updates the DEX_WALLET_BALANCE with the current balance of the TraderBot wallet in Vertex
+     * @notice This function is crucial for maintaining accurate asset valuation in the vault
+     * @notice For the initial epoch, it uses newDeposits(); otherwise, it fetches the balance from Vertex
+     * @notice The balance is adjusted to match the decimals of the vault's asset
+     * @notice This function is called in critical operations like finalizeEpoch and affects totalAssets calculations
      */
     function DexWalletBalance() public {
         if ((totalSupply() == 0) && (CURRENT_EPOCH == 0)) {
@@ -708,41 +969,74 @@ contract CalculumVault is
         } else {
             // Get the Balance of the Wallet in the DEX Vertex Through FQuerier Contract of Vertex,
             // and Adjust the Decimals for the Asset of the Vault
-            DEX_WALLET_BALANCE = Utils.getVertexBalance().mulDiv(10 ** _asset.decimals(), 1 ether);
+            DEX_WALLET_BALANCE = Utils.getVertexBalance().mulDiv(
+                10 ** _asset.decimals(),
+                1 ether
+            );
         }
     }
 
     /**
-     * @dev Returns the total amount of the underlying asset that is “managed” by Vault.
-     * TODO: About this guys the point is how reflect the real value of the asset in the Trader Bot during the  Trading Period,
-     * TODO: Because from this depend the amount of shares that can be mint/burn in the Deposit or Withdraw methods
-     * - SHOULD include any compounding that occurs from yield.
-     * - MUST be inclusive of any fees that are charged against assets in the Vault.
-     * - MUST NOT revert.
+     * @dev Returns the total amount of the underlying asset managed by the Vault.
+     * @notice This function is critical for accurate asset valuation and share calculation.
+     * @notice It reflects the real-time value of assets in the TraderBot during trading periods.
+     * @notice The returned value:
+     * - Includes any yield from compounding.
+     * - Accounts for all fees charged against Vault assets.
+     * - Is used to determine the number of shares to mint/burn in deposit/withdraw operations.
+     * @return The total asset value, which is equal to DEX_WALLET_BALANCE.
      */
     function totalAssets() public view override returns (uint256) {
         return DEX_WALLET_BALANCE;
     }
 
     /**
-     * @dev Method to Update Current Epoch starting timestamp
+     * @dev Updates the current epoch and returns its starting timestamp
+     * @notice This function is crucial for the vault's epoch-based operations
+     * @notice It increments the CURRENT_EPOCH if the current time has passed the next epoch start
+     * @notice Only callable by addresses with TRANSFER_BOT_ROLE
+     * @return The starting timestamp of the current epoch
      */
-    function CurrentEpoch() public onlyRole(TRANSFER_BOT_ROLE) returns (uint256) {
+    function CurrentEpoch()
+        public
+        onlyRole(TRANSFER_BOT_ROLE)
+        returns (uint256)
+    {
         return NextEpoch() - EPOCH_DURATION;
     }
 
+    /**
+     * @dev Calculates and returns the current epoch number and its start timestamp
+     * @notice This function is crucial for epoch-based operations in the vault
+     * @notice It calculates the current epoch based on the elapsed time since EPOCH_START
+     * @notice Unlike CurrentEpoch, this function is view-only and doesn't update state
+     * @return The starting timestamp of the current epoch
+     */
     function getCurrentEpoch() public view returns (uint256) {
         return getNextEpoch() - EPOCH_DURATION;
     }
 
+    /**
+     * @dev Calculates and returns the start timestamp of the next epoch
+     * @notice Essential for determining epoch transitions and maintenance periods
+     * @notice Uses EPOCH_START, EPOCH_DURATION, and CURRENT_EPOCH to calculate
+     * @return The starting timestamp of the next epoch
+     */
     function getNextEpoch() public view returns (uint256) {
         return EPOCH_START + (EPOCH_DURATION * (CURRENT_EPOCH + 1));
     }
 
     /**
-     * @dev See {IERC4262-convertToAssets}
+     * @dev Converts a given number of shares to the equivalent amount of assets
+     * @notice This function is crucial for accurate valuation of user positions
+     * @notice For the initial epoch, uses a 1:1 ratio; otherwise, calculates based on current vault token price
+     * @notice Implements the IERC4626-convertToAssets standard
+     * @param _shares The number of shares to convert
+     * @return _assets The equivalent amount of underlying assets
      */
-    function convertToAssets(uint256 _shares) public view override returns (uint256 _assets) {
+    function convertToAssets(
+        uint256 _shares
+    ) public view override returns (uint256 _assets) {
         if (CURRENT_EPOCH == 0) {
             _assets = (_shares * 10 ** _asset.decimals()) / DECIMAL_FACTOR;
         } else {
@@ -755,26 +1049,39 @@ contract CalculumVault is
     }
 
     /**
-     * @dev See {IERC4262-convertToAssets}
+     * @dev Converts a given number of shares to the equivalent amount of assets
+     * @notice This function is crucial for accurate valuation of user positions
+     * @notice Implements the IERC4626-convertToShares standard
+     * @notice Adjusts for potential decimal differences between share and asset tokens
+     * @param _assets The number of assets to convert
+     * @return _shares The equivalent number of vault shares
      */
-    function convertToShares(uint256 _assets) public view override returns (uint256 _shares) {
+    function convertToShares(
+        uint256 _assets
+    ) public view override returns (uint256 _shares) {
         // decimalsAdjust to fixed the rounding issue with stable coins
         uint256 decimalsAdjust = 10 ** (decimals() - _asset.decimals());
         if (CURRENT_EPOCH == 0) {
             _shares = (_assets * DECIMAL_FACTOR) / 10 ** _asset.decimals();
         } else {
-            _shares = (
-                _assets.mulDiv(
+            _shares =
+                (_assets.mulDiv(
                     DECIMAL_FACTOR,
                     Utils.UpdateVaultPriceToken(address(this), address(_asset)),
                     Math.Rounding.Ceil
-                ) / decimalsAdjust
-            ) * decimalsAdjust; // last part is to fixed the rounding issue with stable coins
+                ) / decimalsAdjust) *
+                decimalsAdjust; // last part is to fixed the rounding issue with stable coins
         }
     }
 
+    /**
+     * @dev Checks if there's a pending DEX transaction in the current epoch
+     * @notice This function is crucial for maintaining the integrity of the vault's transaction flow
+     * @notice It considers both maintenance periods and pending transactions
+     * @return True if there's a pending transaction or the vault is in maintenance, false otherwise
+     */
     function isDexTxPending() public view returns (bool) {
-        (bool isMant,) = isMaintenance();
+        (bool isMant, ) = isMaintenance();
         return isMant && (netTransfer[CURRENT_EPOCH].amount > 0 || _tx);
     }
 
@@ -795,7 +1102,7 @@ contract CalculumVault is
     }
 
     function isDepositWallet(address _wallet) public view returns (bool) {
-        for (uint256 i; i < depositWallets.length;) {
+        for (uint256 i; i < depositWallets.length; ) {
             if (depositWallets[i] == _wallet) {
                 return true;
             }
@@ -807,7 +1114,7 @@ contract CalculumVault is
     }
 
     function isWithdrawWallet(address _wallet) public view returns (bool) {
-        for (uint256 i; i < withdrawWallets.length;) {
+        for (uint256 i; i < withdrawWallets.length; ) {
             if (withdrawWallets[i] == _wallet) {
                 return true;
             }
@@ -819,7 +1126,7 @@ contract CalculumVault is
     }
 
     function newDeposits() public view returns (uint256 _total) {
-        for (uint256 i; i < depositWallets.length;) {
+        for (uint256 i; i < depositWallets.length; ) {
             DataTypes.Basics storage depositor = DEPOSITS[depositWallets[i]];
             if (depositor.status == DataTypes.Status.Pending) {
                 _total += depositor.amountAssets;
@@ -831,7 +1138,7 @@ contract CalculumVault is
     }
 
     function newShares() private view returns (uint256 _total) {
-        for (uint256 i; i < depositWallets.length;) {
+        for (uint256 i; i < depositWallets.length; ) {
             DataTypes.Basics storage depositor = DEPOSITS[depositWallets[i]];
             if (depositor.status == DataTypes.Status.Pending) {
                 _total += depositor.amountShares;
@@ -843,11 +1150,13 @@ contract CalculumVault is
     }
 
     function newWithdrawals() public view returns (uint256 _total) {
-        for (uint256 i; i < withdrawWallets.length;) {
-            DataTypes.Basics storage withdrawer = WITHDRAWALS[withdrawWallets[i]];
+        for (uint256 i; i < withdrawWallets.length; ) {
+            DataTypes.Basics storage withdrawer = WITHDRAWALS[
+                withdrawWallets[i]
+            ];
             if (
-                (withdrawer.status == DataTypes.Status.PendingRedeem)
-                    || (withdrawer.status == DataTypes.Status.PendingWithdraw)
+                (withdrawer.status == DataTypes.Status.PendingRedeem) ||
+                (withdrawer.status == DataTypes.Status.PendingWithdraw)
             ) {
                 _total += withdrawer.amountAssets;
             }
@@ -917,21 +1226,32 @@ contract CalculumVault is
         return balanceOf(_owner);
     }
 
-    function decimals() public view override(ERC20Upgradeable, IERC20Metadata) returns (uint8) {
+    function decimals()
+        public
+        view
+        override(ERC20Upgradeable, IERC20Metadata)
+        returns (uint8)
+    {
         return _decimals;
     }
 
     // Creata a function to return a tuple with a boolean is the vault is in maintenance or not and the time for out of maintenance
     function isMaintenance() public view returns (bool, uint256) {
         if (
-            (block.timestamp > (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START))
-                || (block.timestamp < (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START))
+            (block.timestamp >
+                (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START)) ||
+            (block.timestamp <
+                (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START))
         ) {
-            uint256 pending = block.timestamp > (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START)
-                ? block.timestamp - (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START)
-                : block.timestamp < (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START)
-                    ? (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START) - block.timestamp
-                    : 0;
+            uint256 pending = block.timestamp >
+                (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START)
+                ? block.timestamp -
+                    (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START)
+                : block.timestamp <
+                    (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START)
+                ? (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START) -
+                    block.timestamp
+                : 0;
             return (true, pending);
         }
         return (false, 0);
@@ -941,7 +1261,10 @@ contract CalculumVault is
      * Method to Update Next Epoch starting timestamp
      */
     function NextEpoch() private returns (uint256) {
-        if (block.timestamp > EPOCH_START + (EPOCH_DURATION * (CURRENT_EPOCH + 1))) {
+        if (
+            block.timestamp >
+            EPOCH_START + (EPOCH_DURATION * (CURRENT_EPOCH + 1))
+        ) {
             ++CURRENT_EPOCH;
         }
         return EPOCH_START + (EPOCH_DURATION * (CURRENT_EPOCH + 1));
@@ -954,7 +1277,11 @@ contract CalculumVault is
      * @param _assets amount of assets the deposit
      */
     // Add Epoch Time
-    function addDeposit(address _wallet, uint256 _shares, uint256 _assets) private {
+    function addDeposit(
+        address _wallet,
+        uint256 _shares,
+        uint256 _assets
+    ) private {
         DataTypes.Basics storage depositor = DEPOSITS[_wallet];
         if (!isDepositWallet(_wallet)) depositWallets.push(_wallet);
         if (DEPOSITS[_wallet].status == DataTypes.Status.Inactive) {
@@ -979,21 +1306,27 @@ contract CalculumVault is
      * @param _shares amount of shares to add for minting
      * @param _assets amount of assets the deposit
      */
-    function addWithdraw(address _wallet, uint256 _shares, uint256 _assets, bool _isWithdraw)
-        private
-    {
+    function addWithdraw(
+        address _wallet,
+        uint256 _shares,
+        uint256 _assets,
+        bool _isWithdraw
+    ) private {
         if (!isWithdrawWallet(_wallet)) withdrawWallets.push(_wallet);
         DataTypes.Basics storage withdrawer = WITHDRAWALS[_wallet];
         if (WITHDRAWALS[_wallet].status == DataTypes.Status.Inactive) {
             WITHDRAWALS[_wallet] = DataTypes.Basics({
-                status: _isWithdraw ? DataTypes.Status.PendingWithdraw : DataTypes.Status.PendingRedeem,
+                status: _isWithdraw
+                    ? DataTypes.Status.PendingWithdraw
+                    : DataTypes.Status.PendingRedeem,
                 amountAssets: _assets,
                 amountShares: _shares,
                 finalAmount: uint256(0)
             });
         } else {
-            withdrawer.status =
-                _isWithdraw ? DataTypes.Status.PendingWithdraw : DataTypes.Status.PendingRedeem;
+            withdrawer.status = _isWithdraw
+                ? DataTypes.Status.PendingWithdraw
+                : DataTypes.Status.PendingRedeem;
             unchecked {
                 withdrawer.amountAssets += _assets;
                 withdrawer.amountShares += _shares;
@@ -1010,15 +1343,20 @@ contract CalculumVault is
             unchecked {
                 if (CURRENT_EPOCH >= 2) {
                     if (TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] == 0) {
-                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] =
-                            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 2];
+                        TOTAL_VAULT_TOKEN_SUPPLY[
+                            CURRENT_EPOCH - 1
+                        ] = TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 2];
                     }
                 }
             }
             // rewrite the total supply of the vault token to avoid underflow errors
-            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1]
-                + newShares() > newWithdrawalsShares()
-                ? (TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] + newShares()) - newWithdrawalsShares()
+            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = TOTAL_VAULT_TOKEN_SUPPLY[
+                CURRENT_EPOCH - 1
+            ] +
+                newShares() >
+                newWithdrawalsShares()
+                ? (TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] + newShares()) -
+                    newWithdrawalsShares()
                 : 0;
         } else {
             TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = newShares();
@@ -1027,8 +1365,10 @@ contract CalculumVault is
 
     function _swapDAforETH() private nonReentrant {
         if (
-            (openZeppelinDefenderWallet.balance < MIN_WALLET_BALANCE_ETH_TRANSFER_BOT)
-                && (_asset.balanceOf(openZeppelinDefenderWallet) > MIN_WALLET_BALANCE_USDC_TRANSFER_BOT)
+            (openZeppelinDefenderWallet.balance <
+                MIN_WALLET_BALANCE_ETH_TRANSFER_BOT) &&
+            (_asset.balanceOf(openZeppelinDefenderWallet) >
+                MIN_WALLET_BALANCE_USDC_TRANSFER_BOT)
         ) {
             UniswapLibV3._swapTokensForETH(address(_asset), address(router));
         }
@@ -1046,35 +1386,47 @@ contract CalculumVault is
             uint256 deposits = newDeposits();
             uint256 withdrawals = newWithdrawals();
             uint256 mgtFee = Utils.MgtFeePerVaultToken(address(this));
-            uint256 perfFee = Utils.PerfFeePerVaultToken(address(this), address(_asset));
+            uint256 perfFee = Utils.PerfFeePerVaultToken(
+                address(this),
+                address(_asset)
+            );
             if (
-                deposits
-                    > withdrawals
-                        + (mgtFee + perfFee).mulDiv(
-                            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1], DECIMAL_FACTOR
-                        )
+                deposits >
+                withdrawals +
+                    (mgtFee + perfFee).mulDiv(
+                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                        DECIMAL_FACTOR
+                    )
             ) {
                 actualTx.direction = true;
-                actualTx.amount = deposits - withdrawals
-                    - (mgtFee + perfFee).mulDiv(
-                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1], DECIMAL_FACTOR
+                actualTx.amount =
+                    deposits -
+                    withdrawals -
+                    (mgtFee + perfFee).mulDiv(
+                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                        DECIMAL_FACTOR
                     );
             } else {
                 actualTx.direction = false;
-                actualTx.amount = withdrawals
-                    + (mgtFee + perfFee).mulDiv(
-                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1], DECIMAL_FACTOR
-                    ) - deposits;
+                actualTx.amount =
+                    withdrawals +
+                    (mgtFee + perfFee).mulDiv(
+                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                        DECIMAL_FACTOR
+                    ) -
+                    deposits;
             }
         }
     }
 
     function newWithdrawalsShares() private view returns (uint256 _total) {
-        for (uint256 i; i < withdrawWallets.length;) {
-            DataTypes.Basics storage withdrawer = WITHDRAWALS[withdrawWallets[i]];
+        for (uint256 i; i < withdrawWallets.length; ) {
+            DataTypes.Basics storage withdrawer = WITHDRAWALS[
+                withdrawWallets[i]
+            ];
             if (
-                (withdrawer.status == DataTypes.Status.PendingRedeem)
-                    || (withdrawer.status == DataTypes.Status.PendingWithdraw)
+                (withdrawer.status == DataTypes.Status.PendingRedeem) ||
+                (withdrawer.status == DataTypes.Status.PendingWithdraw)
             ) {
                 _total += withdrawer.amountShares;
             }
@@ -1085,29 +1437,37 @@ contract CalculumVault is
     }
 
     function _checkVaultInMaintenance() private view {
-        bool maintenance = (block.timestamp > (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START))
-            || (block.timestamp < (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START));
+        bool maintenance = (block.timestamp >
+            (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START)) ||
+            (block.timestamp <
+                (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START));
         if (maintenance) {
             revert Errors.VaultInMaintenance();
         }
     }
 
     function _checkVaultOutMaintenance() private view {
-        bool maintenance = (block.timestamp > (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START))
-            || (block.timestamp < (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START));
+        bool maintenance = (block.timestamp >
+            (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START)) ||
+            (block.timestamp <
+                (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START));
         if (!maintenance) {
             revert Errors.VaultOutMaintenance();
         }
     }
 
     function _checkLimit(uint256 assets) private view {
-        uint256 amountBlock =
-            totalAssets().mulDiv((100 - limit.percentage), 100, Math.Rounding.Ceil);
+        uint256 amountBlock = totalAssets().mulDiv(
+            (100 - limit.percentage),
+            100,
+            Math.Rounding.Ceil
+        );
         uint256 permitWithdraw = totalAssets() - newWithdrawals() > amountBlock
             ? totalAssets() - newWithdrawals() - amountBlock
             : 0;
         if (block.timestamp <= limit.timestamp) {
-            if (assets > permitWithdraw) revert Errors.NotEnoughBalance(assets, permitWithdraw);
+            if (assets > permitWithdraw)
+                revert Errors.NotEnoughBalance(assets, permitWithdraw);
         }
     }
 }
