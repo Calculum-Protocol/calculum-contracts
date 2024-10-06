@@ -140,12 +140,24 @@ contract BearVaultTestnet is
     }
 
     /**
-     * @dev Method to Inicialize the Initial Parameters of the Vault
-     * @param _name Name of the ERC20 Share / Vault Token
-     * @param _symbol Symbol of the ERC20 Share / Vault Token
-     * @param decimals_ Decimals of the ERC20 Share / Vault Token
-     * @param _initialAddress Array of Initial Addresses 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: USDCToken Address, 4: Vertex Endpoint
-     * @param _initialValue Array of Initial Values 0: Start timestamp, 1: Min Deposit, 2: Max Deposit, 3: Max Total Supply Value, 4: Min Wallet Balance USDC Transfer Bot, 5: Target Wallet Balance USDC Transfer Bot, 6: Min Wallet Balance ETH Transfer Bot
+     * @dev Initializes the Vault with initial parameters.
+     * @param _name Name of the ERC20 Share / Vault Token.
+     * @param _symbol Symbol of the ERC20 Share / Vault Token.
+     * @param decimals_ Decimals of the ERC20 Share / Vault Token.
+     * @param _initialAddress Array of initial addresses:
+     *        0: Trader Bot Wallet,
+     *        1: Treasury Wallet,
+     *        2: OpenZeppelin Defender Wallet,
+     *        3: USDCToken Address,
+     *        4: Vertex Endpoint.
+     * @param _initialValue Array of initial values:
+     *        0: Start timestamp,
+     *        1: Min Deposit,
+     *        2: Max Deposit,
+     *        3: Max Total Supply Value,
+     *        4: Min Wallet Balance USDC Transfer Bot,
+     *        5: Target Wallet Balance USDC Transfer Bot,
+     *        6: Min Wallet Balance ETH Transfer Bot.
      */
     function initialize(
         string memory _name,

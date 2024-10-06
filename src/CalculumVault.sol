@@ -1086,21 +1086,28 @@ contract CalculumVault is
     }
 
     /**
-     * @dev Method for Verify if any caller is a Claimer of Pending Deposit
-     * @param _claimer address of the wallet
+     * @dev Checks if the given address has a pending deposit claim.
+     * @param _claimer The address to check.
+     * @return True if the address has a pending deposit claim, false otherwise.
      */
     function isClaimerMint(address _claimer) public view returns (bool) {
         return DEPOSITS[_claimer].status == DataTypes.Status.Claimet;
     }
 
     /**
-     * @dev Method for Verify if any caller is a Claimer of Pending Deposit
-     * @param _claimer address of the wallet
+     * @dev Checks if the caller has a pending withdrawal claim.
+     * @param _claimer The address to check.
+     * @return True if the caller has a pending withdrawal claim, false otherwise.
      */
     function isClaimerWithdraw(address _claimer) public view returns (bool) {
         return WITHDRAWALS[_claimer].status == DataTypes.Status.Claimet;
     }
 
+    /**
+     * @dev Checks if a given address is in the list of deposit wallets.
+     * @param _wallet The address to check.
+     * @return True if the address is in the deposit wallets list, false otherwise.
+     */
     function isDepositWallet(address _wallet) public view returns (bool) {
         for (uint256 i; i < depositWallets.length; ) {
             if (depositWallets[i] == _wallet) {
@@ -1113,6 +1120,11 @@ contract CalculumVault is
         return false;
     }
 
+    /**
+     * @dev Checks if a given address is in the list of withdrawal wallets.
+     * @param _wallet The address to check.
+     * @return True if the address is in the withdrawal wallets list, false otherwise.
+     */
     function isWithdrawWallet(address _wallet) public view returns (bool) {
         for (uint256 i; i < withdrawWallets.length; ) {
             if (withdrawWallets[i] == _wallet) {
@@ -1125,6 +1137,11 @@ contract CalculumVault is
         return false;
     }
 
+    /**
+     * @dev Calculates the total amount of assets pending deposit.
+     * @notice Iterates through all deposit wallets to sum up assets in Pending status.
+     * @return _total The total amount of assets pending deposit.
+     */
     function newDeposits() public view returns (uint256 _total) {
         for (uint256 i; i < depositWallets.length; ) {
             DataTypes.Basics storage depositor = DEPOSITS[depositWallets[i]];
@@ -1137,6 +1154,11 @@ contract CalculumVault is
         }
     }
 
+    /**
+     * @dev Calculates the total amount of shares pending deposit.
+     * @notice Iterates through all deposit wallets to sum up shares in Pending status.
+     * @return _total The total amount of shares pending deposit.
+     */
     function newShares() private view returns (uint256 _total) {
         for (uint256 i; i < depositWallets.length; ) {
             DataTypes.Basics storage depositor = DEPOSITS[depositWallets[i]];
@@ -1149,6 +1171,11 @@ contract CalculumVault is
         }
     }
 
+    /**
+     * @dev Calculates the total amount of assets pending withdrawal.
+     * @notice Iterates through all withdrawal wallets to sum up assets in PendingRedeem or PendingWithdraw status.
+     * @return _total The total amount of assets pending withdrawal.
+     */
     function newWithdrawals() public view returns (uint256 _total) {
         for (uint256 i; i < withdrawWallets.length; ) {
             DataTypes.Basics storage withdrawer = WITHDRAWALS[
@@ -1167,26 +1194,34 @@ contract CalculumVault is
     }
 
     /**
-     * @dev See {IERC4262-asset}
+     * @dev Returns the address of the underlying asset.
+     * @notice Implements the IERC4626 standard.
      */
     function asset() public view virtual override returns (address) {
         return address(_asset);
     }
 
     /**
-     * @dev See {IERC4262-previewDeposit}
+     * @dev Converts a given amount of assets to the equivalent amount of shares.
+     * @notice Implements the IERC4626 standard for previewing share amounts.
+     * @param _assets The amount of assets to convert.
+     * @return The equivalent amount of shares.
      */
     function previewDeposit(uint256 _assets) public view returns (uint256) {
         return convertToShares(_assets);
     }
 
     /**
-     * @dev See {IERC4262-previewMint}
+     * @dev Previews the amount of assets required to mint a given number of shares.
+     * @notice NOTE: This function mint is not implemented in the base contract.
      */
     function previewMint(uint256 shares) public view returns (uint256) {}
 
     /**
-     * @dev See {IERC4262-previewWithdraw}
+     * @dev Previews the amount of shares needed to withdraw a given amount of assets.
+     * @notice Converts the specified asset amount to shares and adjusts for rounding errors.
+     * @param assets The amount of assets to withdraw.
+     * @return The equivalent amount of shares required for the withdrawal.
      */
     function previewWithdraw(uint256 assets) public view returns (uint256) {
         uint256 shares = convertToShares(assets);
@@ -1194,38 +1229,53 @@ contract CalculumVault is
     }
 
     /**
-     * @dev See {IERC4262-previewRedeem}
+     * @dev Converts a given amount of shares to the equivalent amount of assets.
+     * @notice Implements the IERC4626 standard for previewing asset amounts.
+     * @param shares The number of shares to convert.
+     * @return The equivalent amount of underlying assets.
      */
     function previewRedeem(uint256 shares) public view returns (uint256) {
         return convertToAssets(shares);
     }
 
     /**
-     * @dev See {IERC4262-maxDeposit}
+     * @dev Returns the maximum amount of assets that can be deposited by an address.
+     * @notice This function is part of the ERC4626 standard.
+     * @return The maximum deposit amount allowed.
      */
     function maxDeposit(address) public view override returns (uint256) {
         return MAX_DEPOSIT;
     }
 
     /**
-     * @dev See {IERC4262-maxMint}
+     * @dev Returns the maximum amount of shares that can be minted.
+     * @notice This function is part of the ERC4626 standard.
+     * @notice NOTE: Take into account, the vault not implements the mint function.
      */
     function maxMint(address) public pure virtual returns (uint256) {}
 
     /**
-     * @dev See {IERC4262-maxWithdraw}
+     * @dev Returns the maximum amount of assets that can be withdrawn by the owner.
+     * @param _owner The address of the owner whose assets are being queried.
+     * @return The maximum amount of assets that can be withdrawn.
      */
     function maxWithdraw(address _owner) public view returns (uint256) {
         return convertToAssets(balanceOf(_owner));
     }
 
     /**
-     * @dev See {IERC4262-maxRedeem}
+     * @dev Returns the maximum amount of shares that can be redeemed by the owner.
+     * @param _owner The address of the owner whose shares are being queried.
+     * @return The balance of shares owned by the specified address.
      */
     function maxRedeem(address _owner) public view returns (uint256) {
         return balanceOf(_owner);
     }
 
+    /**
+     * @dev Returns the number of decimals used to get its user representation.
+     * @return The number of decimals for the vault token.
+     */
     function decimals()
         public
         view
@@ -1235,7 +1285,10 @@ contract CalculumVault is
         return _decimals;
     }
 
-    // Creata a function to return a tuple with a boolean is the vault is in maintenance or not and the time for out of maintenance
+    /**
+     * @dev Checks if the vault is in a maintenance period.
+     * @return A tuple with a boolean indicating maintenance status and the remaining time until maintenance ends.
+     */
     function isMaintenance() public view returns (bool, uint256) {
         if (
             (block.timestamp >
@@ -1258,7 +1311,9 @@ contract CalculumVault is
     }
 
     /**
-     * Method to Update Next Epoch starting timestamp
+     * @dev Updates the starting timestamp for the next epoch.
+     * @notice Increments the current epoch if the current time has passed the next epoch start.
+     * @return The starting timestamp of the next epoch.
      */
     function NextEpoch() private returns (uint256) {
         if (
@@ -1271,12 +1326,11 @@ contract CalculumVault is
     }
 
     /**
-     * @dev Add deposit wallet, assets and shares
-     * @param _wallet address of the wallet
-     * @param _shares amount of shares to add for minting
-     * @param _assets amount of assets the deposit
+     * @dev Adds a deposit entry for a wallet.
+     * @param _wallet Address of the wallet.
+     * @param _shares Amount of shares to mint.
+     * @param _assets Amount of assets to deposit.
      */
-    // Add Epoch Time
     function addDeposit(
         address _wallet,
         uint256 _shares,
@@ -1301,10 +1355,11 @@ contract CalculumVault is
     }
 
     /**
-     * @dev Add withdraws wallet, assets and shares
-     * @param _wallet address of the wallet
-     * @param _shares amount of shares to add for minting
-     * @param _assets amount of assets the deposit
+     * @dev Adds a withdrawal request for a wallet, including assets and shares.
+     * @param _wallet The address of the wallet making the withdrawal.
+     * @param _shares The amount of shares to be withdrawn.
+     * @param _assets The amount of assets to be withdrawn.
+     * @param _isWithdraw Boolean indicating if it's a withdrawal (true) or redeem (false).
      */
     function addWithdraw(
         address _wallet,
@@ -1335,11 +1390,12 @@ contract CalculumVault is
     }
 
     /**
-     * @dev  Method for Update Total Supply
+     * @dev Updates the total supply of vault tokens for the current epoch.
+     * @notice Adjusts for new shares and withdrawals, ensuring no underflow.
      */
     function updateTotalSupply() private {
         if (CURRENT_EPOCH != 0) {
-            // Partial fix if Finalize epoch fail in some point
+            // Fix for potential finalize epoch failure
             unchecked {
                 if (CURRENT_EPOCH >= 2) {
                     if (TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] == 0) {
@@ -1349,7 +1405,7 @@ contract CalculumVault is
                     }
                 }
             }
-            // rewrite the total supply of the vault token to avoid underflow errors
+            // Update total supply to avoid underflow errors
             TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = TOTAL_VAULT_TOKEN_SUPPLY[
                 CURRENT_EPOCH - 1
             ] +
@@ -1363,6 +1419,11 @@ contract CalculumVault is
         }
     }
 
+    /**
+     * @dev Swaps USDC for ETH if the OpenZeppelin Defender wallet's ETH balance is below the minimum threshold.
+     * @notice This function ensures the OpenZeppelin Defender wallet has enough ETH for gas fees.
+     * @notice It checks if the USDC balance in the OpenZeppelin Defender wallet is above the minimum threshold before swapping.
+     */
     function _swapDAforETH() private nonReentrant {
         if (
             (openZeppelinDefenderWallet.balance <
@@ -1374,6 +1435,12 @@ contract CalculumVault is
         }
     }
 
+    /**
+     * @dev Calculates the net transfer balance for the current epoch.
+     * @notice Determines whether to deposit or withdraw assets based on net deposits and withdrawals.
+     * @notice Considers management and performance fees in the calculation.
+     * @notice Sets the transaction direction and amount for the DEX transfer.
+     */
     function netTransferBalance() private {
         DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
         actualTx.pending = true;
@@ -1419,6 +1486,11 @@ contract CalculumVault is
         }
     }
 
+    /**
+     * @dev Calculates the total shares pending withdrawal.
+     * @notice Iterates through all withdrawal wallets to sum up shares in PendingRedeem or PendingWithdraw status.
+     * @return _total The total amount of shares pending withdrawal.
+     */
     function newWithdrawalsShares() private view returns (uint256 _total) {
         for (uint256 i; i < withdrawWallets.length; ) {
             DataTypes.Basics storage withdrawer = WITHDRAWALS[
@@ -1436,6 +1508,12 @@ contract CalculumVault is
         }
     }
 
+    /**
+     * @dev Ensures the vault is not in a maintenance period.
+     * @notice This function checks if the current time falls within the maintenance periods.
+     * @notice Maintenance periods are defined as the time before the start and after the end of each epoch.
+     * @notice Reverts with an error if the vault is in maintenance.
+     */
     function _checkVaultInMaintenance() private view {
         bool maintenance = (block.timestamp >
             (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START)) ||
@@ -1446,6 +1524,12 @@ contract CalculumVault is
         }
     }
 
+    /**
+     * @dev Checks if the vault is currently in a maintenance period.
+     * @notice This function ensures that certain operations are only performed outside of maintenance periods.
+     * @notice Maintenance periods occur before the start and after the end of each epoch.
+     * @notice Reverts with an error if the vault is in maintenance.
+     */
     function _checkVaultOutMaintenance() private view {
         bool maintenance = (block.timestamp >
             (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START)) ||
@@ -1456,6 +1540,12 @@ contract CalculumVault is
         }
     }
 
+    /**
+     * @dev Checks if the vault is currently in a maintenance period.
+     * @notice This function ensures that certain operations are only performed outside of maintenance periods.
+     * @notice Maintenance periods occur before the start and after the end of each epoch.
+     * @notice Reverts with an error if the vault is in maintenance.
+     */
     function _checkLimit(uint256 assets) private view {
         uint256 amountBlock = totalAssets().mulDiv(
             (100 - limit.percentage),

@@ -99,7 +99,8 @@ contract MockUpVertexInteraction is
         address[6] memory _initialAddress // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router, 4: USDCToken Address, 5: Vertex Endpoint, 6: Spot Engine Vertex
     ) public reinitializer(1) {
         if (
-            !isContract(_initialAddress[3]) || !isContract(_initialAddress[4]) ||
+            !isContract(_initialAddress[3]) ||
+            !isContract(_initialAddress[4]) ||
             !isContract(_initialAddress[5])
         ) {
             revert Errors.AddressIsNotContract();
@@ -193,7 +194,7 @@ contract MockUpVertexInteraction is
     }
 
     /**
-     * @dev Method to Preview the Rescue of the Assets.
+     * @dev Previews the rescue operation by fetching the current balance from Vertex.
      */
     function previewRescue() external whenPaused onlyOwner nonReentrant {
         DexWalletBalance();
@@ -212,11 +213,10 @@ contract MockUpVertexInteraction is
      * @param kind Whether to deposit or withdraw assets.
      * @param amount The amount of assets to transfer.
      */
-    function dexTransfer(bool kind, uint256 amount)
-        external
-        onlyRole(TRANSFER_BOT_ROLE)
-        nonReentrant
-    {
+    function dexTransfer(
+        bool kind,
+        uint256 amount
+    ) external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
         if (kind) {
             // Deposit
             Utils.depositCollateralWithReferral(
@@ -301,7 +301,11 @@ contract MockUpVertexInteraction is
      * @dev Returns the subaccount info.
      * @return The subaccount info.
      */
-    function getSubaccountInfo() public view returns (IFQuerier.SubaccountInfo memory) {
+    function getSubaccountInfo()
+        public
+        view
+        returns (IFQuerier.SubaccountInfo memory)
+    {
         return subaccountInfo;
     }
 }
