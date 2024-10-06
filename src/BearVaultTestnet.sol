@@ -110,11 +110,11 @@ contract BearVaultTestnet is
     // Max Total Assets
     uint256 public MAX_TOTAL_DEPOSIT;
     // Minimal Wallet Ballance USDC in Transfer Bot
-    uint256 public MIN_WALLET_BALANCE_USDC_TRANSFER_BOT;
+    uint256 public TRANSFER_BOT_MIN_WALLET_BALANCE_USDC;
     // Wallet Target Balance USDC in Transfer Bot
-    uint256 public TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT;
+    uint256 public TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC;
     // Minimal Wallet Balance of ETH in Transfer Bot
-    uint256 public MIN_WALLET_BALANCE_ETH_TRANSFER_BOT;
+    uint256 public TRANSFER_BOT_MIN_WALLET_BALANCE_ETH;
     // Factor Adjust for Decimals of the Share Token
     uint256 public DECIMAL_FACTOR; // 10^decimals()
     // Array of Wallet Addresses with Deposit
@@ -190,9 +190,9 @@ contract BearVaultTestnet is
         MIN_DEPOSIT = _initialValue[1];
         MAX_DEPOSIT = _initialValue[2];
         MAX_TOTAL_DEPOSIT = _initialValue[3];
-        MIN_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[4];
-        TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[5];
-        MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = _initialValue[6];
+        TRANSFER_BOT_MIN_WALLET_BALANCE_USDC = _initialValue[4];
+        TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC = _initialValue[5];
+        TRANSFER_BOT_MIN_WALLET_BALANCE_ETH = _initialValue[6];
         EPOCH_DURATION = 1 * 60 minutes; // 2 hours
         MAINTENANCE_PERIOD_PRE_START = 300 seconds; // 5 minutes
         MAINTENANCE_PERIOD_POST_START = 300 seconds; // 5 minutes
@@ -725,9 +725,9 @@ contract BearVaultTestnet is
         if (CURRENT_EPOCH == 0) {
             revert Errors.FirstEpochNoFeeTransfer();
         }
-        uint256 mgtFee = Utils.MgtFeePerVaultToken(address(this));
+        uint256 mgtFee = Utils.MgtFeePctVaultToken(address(this));
         uint256 perfFee = _tx
-            ? Utils.PerfFeePerVaultToken(address(this), address(_asset))
+            ? Utils.PerfFeePctVaultToken(address(this), address(_asset))
             : 0;
         uint256 totalFees = Utils.getPnLPerVaultToken(
             address(this),
@@ -1324,8 +1324,8 @@ contract BearVaultTestnet is
         } else {
             uint256 deposits = newDeposits();
             uint256 withdrawals = newWithdrawals();
-            uint256 mgtFee = Utils.MgtFeePerVaultToken(address(this));
-            uint256 perfFee = Utils.PerfFeePerVaultToken(
+            uint256 mgtFee = Utils.MgtFeePctVaultToken(address(this));
+            uint256 perfFee = Utils.PerfFeePctVaultToken(
                 address(this),
                 address(_asset)
             );

@@ -42,7 +42,7 @@ library Utils {
         uint256 currentEpoch = Calculum.CURRENT_EPOCH();
         if (currentEpoch == 0) return 0;
         uint256 targetBalance = Calculum
-            .TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT();
+            .TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC();
         uint256 currentBalance = _asset.balanceOf(OZW);
 
         // Calculate the missing USDC amount to reach the target balance
@@ -52,12 +52,12 @@ library Utils {
 
         // Calculate the total fees to be collected for the current epoch
         uint256 totalFees = getPnLPerVaultToken(calculum, asset)
-            ? (MgtFeePerVaultToken(calculum) +
-                PerfFeePerVaultToken(calculum, asset)).mulDiv(
+            ? (MgtFeePctVaultToken(calculum) +
+                PerfFeePctVaultToken(calculum, asset)).mulDiv(
                     Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1),
                     calDecimals
                 )
-            : MgtFeePerVaultToken(calculum).mulDiv(
+            : MgtFeePctVaultToken(calculum).mulDiv(
                 Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1),
                 calDecimals
             );
@@ -97,7 +97,7 @@ library Utils {
      * @dev Calculates the management fee per vault token for the current epoch.
      * Returns 0 if the current epoch is 0.
      */
-    function MgtFeePerVaultToken(
+    function MgtFeePctVaultToken(
         address calculum
     ) public view returns (uint256) {
         ICalculumVault Calculum = ICalculumVault(calculum);
@@ -121,7 +121,7 @@ library Utils {
      * @dev Calculates the performance fee per vault token for the current epoch.
      * Returns 0 if the current epoch is 0 or if there is no profit.
      */
-    function PerfFeePerVaultToken(
+    function PerfFeePctVaultToken(
         address calculum,
         address asset
     ) public view returns (uint256) {
@@ -189,8 +189,8 @@ library Utils {
         address calculum,
         address asset
     ) public view returns (uint256) {
-        uint256 mgtFee = MgtFeePerVaultToken(calculum);
-        uint256 perfFee = PerfFeePerVaultToken(calculum, asset);
+        uint256 mgtFee = MgtFeePctVaultToken(calculum);
+        uint256 perfFee = PerfFeePctVaultToken(calculum, asset);
         uint256 pnLVT = PnLPerVaultToken(calculum, asset);
         ICalculumVault Calculum = ICalculumVault(calculum);
         uint256 tokenPrice = Calculum.VAULT_TOKEN_PRICE(
