@@ -17,8 +17,12 @@ library DataTypes {
         PendingWithdraw //5
 
     }
-    /// Struct of Basics
 
+    // Enum for wallet type
+    enum WalletType { TraderBot, Treasury, OPZ }
+
+
+    /// Struct of Basics
     struct Basics {
         Status status;
         uint256 amountAssets; // Expresed in Amount of Assets of the Vault

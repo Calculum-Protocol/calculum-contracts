@@ -12,6 +12,8 @@ import chai from "chai";
 import {
     CalculumVault__factory,
     CalculumVault,
+    ExtendedVault,
+    ExtendedVault__factory,
     MockUpOracle,
     MockUpOracle__factory,
     Constants__factory,
@@ -33,7 +35,7 @@ import {
     USDC,
 } from "../typechain-types";
 import { USDC_ABI } from "../files/USDC.json";
-import { BigNumber } from "ethers";
+import { BigNumber, ContractFactory } from "ethers";
 
 dotenv.config();
 
@@ -53,6 +55,8 @@ let Oracle: MockUpOracle;
 let USDc: any;
 let CalculumFactory: CalculumVault__factory;
 let Calculum: CalculumVault;
+let ExtendedVaultFactory: ExtendedVault__factory;
+let ExtendedVault: ExtendedVault;
 let ConstantsFactory: Constants__factory;
 let Constants: Constants;
 let DataTypesFactory: DataTypes__factory;
@@ -615,7 +619,7 @@ describe("Verification of Basic Value and Features 2", function () {
         );
         EPOCH_TIME = moment(EPOCH_START * 1000);
         // Getting from command Line de Contract Name
-        const contractName: string = "CalculumVault";
+        const contractName: string = "ExtendedVault";
 
         console.log(`Contract Name: ${contractName}`);
 
@@ -724,21 +728,19 @@ describe("Verification of Basic Value and Features 2", function () {
         expect(await Utils.getAddress()).to.properAddress;
         console.log(`Utils Address: ${await Utils.getAddress()}`);
         // Calculum Vault Deployer
-        CalculumFactory = (await ethers.getContractFactory(
+        ExtendedVaultFactory = (await ethers.getContractFactory(
             contractName, {
             libraries: {
                 UniswapLibV3: await UniswapLibV3.getAddress(),
                 Utils: await Utils.getAddress(),
             }
         }
-        )) as CalculumVault__factory;
+        )) as ExtendedVault__factory;
         // Deploy Calculum Vault
-        Calculum = (await upgrades.deployProxy(CalculumFactory, [
-            name,
-            symbol,
-            decimals,
+        // Deploy the proxy and explicitly specify the custom initializer function
+        ExtendedVault = (await upgrades.deployProxy(ExtendedVaultFactory, [
+            await Oracle.getAddress(), // Oracle address
             [
-                await Oracle.getAddress(),
                 traderBotWallet.address,
                 treasuryWallet.address,
                 openZeppelinDefenderWallet.address,
@@ -755,7 +757,12 @@ describe("Verification of Basic Value and Features 2", function () {
                 TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT,
                 MIN_WALLET_BALANCE_ETH_TRANSFER_BOT,
             ],
-        ])) as CalculumVault;
+            "CalculumVaultToken", // Token Name
+            "CVT", // Token Symbol
+            18 // Decimals
+        ], {
+            initializer: 'initializeExtendedVault', unsafeAllowLinkedLibraries: true
+        })) as ExtendedVault;  // Specify the initializer
         // eslint-disable-next-line no-unused-expressions
         expect(await Calculum.getAddress()).to.properAddress;
         console.log(`Calculum Address: ${await Calculum.getAddress()}`);

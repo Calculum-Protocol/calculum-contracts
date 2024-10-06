@@ -43,6 +43,7 @@ module.exports = {
             chainId: 42161,
             throwOnTransactionFailures: true,
             throwOnCallFailures: true,
+            allowUnlimitedContractSize: true,
             forking: {
                 url: `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
             },
@@ -182,6 +183,16 @@ module.exports = {
     },
     solidity: {
         compilers: [
+            {
+                version: "0.8.27",
+                settings: {
+                    viaIR: true,
+                    optimizer: {
+                        enabled: true,
+                        runs: 200,
+                    },
+                },
+            },
             {
                 version: "0.8.24",
                 settings: {

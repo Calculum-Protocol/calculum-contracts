@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.27;
 
 import {IERC4626} from "./lib/IERC4626.sol";
 import {Events, SafeERC20, Claimable} from "./lib/Claimable.sol";
@@ -141,18 +141,18 @@ contract CalculumVault is
         _disableInitializers();
     }
 
-    // Modifier to check if the caller is whitelisted and is the owner
-    // This is crucial for access control in deposit, withdraw, and other sensitive operations
-    // It ensures that only authorized users can interact with their own funds in the vault
-    modifier whitelisted(address caller, address _owner) {
-        if (_owner != caller) {
-            revert Errors.CallerIsNotOwner(caller, _owner);
-        }
-        if (whitelist[caller] == false) {
-            revert Errors.NotWhitelisted(caller);
-        }
-        _;
-    }
+    // // Modifier to check if the caller is whitelisted and is the owner
+    // // This is crucial for access control in deposit, withdraw, and other sensitive operations
+    // // It ensures that only authorized users can interact with their own funds in the vault
+    // modifier whitelisted(address caller, address _owner) {
+    //     if (_owner != caller) {
+    //         revert Errors.CallerIsNotOwner(caller, _owner);
+    //     }
+    //     if (whitelist[caller] == false) {
+    //         revert Errors.NotWhitelisted(caller);
+    //     }
+    //     _;
+    // }
 
     /**
      * @dev Initializes the contract with provided parameters.
@@ -278,7 +278,7 @@ contract CalculumVault is
     )
         external
         override
-        whitelisted(_msgSender(), _receiver)
+        // whitelisted(_msgSender(), _receiver)
         whenNotPaused
         nonReentrant
         returns (uint256)
@@ -358,10 +358,10 @@ contract CalculumVault is
      * @param _receiver The address to receive the minted vault shares
      * @return The amount of assets deposited
      */
-    function mint(
-        uint256 _shares,
-        address _receiver
-    ) external returns (uint256) {}
+    // function mint(
+    //     uint256 _shares,
+    //     address _receiver
+    // ) external returns (uint256) {}
 
     /**
      * @dev Burns shares from owner and sends exactly assets of underlying tokens to receiver.
@@ -395,7 +395,7 @@ contract CalculumVault is
     )
         external
         override
-        whitelisted(_msgSender(), _owner)
+        // whitelisted(_msgSender(), _owner)
         whenNotPaused
         nonReentrant
         returns (uint256)
@@ -462,7 +462,7 @@ contract CalculumVault is
     )
         external
         override
-        whitelisted(_msgSender(), _owner)
+        // whitelisted(_msgSender(), _owner)
         whenNotPaused
         nonReentrant
         returns (uint256)
@@ -511,7 +511,11 @@ contract CalculumVault is
      */
     function claimShares(
         address _owner
-    ) external whitelisted(_msgSender(), _owner) nonReentrant {
+    )
+        external
+        // whitelisted(_msgSender(), _owner)
+        nonReentrant
+    {
         _checkVaultInMaintenance();
         address caller = _msgSender();
         DataTypes.Basics storage depositor = DEPOSITS[_owner];
@@ -546,7 +550,11 @@ contract CalculumVault is
     function claimAssets(
         address _receiver,
         address _owner
-    ) external whitelisted(_msgSender(), _owner) nonReentrant {
+    )
+        external
+        // whitelisted(_msgSender(), _owner)
+        nonReentrant
+    {
         _checkVaultInMaintenance();
         address caller = _msgSender();
         DataTypes.Basics storage withdrawer = WITHDRAWALS[_owner];
@@ -609,41 +617,6 @@ contract CalculumVault is
             address(_asset),
             0,
             assets
-        );
-    }
-
-    /**
-     * @dev Updates the epoch duration and maintenance times
-     * @notice Recalculates the epoch start to avoid conflicts with the current epoch
-     * @notice Only callable by the contract owner during non-maintenance periods
-     * @param _epochDuration New epoch duration (between 1 minute and 12 weeks)
-     * @param _maintTimeBefore New maintenance time before epoch start
-     * @param _maintTimeAfter New maintenance time after epoch end
-     * @dev Emits an EpochChanged event with old and new values
-     */
-    function setEpochDuration(
-        uint256 _epochDuration,
-        uint256 _maintTimeBefore,
-        uint256 _maintTimeAfter
-    ) external onlyOwner {
-        _checkVaultInMaintenance();
-        if (_epochDuration < 1 minutes || _epochDuration > 12 weeks) {
-            revert Errors.WrongEpochDuration(_epochDuration);
-        }
-        uint256 oldEpochDuration = EPOCH_DURATION;
-        uint256 oldEpochStart = EPOCH_START;
-        EPOCH_DURATION = _epochDuration;
-        // Permit to Readjust Periods
-        EPOCH_START = block.timestamp - (EPOCH_DURATION * CURRENT_EPOCH);
-        MAINTENANCE_PERIOD_PRE_START = _maintTimeBefore;
-        MAINTENANCE_PERIOD_POST_START = _maintTimeAfter;
-        emit EpochChanged(
-            oldEpochDuration,
-            _epochDuration,
-            oldEpochStart,
-            EPOCH_START,
-            _maintTimeBefore,
-            _maintTimeAfter
         );
     }
 
@@ -871,95 +844,41 @@ contract CalculumVault is
         CurrentEpoch();
     }
 
-    /**
-     * @dev Function to add or remove a wallet from the whitelist
-     * @notice This function is crucial for access control, allowing only whitelisted addresses to interact with the vault
-     * @param _wallet Address to be added or removed from the whitelist
-     * @param status Boolean indicating whether to add (true) or remove (false) the wallet from the whitelist
-     * @notice Only callable by the contract owner, as it's a sensitive operation affecting user access
-     */
-    function addDropWhitelist(address _wallet, bool status) external onlyOwner {
-        whitelist[_wallet] = status;
-    }
+    // /**
+    //  * @dev Function to add or remove a wallet from the whitelist
+    //  * @notice This function is crucial for access control, allowing only whitelisted addresses to interact with the vault
+    //  * @param _wallet Address to be added or removed from the whitelist
+    //  * @param status Boolean indicating whether to add (true) or remove (false) the wallet from the whitelist
+    //  * @notice Only callable by the contract owner, as it's a sensitive operation affecting user access
+    //  */
+    // function addDropWhitelist(address _wallet, bool status) external onlyOwner {
+    //     whitelist[_wallet] = status;
+    // }
 
     /**
-     * @dev Updates the TraderBot wallet address and links it to Vertex
-     * @notice This function is crucial for maintaining the vault's trading capabilities
-     * @param _traderBotWallet The new address for the TraderBot wallet
-     * @notice Only callable by the contract owner
-     * @notice Emits a TraderBotWalletUpdated event
-     * @notice Interacts with Vertex to link the new signer
+     * @dev Function to update the wallet addresses for the TraderBot, Treasury, and OpenZeppelin Defender
+     * @param walletType Enum indicating the type of wallet to update
+     * @param _newWallet Address of the new wallet to set
+     * @notice This function is crucial for maintaining secure and efficient fund management
+     * @notice Only callable by the contract owner, as it affects the vault's operational security
      */
-    function setTraderBotWallet(address _traderBotWallet) external onlyOwner {
-        traderBotWallet = payable(_traderBotWallet);
-        Utils.linkVertexSigner(
-            endpointVertex,
-            address(_asset),
-            address(traderBotWallet)
-        );
-        emit TraderBotWalletUpdated(_traderBotWallet);
-    }
-
-    /**
-     * @dev Updates the treasury wallet address
-     * @notice This function is crucial for managing the vault's fee distribution
-     * @param _treasuryWallet The new address for the treasury wallet
-     * @notice Only callable by the contract owner
-     * @notice Emits a TreasuryWalletUpdated event
-     * @notice Affects fee collection and distribution processes
-     */
-    function setTreasuryWallet(address _treasuryWallet) external onlyOwner {
-        treasuryWallet = payable(_treasuryWallet);
-        emit TreasuryWalletUpdated(_treasuryWallet);
-    }
-
-    /**
-     * @dev Updates the OpenZeppelin Defender wallet address
-     * @notice This function is crucial for managing automated transactions and gas costs
-     * @param _opzWallet The new address for the OpenZeppelin Defender wallet
-     * @notice Only callable by the contract owner
-     * @notice Emits an OPZWalletUpdated event
-     * @notice Affects gas management and automated transaction processes
-     */
-    function setOPZWallet(address _opzWallet) external onlyOwner {
-        openZeppelinDefenderWallet = payable(_opzWallet);
-        emit OPZWalletUpdated(_opzWallet);
-    }
-
-    /**
-     * @dev Updates deposit limits and maximum total supply of the vault
-     * @notice This function is crucial for managing the vault's capacity and individual deposit sizes
-     * @param _initialValue An array containing [MIN_DEPOSIT, MAX_DEPOSIT, MAX_TOTAL_DEPOSIT]
-     * @notice Only callable by the contract owner
-     * @notice Affects deposit validation in the deposit function
-     * @notice Critical for maintaining the vault's economic balance and risk management
-     */
-    function setInitialValue(
-        uint256[3] memory _initialValue
-    ) external onlyOwner {
-        MIN_DEPOSIT = _initialValue[0];
-        MAX_DEPOSIT = _initialValue[1];
-        MAX_TOTAL_DEPOSIT = _initialValue[2];
-    }
-
-    /**
-     * @dev Sets a withdrawal limit for the vault until a specified timestamp
-     * @notice This function is crucial for risk management and liquidity control
-     * @param pct Percentage of total assets that can be withdrawn (0-100)
-     * @param timestamp Unix timestamp until which the limit is active
-     * @notice Only callable by addresses with TRADER_BOT_ROLE
-     * @notice Affects the _checkLimit function in withdraw and redeem operations
-     */
-    function setLimitter(
-        uint8 pct,
-        uint256 timestamp
-    ) external onlyRole(TRADER_BOT_ROLE) {
-        if (pct <= 0) revert Errors.InvalidValue();
-        if (pct > 100) revert Errors.InvalidValue();
-        if (timestamp <= block.timestamp) revert Errors.InvalidValue();
-        if (timestamp >= getNextEpoch()) revert Errors.InvalidValue();
-        limit.percentage = pct;
-        limit.timestamp = timestamp;
+    function updateWallet(
+        DataTypes.WalletType walletType,
+        address _newWallet
+    ) external validAddress(_newWallet) onlyOwner {
+        if (walletType == DataTypes.WalletType.TraderBot) {
+            traderBotWallet = payable(_newWallet);
+            Utils.linkVertexSigner(endpointVertex, address(_asset), _newWallet);
+            emit TraderBotWalletUpdated(_newWallet);
+        }
+        if (walletType == DataTypes.WalletType.Treasury) {
+            treasuryWallet = payable(_newWallet);
+            emit TreasuryWalletUpdated(_newWallet);
+        }
+        if (walletType == DataTypes.WalletType.OPZ) {
+            openZeppelinDefenderWallet = payable(_newWallet);
+            emit OPZWalletUpdated(_newWallet);
+        }
     }
 
     /**
@@ -969,7 +888,7 @@ contract CalculumVault is
      * @notice The balance is adjusted to match the decimals of the vault's asset
      * @notice This function is called in critical operations like finalizeEpoch and affects totalAssets calculations
      */
-    function DexWalletBalance() public {
+    function DexWalletBalance() public virtual {
         if ((totalSupply() == 0) && (CURRENT_EPOCH == 0)) {
             DEX_WALLET_BALANCE = newDeposits();
         } else {
@@ -1221,7 +1140,7 @@ contract CalculumVault is
      * @dev Previews the amount of assets required to mint a given number of shares.
      * @notice NOTE: This function mint is not implemented in the base contract.
      */
-    function previewMint(uint256 shares) public view returns (uint256) {}
+    // function previewMint(uint256 shares) public view returns (uint256) {}
 
     /**
      * @dev Previews the amount of shares needed to withdraw a given amount of assets.
@@ -1258,7 +1177,7 @@ contract CalculumVault is
      * @notice This function is part of the ERC4626 standard.
      * @notice NOTE: Take into account, the vault not implements the mint function.
      */
-    function maxMint(address) public pure virtual returns (uint256) {}
+    // function maxMint(address) public pure virtual returns (uint256) {}
 
     /**
      * @dev Returns the maximum amount of assets that can be withdrawn by the owner.
@@ -1308,9 +1227,9 @@ contract CalculumVault is
                     (getNextEpoch() - MAINTENANCE_PERIOD_PRE_START)
                 : block.timestamp <
                     (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START)
-                ? (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START) -
-                    block.timestamp
-                : 0;
+                    ? (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START) -
+                        block.timestamp
+                    : 0;
             return (true, pending);
         }
         return (false, 0);
