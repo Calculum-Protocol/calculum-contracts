@@ -18,7 +18,10 @@ abstract contract Events {
      * @param estimationOfShares Estimation of Amount of Shares to Mint
      */
     event PendingDeposit(
-        address indexed caller, address indexed receiver, uint256 assets, uint256 estimationOfShares
+        address indexed caller,
+        address indexed receiver,
+        uint256 assets,
+        uint256 estimationOfShares
     );
 
     /**
@@ -36,10 +39,19 @@ abstract contract Events {
      * @param estimationOfShares Estimation of Amount of Shares to Mint
      */
     event PendingWithdraw(
-        address indexed receiver, address indexed owner, uint256 assets, uint256 estimationOfShares
+        address indexed receiver,
+        address indexed owner,
+        uint256 assets,
+        uint256 estimationOfShares
     );
     /**
-     * @dev Epoch Changed
+     * @dev Emitted when the epoch parameters are updated.
+     * @param OldPeriod Previous epoch duration.
+     * @param NewPeriod New epoch duration.
+     * @param OldEpochStart Previous epoch start time.
+     * @param NewEpochStart New epoch start time.
+     * @param newMaintTimeBefore Maintenance time before the update.
+     * @param newMaintTimeAfter Maintenance time after the update.
      */
     event EpochChanged(
         uint256 OldPeriod,
@@ -50,33 +62,54 @@ abstract contract Events {
         uint256 newMaintTimeAfter
     );
     /**
-     * @dev Fees Transfer
+     * @dev Emitted when fees are transferred.
+     * @param epoch The current epoch.
+     * @param Amount The total amount transferred.
+     * @param mantFee The maintenance fee amount.
+     * @param perfFee The performance fee amount.
+     * @param totalFee The combined total of all fees.
      */
     event FeesTransfer(
-        uint256 indexed epoch, uint256 Amount, uint256 mantFee, uint256 perfFee, uint256 totalFee
+        uint256 indexed epoch,
+        uint256 Amount,
+        uint256 mantFee,
+        uint256 perfFee,
+        uint256 totalFee
     );
     /**
-     * @dev Dex Transfer
+     * @dev Emitted when a transfer occurs on the Dex.
+     * @param epoch The current epoch.
+     * @param Amount The amount transferred.
      */
     event DexTransfer(uint256 indexed epoch, uint256 Amount);
 
     /**
-     * @dev Rescued Emercency Funds
+     * @dev Emitted when emergency funds are rescued.
+     * @param owner Address of the owner initiating the rescue.
+     * @param amountAssets Amount of assets rescued.
+     * @param amountEth Amount of Ether rescued.
      */
-    event Rescued(address indexed owner, uint256 amountAssets, uint256 amountEth);
+    event Rescued(
+        address indexed owner,
+        uint256 amountAssets,
+        uint256 amountEth
+    );
 
     /**
-     * @dev Events when change Trader Bot Address
+     * @dev Emitted when the Trader Bot address is updated.
+     * @param newAddress The new Trader Bot address.
      */
     event TraderBotWalletUpdated(address indexed newAddress);
 
     /**
-     * @dev Events when change Treasury Address
+     * @dev Emitted when the Treasury wallet address is updated.
+     * @param newAddress The new Treasury wallet address.
      */
     event TreasuryWalletUpdated(address indexed newAddress);
 
     /**
-     * @dev Events when change OPZ Wallet Address
+     * @dev Emitted when the OPZ wallet address is updated.
+     * @param newAddress The new OPZ wallet address.
      */
     event OPZWalletUpdated(address indexed newAddress);
 }
