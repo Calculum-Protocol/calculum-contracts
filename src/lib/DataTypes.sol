@@ -15,6 +15,7 @@ library DataTypes {
         Completed, // 3
         PendingRedeem, //4
         PendingWithdraw //5
+
     }
     /// Struct of Basics
 
@@ -30,5 +31,37 @@ library DataTypes {
         bool pending;
         bool direction; // true = deposit, false = withdrawal
         uint256 amount;
+    }
+    /// Limitter
+
+    struct Limit {
+        uint8 percentage;
+        uint256 timestamp;
+    }
+
+    // Transaction Type
+    // events that we parse transactions into
+    enum TransactionType {
+        LiquidateSubaccount,
+        DepositCollateral,
+        WithdrawCollateral,
+        SpotTick,
+        UpdatePrice,
+        SettlePnl,
+        MatchOrders,
+        DepositInsurance,
+        ExecuteSlowMode,
+        MintLp,
+        BurnLp,
+        SwapAMM,
+        MatchOrderAMM,
+        DumpFees,
+        ClaimSequencerFee,
+        PerpTick,
+        ManualAssert,
+        Rebate,
+        UpdateProduct,
+        LinkSigner,
+        UpdateFeeRates
     }
 }

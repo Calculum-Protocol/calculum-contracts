@@ -1,29 +1,35 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity >=0.8.0 <=0.8.24;
 
-contract MockUpOracle  {
-    uint256 assets;
+contract MockUpOracle {
     address traderBotWallet;
-    address _owner;
+    address owner;
+    uint256 assets;
 
-    constructor(address _wallet, uint256 _initialValue) {
-        _owner = msg.sender;
-        traderBotWallet = _wallet;
-        assets = _initialValue; // Simulate the First Deposit of Alice
+    constructor(address wallet, uint256 initialValue) {
+        owner = msg.sender;
+        traderBotWallet = wallet;
+        assets = initialValue; // Initialize assets with the first deposit
     }
 
-    function GetAccount(address _wallet) public view returns (uint256) {
-        if (_wallet != traderBotWallet) revert("Not Corresponding Wallet");
+    function GetAccount(address wallet) public view returns (uint256) {
+        // Ensure the provided wallet matches the traderBotWallet
+        if (wallet != traderBotWallet) revert("Not Corresponding Wallet");
+        // Return the current asset value
         return assets;
     }
 
-    function setAssetValue(uint256 _newValue) public {
-        if (msg.sender != _owner) revert("Not authorized");
-        assets = _newValue;
+    function setAssetValue(uint256 newValue) public {
+        // Ensure only the owner can set the asset value
+        if (msg.sender != owner) revert("Not authorized");
+        // Update the asset value
+        assets = newValue;
     }
 
-    function setWallet(address _wallet) public {
-        if (msg.sender != _owner) revert("Not authorized");
-        traderBotWallet = _wallet;
+    function setWallet(address wallet) public {
+        // Ensure only the owner can update the traderBotWallet address
+        if (msg.sender != owner) revert("Not authorized");
+        // Update the traderBotWallet address
+        traderBotWallet = wallet;
     }
 }
