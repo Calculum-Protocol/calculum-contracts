@@ -21,11 +21,11 @@ interface ICalculumVault {
 
     function MAX_TOTAL_DEPOSIT() external view returns (uint256);
 
-    function MIN_WALLET_BALANCE_USDC_TRANSFER_BOT() external view returns (uint256);
+    function TRANSFER_BOT_MIN_WALLET_BALANCE_USDC() external view returns (uint256);
 
-    function TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT() external view returns (uint256);
+    function TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC() external view returns (uint256);
 
-    function MIN_WALLET_BALANCE_ETH_TRANSFER_BOT() external view returns (uint256);
+    function TRANSFER_BOT_MIN_WALLET_BALANCE_ETH() external view returns (uint256);
 
     function EPOCH_DURATION() external view returns (uint256);
 
@@ -44,12 +44,6 @@ interface ICalculumVault {
     // Methods
 
     function getPnLPerVaultToken() external view returns (bool);
-
-    // function MgtFeePerVaultToken() external view returns (uint256);
-
-    // function PerfFeePerVaultToken() external view returns (uint256);
-
-    // function PnLPerVaultToken() external view returns (uint256);
 
     function decimals() external view returns (uint256);
 }

@@ -11,15 +11,18 @@ contract USDC is ERC20 {
         admin = msg.sender;
     }
 
+    // Allows the admin to mint new tokens to a specified address
     function mint(address to, uint256 amount) external {
         require(msg.sender == admin, "Only Admin allowed");
         _mint(to, amount);
     }
 
+    // Returns the number of decimal places used by the token
     function decimals() public pure override returns (uint8) {
         return 6;
     }
 
+    // Allows the caller to burn a specified amount of tokens from their balance
     function burn(uint256 amount) external {
         _burn(msg.sender, amount);
     }
