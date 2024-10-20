@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/extensions/ERC20Burnable.sol)
+// OpenZeppelin Contracts (last updated v4.5.0) (token/ERC20/extensions/ERC20Burnable.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
-import {ERC20Upgradeable} from "../ERC20Upgradeable.sol";
-import {ContextUpgradeable} from "../../../utils/ContextUpgradeable.sol";
+import "../ERC20Upgradeable.sol";
+import "../../../utils/ContextUpgradeable.sol";
 import {Initializable} from "../../../proxy/utils/Initializable.sol";
 
 /**
@@ -19,27 +19,34 @@ abstract contract ERC20BurnableUpgradeable is Initializable, ContextUpgradeable,
     function __ERC20Burnable_init_unchained() internal onlyInitializing {
     }
     /**
-     * @dev Destroys a `value` amount of tokens from the caller.
+     * @dev Destroys `amount` tokens from the caller.
      *
      * See {ERC20-_burn}.
      */
-    function burn(uint256 value) public virtual {
-        _burn(_msgSender(), value);
+    function burn(uint256 amount) public virtual {
+        _burn(_msgSender(), amount);
     }
 
     /**
-     * @dev Destroys a `value` amount of tokens from `account`, deducting from
-     * the caller's allowance.
+     * @dev Destroys `amount` tokens from `account`, deducting from the caller's
+     * allowance.
      *
      * See {ERC20-_burn} and {ERC20-allowance}.
      *
      * Requirements:
      *
      * - the caller must have allowance for ``accounts``'s tokens of at least
-     * `value`.
+     * `amount`.
      */
-    function burnFrom(address account, uint256 value) public virtual {
-        _spendAllowance(account, _msgSender(), value);
-        _burn(account, value);
+    function burnFrom(address account, uint256 amount) public virtual {
+        _spendAllowance(account, _msgSender(), amount);
+        _burn(account, amount);
     }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[50] private __gap;
 }

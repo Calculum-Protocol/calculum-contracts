@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
-import {UUPSUpgradeable} from "../../proxy/utils/UUPSUpgradeable.sol";
-import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import "../../proxy/utils/UUPSUpgradeable.sol";
+import "../../utils/CountersUpgradeable.sol";
 import {Initializable} from "../../proxy/utils/Initializable.sol";
 
 contract NonUpgradeableMockUpgradeable is Initializable {
-    uint256 internal _counter;
+    CountersUpgradeable.Counter internal _counter;
 
     function __NonUpgradeableMock_init() internal onlyInitializing {
     }
@@ -15,12 +15,19 @@ contract NonUpgradeableMockUpgradeable is Initializable {
     function __NonUpgradeableMock_init_unchained() internal onlyInitializing {
     }
     function current() external view returns (uint256) {
-        return _counter;
+        return CountersUpgradeable.current(_counter);
     }
 
     function increment() external {
-        ++_counter;
+        return CountersUpgradeable.increment(_counter);
     }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[49] private __gap;
 }
 
 contract UUPSUpgradeableMockUpgradeable is Initializable, NonUpgradeableMockUpgradeable, UUPSUpgradeable {
@@ -31,6 +38,13 @@ contract UUPSUpgradeableMockUpgradeable is Initializable, NonUpgradeableMockUpgr
     }
     // Not having any checks in this function is dangerous! Do not do this outside tests!
     function _authorizeUpgrade(address) internal override {}
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[50] private __gap;
 }
 
 contract UUPSUpgradeableUnsafeMockUpgradeable is Initializable, UUPSUpgradeableMockUpgradeable {
@@ -39,18 +53,18 @@ contract UUPSUpgradeableUnsafeMockUpgradeable is Initializable, UUPSUpgradeableM
 
     function __UUPSUpgradeableUnsafeMock_init_unchained() internal onlyInitializing {
     }
+    function upgradeTo(address newImplementation) public override {
+        ERC1967UpgradeUpgradeable._upgradeToAndCall(newImplementation, bytes(""), false);
+    }
+
     function upgradeToAndCall(address newImplementation, bytes memory data) public payable override {
-        ERC1967Utils.upgradeToAndCall(newImplementation, data);
-    }
-}
-
-contract UUPSUnsupportedProxiableUUIDUpgradeable is Initializable, UUPSUpgradeableMockUpgradeable {
-    function __UUPSUnsupportedProxiableUUID_init() internal onlyInitializing {
+        ERC1967UpgradeUpgradeable._upgradeToAndCall(newImplementation, data, false);
     }
 
-    function __UUPSUnsupportedProxiableUUID_init_unchained() internal onlyInitializing {
-    }
-    function proxiableUUID() external pure override returns (bytes32) {
-        return keccak256("invalid UUID");
-    }
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[50] private __gap;
 }

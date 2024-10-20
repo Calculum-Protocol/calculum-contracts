@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.27;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Upgradeable} from "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 
-contract USDC is ERC20 {
+contract USDC is ERC20Upgradeable {
     address public admin;
 
-    constructor() ERC20("USDC Bear Protocol", "bpUSDC5") {
+    constructor() ERC20Upgradeable() {
+        __ERC20_init("USDC Bear Protocol", "bpUSDC5");
         _mint(msg.sender, 1000000 * 10 ** 6);
         admin = msg.sender;
     }
