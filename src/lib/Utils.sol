@@ -42,7 +42,7 @@ library Utils {
         uint256 currentEpoch = Calculum.CURRENT_EPOCH();
         if (currentEpoch == 0) return 0;
         uint256 targetBalance = Calculum
-            .TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC();
+            .TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT();
         uint256 currentBalance = _asset.balanceOf(OZW);
 
         // Calculate the missing USDC amount to reach the target balance

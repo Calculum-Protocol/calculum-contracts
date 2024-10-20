@@ -110,11 +110,11 @@ contract CalculumVault is
     // Max Total Assets
     uint256 public MAX_TOTAL_DEPOSIT;
     // Minimal Wallet Ballance USDC in Transfer Bot
-    uint256 public TRANSFER_BOT_MIN_WALLET_BALANCE_USDC;
+    uint256 public MIN_WALLET_BALANCE_USDC_TRANSFER_BOT;
     // Wallet Target Balance USDC in Transfer Bot
-    uint256 public TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC;
+    uint256 public TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT;
     // Minimal Wallet Balance of ETH in Transfer Bot
-    uint256 public TRANSFER_BOT_MIN_WALLET_BALANCE_ETH;
+    uint256 public MIN_WALLET_BALANCE_ETH_TRANSFER_BOT;
     // Factor Adjust for Decimals of the Share Token
     uint256 public DECIMAL_FACTOR; // 10^decimals()
     // Array of Wallet Addresses with Deposit
@@ -209,9 +209,9 @@ contract CalculumVault is
         MIN_DEPOSIT = _initialValue[1];
         MAX_DEPOSIT = _initialValue[2];
         MAX_TOTAL_DEPOSIT = _initialValue[3];
-        TRANSFER_BOT_MIN_WALLET_BALANCE_USDC = _initialValue[4];
-        TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC = _initialValue[5];
-        TRANSFER_BOT_MIN_WALLET_BALANCE_ETH = _initialValue[6];
+        MIN_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[4];
+        TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[5];
+        MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = _initialValue[6];
         EPOCH_DURATION = 2 * 60 minutes; // 4 hours
         MAINTENANCE_PERIOD_PRE_START = 300 seconds; // 5 minutes
         MAINTENANCE_PERIOD_POST_START = 300 seconds; // 5 minutes
@@ -1433,9 +1433,9 @@ contract CalculumVault is
     function _swapDAforETH() private nonReentrant {
         if (
             (openZeppelinDefenderWallet.balance <
-                TRANSFER_BOT_MIN_WALLET_BALANCE_ETH) &&
+                MIN_WALLET_BALANCE_ETH_TRANSFER_BOT) &&
             (_asset.balanceOf(openZeppelinDefenderWallet) >
-                TRANSFER_BOT_MIN_WALLET_BALANCE_USDC)
+                MIN_WALLET_BALANCE_USDC_TRANSFER_BOT)
         ) {
             UniswapLibV3._swapTokensForETH(address(_asset), address(router));
         }

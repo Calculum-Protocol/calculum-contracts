@@ -110,11 +110,11 @@ contract BearVaultTestnet is
     // Max Total Assets
     uint256 public MAX_TOTAL_DEPOSIT;
     // Minimal Wallet Ballance USDC in Transfer Bot
-    uint256 public TRANSFER_BOT_MIN_WALLET_BALANCE_USDC;
+    uint256 public MIN_WALLET_BALANCE_USDC_TRANSFER_BOT;
     // Wallet Target Balance USDC in Transfer Bot
-    uint256 public TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC;
+    uint256 public TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT;
     // Minimal Wallet Balance of ETH in Transfer Bot
-    uint256 public TRANSFER_BOT_MIN_WALLET_BALANCE_ETH;
+    uint256 public MIN_WALLET_BALANCE_ETH_TRANSFER_BOT;
     // Factor Adjust for Decimals of the Share Token
     uint256 public DECIMAL_FACTOR; // 10^decimals()
     // Array of Wallet Addresses with Deposit
@@ -190,9 +190,9 @@ contract BearVaultTestnet is
         MIN_DEPOSIT = _initialValue[1];
         MAX_DEPOSIT = _initialValue[2];
         MAX_TOTAL_DEPOSIT = _initialValue[3];
-        TRANSFER_BOT_MIN_WALLET_BALANCE_USDC = _initialValue[4];
-        TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC = _initialValue[5];
-        TRANSFER_BOT_MIN_WALLET_BALANCE_ETH = _initialValue[6];
+        MIN_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[4];
+        TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[5];
+        MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = _initialValue[6];
         EPOCH_DURATION = 1 * 60 minutes; // 2 hours
         MAINTENANCE_PERIOD_PRE_START = 300 seconds; // 5 minutes
         MAINTENANCE_PERIOD_POST_START = 300 seconds; // 5 minutes
@@ -567,16 +567,37 @@ contract BearVaultTestnet is
          */
         _checkVaultOutMaintenance();
         DexWalletBalance();
-        // Partial fix if Finalize epoch fail in some point
-        unchecked {
-            if (CURRENT_EPOCH >= 1) {
-                if (VAULT_TOKEN_PRICE[CURRENT_EPOCH - 1] == 0) {
-                    VAULT_TOKEN_PRICE[CURRENT_EPOCH - 1] = convertToAssets(
-                        1 ether
-                    );
+        // Partial fix if Finalize epoch failed at some point
+        if (CURRENT_EPOCH >= 1) {
+            uint256 lastEpoch = CURRENT_EPOCH - 1;
+            if (VAULT_TOKEN_PRICE[lastEpoch] <= 10) {
+                bool found = false;
+                // Iterate backward to find the last non-zero token price
+                while (true) {
+                    if (VAULT_TOKEN_PRICE[lastEpoch] >= 10) {
+                        // Found a non-zero price
+                        VAULT_TOKEN_PRICE[
+                            CURRENT_EPOCH - 1
+                        ] = VAULT_TOKEN_PRICE[lastEpoch];
+                        found = true;
+                        break;
+                    }
+                    if (lastEpoch == 0) {
+                        // Reached the earliest epoch
+                        break;
+                    }
+                    lastEpoch--;
+                }
+                if (!found) {
+                    // All previous prices are zero; initialize the first epoch price
+                    uint256 initialPrice = convertToAssets(1 ether);
+                    VAULT_TOKEN_PRICE[0] = initialPrice;
+                    VAULT_TOKEN_PRICE[CURRENT_EPOCH - 1] = initialPrice;
                 }
             }
         }
+
+        // Update the Vault Token Price
         VAULT_TOKEN_PRICE[CURRENT_EPOCH] = convertToAssets(1 ether);
         // Update Value such Token Price Updated
         for (uint256 i; i < depositWallets.length; ) {
