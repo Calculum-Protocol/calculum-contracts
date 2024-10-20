@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.27;
 
 import "./lib/Claimable.sol";
 import "./lib/DataTypes.sol";
 import "./lib/Errors.sol";
 import "./lib/Utils.sol";
 import {ERC20Upgradeable} from "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @title MockUpVertexInteraction
@@ -24,17 +24,17 @@ contract MockUpVertexInteraction is
     AccessControlUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    using Math for uint256;
-    using SafeERC20 for IERC20;
+    using MathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20MetadataUpgradeable;
 
-    event DexTransferKind(bool kind, uint256 Amount);
+    event DexTransferKind(bool kind, uint256 amount);
 
     // Principal private Variable of ERC4626
-    IERC20Metadata internal _asset;
+    IERC20MetadataUpgradeable public _asset;
     // Decimals of the Share Token
-    uint8 private _decimals;
+    uint8 public _decimals;
     // Flag to Control Linksigner
-    bool private linked;
+    bool public linked;
     // Flag to Control Start Sales of Shares
     uint256 public EPOCH_START; // start 10 July 2022, Sunday 22:00:00  UTC
     // Transfer Bot Wallet in DEX
@@ -42,7 +42,7 @@ contract MockUpVertexInteraction is
     // Trader Bot Wallet in DEX
     address payable traderBotWallet;
     // Address of Vertex Endpoint
-    address private endpointVertex;
+    address public endpointVertex;
     // Treasury Wallet of Calculum
     address public treasuryWallet;
     // Actual Value of Assets during Trader Period
@@ -51,8 +51,6 @@ contract MockUpVertexInteraction is
     bytes32 private constant TRANSFER_BOT_ROLE = keccak256("TRANSFER_BOT_ROLE");
     // Constant for TraderBot Role
     bytes32 private constant TRADER_BOT_ROLE = keccak256("TRADER_BOT_ROLE");
-    // mapping for whitelist of wallet to access the Vault
-    mapping(address => bool) public whitelist;
 
     uint256 public balance;
     IFQuerier.SubaccountInfo subaccountInfo;
@@ -60,21 +58,6 @@ contract MockUpVertexInteraction is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
-    }
-
-    /**
-     * @dev Modifier to ensure that the caller is whitelisted and the owner of the asset.
-     * @param caller The address of the caller.
-     * @param _owner The address of the owner of the asset.
-     */
-    modifier whitelisted(address caller, address _owner) {
-        if (_owner != caller) {
-            revert Errors.CallerIsNotOwner(caller, _owner);
-        }
-        if (whitelist[caller] == false) {
-            revert Errors.NotWhitelisted(caller);
-        }
-        _;
     }
 
     /**
@@ -90,13 +73,12 @@ contract MockUpVertexInteraction is
      * 3: Router
      * 4: USDCToken Address
      * 5: Vertex Endpoint
-     * 6: Spot Engine Vertex
      */
     function initialize(
         string memory _name,
         string memory _symbol,
         uint8 decimals_,
-        address[6] memory _initialAddress // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router, 4: USDCToken Address, 5: Vertex Endpoint, 6: Spot Engine Vertex
+        address[6] memory _initialAddress // 0: Trader Bot Wallet, 1: Treasury Wallet, 2: OpenZeppelin Defender Wallet, 3: Router, 4: USDCToken Address, 5: Vertex Endpoint
     ) public reinitializer(1) {
         if (
             !isContract(_initialAddress[3]) ||
@@ -105,7 +87,7 @@ contract MockUpVertexInteraction is
         ) {
             revert Errors.AddressIsNotContract();
         }
-        __Ownable_init(_msgSender());
+        __Ownable_init();
         __ReentrancyGuard_init();
         __AccessControl_init_unchained();
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -114,7 +96,7 @@ contract MockUpVertexInteraction is
         grantRole(TRADER_BOT_ROLE, _msgSender());
         grantRole(TRADER_BOT_ROLE, _initialAddress[0]);
         __ERC20_init(_name, _symbol);
-        _asset = IERC20Metadata(_initialAddress[4]);
+        _asset = IERC20MetadataUpgradeable(_initialAddress[4]);
         _decimals = decimals_;
         endpointVertex = _initialAddress[5];
         traderBotWallet = payable(_initialAddress[0]);
@@ -186,7 +168,7 @@ contract MockUpVertexInteraction is
     function rescue() external whenPaused onlyOwner nonReentrant {
         uint256 assets = _asset.balanceOf(address(this));
         // Safe Transfer of the Assets to the Owner
-        SafeERC20.safeTransfer(_asset, _msgSender(), assets);
+        SafeERC20Upgradeable.safeTransfer(_asset, _msgSender(), assets);
         // Transfer all Eth to the Owner
         uint256 amount = address(this).balance;
         claimValues(address(0), _msgSender());
@@ -209,15 +191,20 @@ contract MockUpVertexInteraction is
     }
 
     /**
-     * @dev Transfers assets to or from Vertex.
-     * @param kind Whether to deposit or withdraw assets.
+     * @dev Transfers assets to or from Vertex, handling both deposits and withdrawals.
+     * @dev This method is called twice for each transfer due to Vertex's off-chain withdrawal process:
+     *      1. First call initiates the transfer.
+     *      2. Second call completes the withdrawal of assets from Vertex.
+     * @dev After the transfer, it recalculates the gas reserve and emits a Transfer event.
+     * @dev Can only be called by accounts with TRANSFER_BOT_ROLE.
+     * @param kind Direction of transfer: true for Deposit, false for Withdrawal.
      * @param amount The amount of assets to transfer.
      */
     function dexTransfer(
         bool kind,
         uint256 amount
-    ) external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
-        if (kind) {
+    ) public onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
+        if  ((kind) && (amount > 0)) {
             // Deposit
             Utils.depositCollateralWithReferral(
                 endpointVertex,
@@ -234,16 +221,18 @@ contract MockUpVertexInteraction is
                 );
                 linked = true;
             }
+            emit DexTransfer(1, amount);
         } else {
             // Withdrawl
             Utils.withdrawVertexCollateral(
                 endpointVertex,
                 address(_asset),
                 0,
-                uint128(amount)
+                amount
             );
+            emit DexTransfer(0, amount);
         }
-        emit DexTransferKind(kind, amount);
+        DexWalletBalance();
     }
 
     /**

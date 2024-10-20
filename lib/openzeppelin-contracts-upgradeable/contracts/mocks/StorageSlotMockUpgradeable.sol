@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
-import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
+import "../utils/StorageSlotUpgradeable.sol";
 import {Initializable} from "../proxy/utils/Initializable.sol";
 
 contract StorageSlotMockUpgradeable is Initializable {
-    using StorageSlot for *;
+    using StorageSlotUpgradeable for *;
 
     function __StorageSlotMock_init() internal onlyInitializing {
     }
@@ -45,7 +45,7 @@ contract StorageSlotMockUpgradeable is Initializable {
         return slot.getUint256Slot().value;
     }
 
-    mapping(uint256 key => string) public stringMap;
+    mapping(uint256 => string) public stringMap;
 
     function setString(bytes32 slot, string calldata value) public {
         slot.getStringSlot().value = value;
@@ -63,7 +63,7 @@ contract StorageSlotMockUpgradeable is Initializable {
         return stringMap[key].getStringSlot().value;
     }
 
-    mapping(uint256 key => bytes) public bytesMap;
+    mapping(uint256 => bytes) public bytesMap;
 
     function setBytes(bytes32 slot, bytes calldata value) public {
         slot.getBytesSlot().value = value;
@@ -80,4 +80,11 @@ contract StorageSlotMockUpgradeable is Initializable {
     function getBytesStorage(uint256 key) public view returns (bytes memory) {
         return bytesMap[key].getBytesSlot().value;
     }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[48] private __gap;
 }

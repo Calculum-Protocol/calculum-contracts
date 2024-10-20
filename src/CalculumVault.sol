@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.27;
 
-import {IERC4626} from "./lib/IERC4626.sol";
-import {Events, SafeERC20, Claimable} from "./lib/Claimable.sol";
+import {IERC4626Upgradeable} from "@openzeppelin-contracts-upgradeable/contracts/interfaces/IERC4626Upgradeable.sol";
+import "./lib/Claimable.sol";
 import "./lib/DataTypes.sol";
 import "./lib/Errors.sol";
 import {IRouter} from "./lib/IRouter.sol";
 import "./lib/UniswapLibV3.sol";
 import "./lib/Utils.sol";
 import {ERC20Upgradeable} from "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @title Smart Contract Disclaimer
@@ -55,18 +55,18 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin-contracts-upgradeable/co
  */
 /// @custom:oz-upgrades-unsafe-allow external-library-linking
 contract CalculumVault is
-    IERC4626,
+    IERC4626Upgradeable,
     ERC20Upgradeable,
     PausableUpgradeable,
     Claimable,
     AccessControlUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    using Math for uint256;
-    using SafeERC20 for IERC20;
+    using MathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20MetadataUpgradeable;
     // Principal private Variable of ERC4626
 
-    IERC20Metadata internal _asset;
+    IERC20MetadataUpgradeable internal _asset;
     // Decimals of the Share Token
     uint8 private _decimals;
     // Flag to Control Linksigner
@@ -129,29 +129,14 @@ contract CalculumVault is
     bytes32 private constant TRANSFER_BOT_ROLE = keccak256("TRANSFER_BOT_ROLE");
     // Constant for TraderBot Role
     bytes32 private constant TRADER_BOT_ROLE = keccak256("TRADER_BOT_ROLE");
-    // Mapping of Struct NetTransfer
-    mapping(uint256 => DataTypes.NetTransfer) public netTransfer; // Mapping of Struct NetTransfer based on EPOCH
-    // mapping for whitelist of wallet to access the Vault
-    mapping(address => bool) public whitelist;
-    // limitter
-    DataTypes.Limit public limit;
+    // Mapping of Struct NetTransfer based on EPOCH
+    mapping(uint256 => DataTypes.NetTransfer) public netTransfer; 
+    // Mapping of Whitelisted Wallets for Deposit more then maxDeposit per user
+    mapping(address => bool) public whitelistedWallets;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
-    }
-
-    // Modifier to check if the caller is whitelisted and is the owner
-    // This is crucial for access control in deposit, withdraw, and other sensitive operations
-    // It ensures that only authorized users can interact with their own funds in the vault
-    modifier whitelisted(address caller, address _owner) {
-        if (_owner != caller) {
-            revert Errors.CallerIsNotOwner(caller, _owner);
-        }
-        if (whitelist[caller] == false) {
-            revert Errors.NotWhitelisted(caller);
-        }
-        _;
     }
 
     /**
@@ -189,7 +174,7 @@ contract CalculumVault is
             !isContract(_initialAddress[4]) ||
             !isContract(_initialAddress[5])
         ) revert Errors.AddressIsNotContract();
-        __Ownable_init(_msgSender());
+        __Ownable_init();
         __ReentrancyGuard_init();
         __AccessControl_init_unchained();
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -198,7 +183,7 @@ contract CalculumVault is
         grantRole(TRADER_BOT_ROLE, _msgSender());
         grantRole(TRADER_BOT_ROLE, _initialAddress[0]);
         __ERC20_init(_name, _symbol);
-        _asset = IERC20Metadata(_initialAddress[4]);
+        _asset = IERC20MetadataUpgradeable(_initialAddress[4]);
         _decimals = decimals_;
         router = IRouter(_initialAddress[3]);
         endpointVertex = _initialAddress[5];
@@ -219,12 +204,6 @@ contract CalculumVault is
         MANAGEMENT_FEE_PERCENTAGE = 1 ether / 100; // Represent 1% Maintenance Fee Annually
         PERFORMANCE_FEE_PERCENTAGE = 0; // 15 ether / 100; // Represent 15% Performance Fee Annually
         DECIMAL_FACTOR = 10 ** decimals();
-
-        // Set the Limitter
-        limit = DataTypes.Limit({
-            percentage: 30, // 30% of the total assets of the Vault can be withdrawn
-            timestamp: block.timestamp + (52 weeks * 5) // 5 years
-        });
     }
 
     /**
@@ -278,7 +257,6 @@ contract CalculumVault is
     )
         external
         override
-        whitelisted(_msgSender(), _receiver)
         whenNotPaused
         nonReentrant
         returns (uint256)
@@ -296,10 +274,10 @@ contract CalculumVault is
         if (_assets < MIN_DEPOSIT) {
             revert Errors.DepositAmountTooLow(_receiver, _assets);
         }
-        if (
+        if ((
             _assets >
             (MAX_DEPOSIT - (depositor.finalAmount + depositor.amountAssets))
-        ) {
+        ) && !whitelistedWallets[_receiver]) {
             // Verify the maximun value per user
             revert Errors.DepositExceededMax(
                 _receiver,
@@ -324,7 +302,12 @@ contract CalculumVault is
 
         // if _asset is ERC777, transferFrom can call reenter BEFORE the transfer happens through
         // the tokensToSend hook, so we need to transfer before we mint to keep the invariants.
-        SafeERC20.safeTransferFrom(_asset, _receiver, address(this), _assets);
+        SafeERC20Upgradeable.safeTransferFrom(
+            _asset,
+            _receiver,
+            address(this),
+            _assets
+        );
         addDeposit(_receiver, shares, _assets);
 
         // flag to control the transfer to Vertex
@@ -395,7 +378,6 @@ contract CalculumVault is
     )
         external
         override
-        whitelisted(_msgSender(), _owner)
         whenNotPaused
         nonReentrant
         returns (uint256)
@@ -417,7 +399,6 @@ contract CalculumVault is
         ) {
             revert Errors.WithdrawPendingClaim(_owner);
         }
-        _checkLimit(_assets);
         uint256 shares = previewWithdraw(_assets);
 
         // if _asset is ERC777, transfer can call reenter AFTER the transfer happens through
@@ -462,7 +443,6 @@ contract CalculumVault is
     )
         external
         override
-        whitelisted(_msgSender(), _owner)
         whenNotPaused
         nonReentrant
         returns (uint256)
@@ -486,7 +466,6 @@ contract CalculumVault is
         }
 
         uint256 assets = previewRedeem(_shares);
-        _checkLimit(assets);
 
         // if _asset is ERC777, transfer can call reenter AFTER the transfer happens through
         // the tokensReceived hook, so we need to transfer after we burn to keep the invariants.
@@ -511,7 +490,7 @@ contract CalculumVault is
      */
     function claimShares(
         address _owner
-    ) external whitelisted(_msgSender(), _owner) nonReentrant {
+    ) external nonReentrant {
         _checkVaultInMaintenance();
         address caller = _msgSender();
         DataTypes.Basics storage depositor = DEPOSITS[_owner];
@@ -546,7 +525,7 @@ contract CalculumVault is
     function claimAssets(
         address _receiver,
         address _owner
-    ) external whitelisted(_msgSender(), _owner) nonReentrant {
+    ) external nonReentrant {
         _checkVaultInMaintenance();
         address caller = _msgSender();
         DataTypes.Basics storage withdrawer = WITHDRAWALS[_owner];
@@ -560,7 +539,11 @@ contract CalculumVault is
             );
         }
         _burn(_owner, withdrawer.amountShares);
-        SafeERC20.safeTransfer(_asset, _receiver, withdrawer.amountAssets);
+        SafeERC20Upgradeable.safeTransfer(
+            _asset,
+            _receiver,
+            withdrawer.amountAssets
+        );
         // flag to control the transfer to Vertex
         _tx = true;
         emit Withdraw(
@@ -585,7 +568,7 @@ contract CalculumVault is
     function rescue() external whenPaused onlyOwner nonReentrant {
         uint256 assets = _asset.balanceOf(address(this));
         // Safe Transfer of the Assets to the Owner
-        SafeERC20.safeTransfer(_asset, _msgSender(), assets);
+        SafeERC20Upgradeable.safeTransfer(_asset, _msgSender(), assets);
         // Transfer all Eth to the Owner
         uint256 amount = address(this).balance;
         claimValues(address(0), _msgSender());
@@ -609,41 +592,6 @@ contract CalculumVault is
             address(_asset),
             0,
             assets
-        );
-    }
-
-    /**
-     * @dev Updates the epoch duration and maintenance times
-     * @notice Recalculates the epoch start to avoid conflicts with the current epoch
-     * @notice Only callable by the contract owner during non-maintenance periods
-     * @param _epochDuration New epoch duration (between 1 minute and 12 weeks)
-     * @param _maintTimeBefore New maintenance time before epoch start
-     * @param _maintTimeAfter New maintenance time after epoch end
-     * @dev Emits an EpochChanged event with old and new values
-     */
-    function setEpochDuration(
-        uint256 _epochDuration,
-        uint256 _maintTimeBefore,
-        uint256 _maintTimeAfter
-    ) external onlyOwner {
-        _checkVaultInMaintenance();
-        if (_epochDuration < 1 minutes || _epochDuration > 12 weeks) {
-            revert Errors.WrongEpochDuration(_epochDuration);
-        }
-        uint256 oldEpochDuration = EPOCH_DURATION;
-        uint256 oldEpochStart = EPOCH_START;
-        EPOCH_DURATION = _epochDuration;
-        // Permit to Readjust Periods
-        EPOCH_START = block.timestamp - (EPOCH_DURATION * CURRENT_EPOCH);
-        MAINTENANCE_PERIOD_PRE_START = _maintTimeBefore;
-        MAINTENANCE_PERIOD_POST_START = _maintTimeAfter;
-        emit EpochChanged(
-            oldEpochDuration,
-            _epochDuration,
-            oldEpochStart,
-            EPOCH_START,
-            _maintTimeBefore,
-            _maintTimeAfter
         );
     }
 
@@ -790,6 +738,7 @@ contract CalculumVault is
                 );
             }
             actualTx.pending = false;
+            emit DexTransfer(CURRENT_EPOCH, actualTx.amount);
         }
         uint256 reserveGas = Utils.CalculateTransferBotGasReserveDA(
             address(this),
@@ -800,15 +749,12 @@ contract CalculumVault is
             if (assetBalance < reserveGas) {
                 revert Errors.NotEnoughBalance(reserveGas, assetBalance);
             }
-            SafeERC20.safeTransfer(
+            SafeERC20Upgradeable.safeTransfer(
                 _asset,
                 openZeppelinDefenderWallet,
                 reserveGas
             );
-        }
-        if (!kind) {
-            // Avoid Duplicate Event
-            emit DexTransfer(CURRENT_EPOCH, actualTx.amount);
+            emit ReserveGasTransfer(CURRENT_EPOCH, reserveGas);
         }
     }
 
@@ -856,7 +802,11 @@ contract CalculumVault is
         uint256 restEvent;
         if (rest > 0) {
             restEvent = rest;
-            SafeERC20.safeTransfer(_asset, treasuryWallet, restEvent);
+            SafeERC20Upgradeable.safeTransfer(
+                _asset,
+                treasuryWallet,
+                restEvent
+            );
         }
         _tx = false;
         emit FeesTransfer(
@@ -871,16 +821,6 @@ contract CalculumVault is
         CurrentEpoch();
     }
 
-    /**
-     * @dev Function to add or remove a wallet from the whitelist
-     * @notice This function is crucial for access control, allowing only whitelisted addresses to interact with the vault
-     * @param _wallet Address to be added or removed from the whitelist
-     * @param status Boolean indicating whether to add (true) or remove (false) the wallet from the whitelist
-     * @notice Only callable by the contract owner, as it's a sensitive operation affecting user access
-     */
-    function addDropWhitelist(address _wallet, bool status) external onlyOwner {
-        whitelist[_wallet] = status;
-    }
 
     /**
      * @dev Updates the TraderBot wallet address and links it to Vertex
@@ -943,23 +883,15 @@ contract CalculumVault is
     }
 
     /**
-     * @dev Sets a withdrawal limit for the vault until a specified timestamp
-     * @notice This function is crucial for risk management and liquidity control
-     * @param pct Percentage of total assets that can be withdrawn (0-100)
-     * @param timestamp Unix timestamp until which the limit is active
-     * @notice Only callable by addresses with TRADER_BOT_ROLE
-     * @notice Affects the _checkLimit function in withdraw and redeem operations
+     * @dev Sets the whitelisted status of a wallet
+     * @param _wallet The wallet address to set the status for
+     * @param _whitelisted The new whitelisted status
+     * @notice Only callable by the contract owner
+     * @notice Emits a WhitelistedUpdated event
      */
-    function setLimitter(
-        uint8 pct,
-        uint256 timestamp
-    ) external onlyRole(TRADER_BOT_ROLE) {
-        if (pct <= 0) revert Errors.InvalidValue();
-        if (pct > 100) revert Errors.InvalidValue();
-        if (timestamp <= block.timestamp) revert Errors.InvalidValue();
-        if (timestamp >= getNextEpoch()) revert Errors.InvalidValue();
-        limit.percentage = pct;
-        limit.timestamp = timestamp;
+    function setWhitelisted(address _wallet, bool _whitelisted) external onlyOwner {
+        whitelistedWallets[_wallet] = _whitelisted;
+        emit WhitelistedUpdated(_wallet, _whitelisted);
     }
 
     /**
@@ -1049,7 +981,7 @@ contract CalculumVault is
             _assets = _shares.mulDiv(
                 Utils.UpdateVaultPriceToken(address(this), address(_asset)),
                 DECIMAL_FACTOR,
-                Math.Rounding.Ceil
+                MathUpgradeable.Rounding.Down
             );
         }
     }
@@ -1074,7 +1006,7 @@ contract CalculumVault is
                 (_assets.mulDiv(
                     DECIMAL_FACTOR,
                     Utils.UpdateVaultPriceToken(address(this), address(_asset)),
-                    Math.Rounding.Ceil
+                    MathUpgradeable.Rounding.Down
                 ) / decimalsAdjust) *
                 decimalsAdjust; // last part is to fixed the rounding issue with stable coins
         }
@@ -1285,7 +1217,7 @@ contract CalculumVault is
     function decimals()
         public
         view
-        override(ERC20Upgradeable, IERC20Metadata)
+        override(ERC20Upgradeable, IERC20MetadataUpgradeable)
         returns (uint8)
     {
         return _decimals;
@@ -1543,27 +1475,6 @@ contract CalculumVault is
                 (getCurrentEpoch() + MAINTENANCE_PERIOD_POST_START));
         if (!maintenance) {
             revert Errors.VaultOutMaintenance();
-        }
-    }
-
-    /**
-     * @dev Checks if the vault is currently in a maintenance period.
-     * @notice This function ensures that certain operations are only performed outside of maintenance periods.
-     * @notice Maintenance periods occur before the start and after the end of each epoch.
-     * @notice Reverts with an error if the vault is in maintenance.
-     */
-    function _checkLimit(uint256 assets) private view {
-        uint256 amountBlock = totalAssets().mulDiv(
-            (100 - limit.percentage),
-            100,
-            Math.Rounding.Ceil
-        );
-        uint256 permitWithdraw = totalAssets() - newWithdrawals() > amountBlock
-            ? totalAssets() - newWithdrawals() - amountBlock
-            : 0;
-        if (block.timestamp <= limit.timestamp) {
-            if (assets > permitWithdraw)
-                revert Errors.NotEnoughBalance(assets, permitWithdraw);
         }
     }
 }

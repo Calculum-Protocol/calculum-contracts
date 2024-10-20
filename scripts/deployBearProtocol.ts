@@ -35,8 +35,8 @@ let UniswapLibV3Factory: UniswapLibV3__factory;
 let UniswapLibV3: UniswapLibV3;
 let UtilsFactory: Utils__factory;
 let Utils: Utils;
-const name = "Bear Protocol USDC Vault";
-const symbol = "vbUSDc";
+const name = "SmoothCoin USDC Vault";
+const symbol = "scUSDc";
 const decimals = 18;
 const EPOCH_TIME: moment.Moment = moment().utc();
 const ZERO_ADDRESS = `0x` + `0`.repeat(40);
@@ -45,39 +45,50 @@ async function main() {
     // Hardhat always runs the compile task when running scripts with its command
     // line interface.
 
-    // Round to the nearest hour in UTC
-    // Round to the nearest hour in UTC
-    let roundedHour = EPOCH_TIME.clone().add(1, 'hour').startOf('hour');
+    // Asegúrate de tener moment.js instalado: npm install moment
+    const moment = require('moment');
 
-    // Ensure we are rounding to the nearest even hour
+    // Obtener el tiempo actual en UTC
+    let EPOCH_TIME = moment.utc();
+
+    // Definir la duración del epoch en segundos (4 horas)
+    const EPOCH_DURATION = 4 * 3600; // 14400 segundos
+
+    // Definir el buffer de tiempo para configuraciones (2 horas en segundos)
+    const SETUP_BUFFER = 2 * 3600; // 7200 segundos
+
+    // Calcular el tiempo objetivo restando el buffer de configuración al tiempo actual
+    let setupTime = EPOCH_TIME.clone().subtract(SETUP_BUFFER, 'seconds');
+
+    // Redondear hacia abajo al inicio de la hora más cercana
+    let roundedHour = setupTime.clone().startOf('hour');
+
+    // Asegurarse de que la hora redondeada sea par
     if (roundedHour.hours() % 2 !== 0) {
-        // If it's an odd hour, round down to the previous even hour
+        // Si es una hora impar, restar una hora para obtener una hora par
         roundedHour.subtract(1, 'hour');
     }
 
-    // Calculate the difference in seconds to the rounded hour
-    const diffToRoundedHour = Math.abs(EPOCH_TIME.unix() - roundedHour.unix());
+    // Establecer EPOCH_START a la hora par redondeada
+    const EPOCH_START = roundedHour.unix();
 
-    // Calculate the previous even hour within 2 hours
-    let oneHourBefore = roundedHour.clone().subtract(2, 'hours');
-
-    // Determine the closest even hour within a 2-hour difference
-    let EPOCH_START;
-    if (diffToRoundedHour <= 3600) { // 3600 seconds = 1 hour
-        EPOCH_START = roundedHour.unix();
-    } else if (diffToRoundedHour <= 7200) { // 7200 seconds = 2 hours
-        EPOCH_START = oneHourBefore.add(2, 'hours').unix();
-    } else {
-        // If the closest even hour is more than 2 hours away, choose the previous even hour
-        EPOCH_START = oneHourBefore.unix();
+    // Verificar que EPOCH_START esté en el pasado respecto a EPOCH_TIME
+    if (EPOCH_START > EPOCH_TIME.unix()) {
+        throw new Error("EPOCH_START no está en el pasado. Verifica la lógica de redondeo.");
     }
+
+    // Calcular el inicio del siguiente epoch sumando la duración al EPOCH_START
+    const NEXT_EPOCH_START = roundedHour.clone().add(EPOCH_DURATION / 3600, 'hours').unix();
+
+    // Mostrar los resultados para verificación
+    console.log("EPOCH_START (UTC):", moment.unix(EPOCH_START).utc().format('YYYY-MM-DD HH:mm:ss'));
+    console.log("NEXT_EPOCH_START (UTC):", moment.unix(NEXT_EPOCH_START).utc().format('YYYY-MM-DD HH:mm:ss'));
     // If this script is run directly using `node` you may want to call compile
     // manually to make sure everything is compiled
     // await run("compile");
     const provider = network.provider;
     // const accounts: SignerWithAddress[] = await ethers.getSigners();
     // Getting from command Line de Contract Name
-    const EPOCH_DURATION = 3600;
     const contractName: string = "BearVaultTestnet";
     console.log(`Contract Name: ${contractName}`);
     console.log(`Epoch Start: ${EPOCH_START}`);
@@ -164,11 +175,11 @@ async function main() {
             [
                 EPOCH_START,
                 1 * 10 ** 6, // 1 $
-                10000 * 10 ** 6, // 100.000 $
+                100000 * 10 ** 6, // 100.000 $
                 '100000000000000000', // 100.000.000.000 $
                 3 * 10 ** 6, // 3 $
                 5 * 10 ** 6, // 5 $
-                ethers.parseEther("0.001")
+                ethers.parseEther("0.01")
             ]
         ]
     );

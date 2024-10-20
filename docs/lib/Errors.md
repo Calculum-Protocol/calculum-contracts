@@ -1,8 +1,8 @@
 # Solidity API
 
 # Contract Errors
-**Title:** Library DataTypes
-**Author:** 
+**Title:** Helpers Methods
+**Author:** Alfredo Lopez / Calculum
 
 **Description:** 
 

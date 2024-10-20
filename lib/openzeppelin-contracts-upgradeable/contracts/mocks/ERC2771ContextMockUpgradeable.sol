@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.9;
 
-import {ContextMockUpgradeable} from "./ContextMockUpgradeable.sol";
-import {ContextUpgradeable} from "../utils/ContextUpgradeable.sol";
-import {ERC2771ContextUpgradeable} from "../metatx/ERC2771ContextUpgradeable.sol";
+import "./ContextMockUpgradeable.sol";
+import "../utils/MulticallUpgradeable.sol";
+import "../metatx/ERC2771ContextUpgradeable.sol";
 import {Initializable} from "../proxy/utils/Initializable.sol";
 
 // By inheriting from ERC2771Context, Context's internal functions are overridden automatically
-contract ERC2771ContextMockUpgradeable is Initializable, ContextMockUpgradeable, ERC2771ContextUpgradeable {
+contract ERC2771ContextMockUpgradeable is Initializable, ContextMockUpgradeable, ERC2771ContextUpgradeable, MulticallUpgradeable {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address trustedForwarder) ERC2771ContextUpgradeable(trustedForwarder) {
         emit Sender(_msgSender()); // _msgSender() should be accessible during construction
@@ -21,4 +21,15 @@ contract ERC2771ContextMockUpgradeable is Initializable, ContextMockUpgradeable,
     function _msgData() internal view override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (bytes calldata) {
         return ERC2771ContextUpgradeable._msgData();
     }
+
+    function _contextSuffixLength() internal view override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (uint256) {
+        return ERC2771ContextUpgradeable._contextSuffixLength();
+    }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[50] private __gap;
 }

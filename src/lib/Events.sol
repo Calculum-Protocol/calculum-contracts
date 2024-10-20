@@ -83,6 +83,13 @@ abstract contract Events {
      */
     event DexTransfer(uint256 indexed epoch, uint256 Amount);
 
+        /**
+     * @dev Emitted when a transfer occurs on the Dex.
+     * @param epoch The current epoch.
+     * @param Amount The amount transferred.
+     */
+    event ReserveGasTransfer(uint256 indexed epoch, uint256 Amount);
+
     /**
      * @dev Emitted when emergency funds are rescued.
      * @param owner Address of the owner initiating the rescue.
@@ -112,4 +119,11 @@ abstract contract Events {
      * @param newAddress The new OPZ wallet address.
      */
     event OPZWalletUpdated(address indexed newAddress);
+
+    /**
+     * @dev Emitted when a wallet is whitelisted or unwhitelisted.
+     * @param _wallet The wallet address.
+     * @param _whitelisted The new whitelisted status.
+     */
+    event WhitelistedUpdated(address _wallet, bool _whitelisted);
 }
