@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.0.0) (governance/extensions/GovernorTimelockCompound.sol)
+// OpenZeppelin Contracts (last updated v4.9.0) (governance/extensions/GovernorTimelockCompound.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
-import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
-import {GovernorUpgradeable} from "../GovernorUpgradeable.sol";
-import {ICompoundTimelock} from "@openzeppelin/contracts/vendor/compound/ICompoundTimelock.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "./IGovernorTimelockUpgradeable.sol";
+import "../GovernorUpgradeable.sol";
+import "../../utils/math/SafeCastUpgradeable.sol";
+import "../../vendor/compound/ICompoundTimelockUpgradeable.sol";
 import {Initializable} from "../../proxy/utils/Initializable.sol";
 
 /**
@@ -19,21 +18,14 @@ import {Initializable} from "../../proxy/utils/Initializable.sol";
  * Using this model means the proposal will be operated by the {TimelockController} and not by the {Governor}. Thus,
  * the assets and permissions must be attached to the {TimelockController}. Any asset sent to the {Governor} will be
  * inaccessible.
+ *
+ * _Available since v4.3._
  */
-abstract contract GovernorTimelockCompoundUpgradeable is Initializable, GovernorUpgradeable {
-    /// @custom:storage-location erc7201:openzeppelin.storage.GovernorTimelockCompound
-    struct GovernorTimelockCompoundStorage {
-        ICompoundTimelock _timelock;
-    }
+abstract contract GovernorTimelockCompoundUpgradeable is Initializable, IGovernorTimelockUpgradeable, GovernorUpgradeable {
+    ICompoundTimelockUpgradeable private _timelock;
 
-    // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.GovernorTimelockCompound")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant GovernorTimelockCompoundStorageLocation = 0x7d1501d734d0ca30b8d26751a7fae89646767b24afe11265192d56e5fe515b00;
-
-    function _getGovernorTimelockCompoundStorage() private pure returns (GovernorTimelockCompoundStorage storage $) {
-        assembly {
-            $.slot := GovernorTimelockCompoundStorageLocation
-        }
-    }
+    /// @custom:oz-retyped-from mapping(uint256 => GovernorTimelockCompound.ProposalTimelock)
+    mapping(uint256 => uint64) private _proposalTimelocks;
 
     /**
      * @dev Emitted when the timelock controller used for proposal execution is modified.
@@ -43,92 +35,104 @@ abstract contract GovernorTimelockCompoundUpgradeable is Initializable, Governor
     /**
      * @dev Set the timelock.
      */
-    function __GovernorTimelockCompound_init(ICompoundTimelock timelockAddress) internal onlyInitializing {
+    function __GovernorTimelockCompound_init(ICompoundTimelockUpgradeable timelockAddress) internal onlyInitializing {
         __GovernorTimelockCompound_init_unchained(timelockAddress);
     }
 
-    function __GovernorTimelockCompound_init_unchained(ICompoundTimelock timelockAddress) internal onlyInitializing {
+    function __GovernorTimelockCompound_init_unchained(ICompoundTimelockUpgradeable timelockAddress) internal onlyInitializing {
         _updateTimelock(timelockAddress);
     }
 
     /**
-     * @dev Overridden version of the {Governor-state} function with added support for the `Expired` state.
+     * @dev See {IERC165-supportsInterface}.
      */
-    function state(uint256 proposalId) public view virtual override returns (ProposalState) {
-        GovernorTimelockCompoundStorage storage $ = _getGovernorTimelockCompoundStorage();
+    function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165Upgradeable, GovernorUpgradeable) returns (bool) {
+        return interfaceId == type(IGovernorTimelockUpgradeable).interfaceId || super.supportsInterface(interfaceId);
+    }
+
+    /**
+     * @dev Overridden version of the {Governor-state} function with added support for the `Queued` and `Expired` state.
+     */
+    function state(uint256 proposalId) public view virtual override(IGovernorUpgradeable, GovernorUpgradeable) returns (ProposalState) {
         ProposalState currentState = super.state(proposalId);
 
-        return
-            (currentState == ProposalState.Queued &&
-                block.timestamp >= proposalEta(proposalId) + $._timelock.GRACE_PERIOD())
-                ? ProposalState.Expired
-                : currentState;
+        if (currentState != ProposalState.Succeeded) {
+            return currentState;
+        }
+
+        uint256 eta = proposalEta(proposalId);
+        if (eta == 0) {
+            return currentState;
+        } else if (block.timestamp >= eta + _timelock.GRACE_PERIOD()) {
+            return ProposalState.Expired;
+        } else {
+            return ProposalState.Queued;
+        }
     }
 
     /**
      * @dev Public accessor to check the address of the timelock
      */
-    function timelock() public view virtual returns (address) {
-        GovernorTimelockCompoundStorage storage $ = _getGovernorTimelockCompoundStorage();
-        return address($._timelock);
+    function timelock() public view virtual override returns (address) {
+        return address(_timelock);
     }
 
     /**
-     * @dev See {IGovernor-proposalNeedsQueuing}.
+     * @dev Public accessor to check the eta of a queued proposal
      */
-    function proposalNeedsQueuing(uint256) public view virtual override returns (bool) {
-        return true;
+    function proposalEta(uint256 proposalId) public view virtual override returns (uint256) {
+        return _proposalTimelocks[proposalId];
     }
 
     /**
      * @dev Function to queue a proposal to the timelock.
      */
-    function _queueOperations(
-        uint256 proposalId,
+    function queue(
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas,
-        bytes32 /*descriptionHash*/
-    ) internal virtual override returns (uint48) {
-        GovernorTimelockCompoundStorage storage $ = _getGovernorTimelockCompoundStorage();
-        uint48 etaSeconds = SafeCast.toUint48(block.timestamp + $._timelock.delay());
+        bytes32 descriptionHash
+    ) public virtual override returns (uint256) {
+        uint256 proposalId = hashProposal(targets, values, calldatas, descriptionHash);
+
+        require(state(proposalId) == ProposalState.Succeeded, "Governor: proposal not successful");
+
+        uint256 eta = block.timestamp + _timelock.delay();
+        _proposalTimelocks[proposalId] = SafeCastUpgradeable.toUint64(eta);
 
         for (uint256 i = 0; i < targets.length; ++i) {
-            if (
-                $._timelock.queuedTransactions(keccak256(abi.encode(targets[i], values[i], "", calldatas[i], etaSeconds)))
-            ) {
-                revert GovernorAlreadyQueuedProposal(proposalId);
-            }
-            $._timelock.queueTransaction(targets[i], values[i], "", calldatas[i], etaSeconds);
+            require(
+                !_timelock.queuedTransactions(keccak256(abi.encode(targets[i], values[i], "", calldatas[i], eta))),
+                "GovernorTimelockCompound: identical proposal action already queued"
+            );
+            _timelock.queueTransaction(targets[i], values[i], "", calldatas[i], eta);
         }
 
-        return etaSeconds;
+        emit ProposalQueued(proposalId, eta);
+
+        return proposalId;
     }
 
     /**
-     * @dev Overridden version of the {Governor-_executeOperations} function that run the already queued proposal
-     * through the timelock.
+     * @dev Overridden execute function that run the already queued proposal through the timelock.
      */
-    function _executeOperations(
+    function _execute(
         uint256 proposalId,
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas,
         bytes32 /*descriptionHash*/
     ) internal virtual override {
-        GovernorTimelockCompoundStorage storage $ = _getGovernorTimelockCompoundStorage();
-        uint256 etaSeconds = proposalEta(proposalId);
-        if (etaSeconds == 0) {
-            revert GovernorNotQueuedProposal(proposalId);
-        }
-        Address.sendValue(payable($._timelock), msg.value);
+        uint256 eta = proposalEta(proposalId);
+        require(eta > 0, "GovernorTimelockCompound: proposal not yet queued");
+        AddressUpgradeable.sendValue(payable(_timelock), msg.value);
         for (uint256 i = 0; i < targets.length; ++i) {
-            $._timelock.executeTransaction(targets[i], values[i], "", calldatas[i], etaSeconds);
+            _timelock.executeTransaction(targets[i], values[i], "", calldatas[i], eta);
         }
     }
 
     /**
-     * @dev Overridden version of the {Governor-_cancel} function to cancel the timelocked proposal if it has already
+     * @dev Overridden version of the {Governor-_cancel} function to cancel the timelocked proposal if it as already
      * been queued.
      */
     function _cancel(
@@ -137,14 +141,15 @@ abstract contract GovernorTimelockCompoundUpgradeable is Initializable, Governor
         bytes[] memory calldatas,
         bytes32 descriptionHash
     ) internal virtual override returns (uint256) {
-        GovernorTimelockCompoundStorage storage $ = _getGovernorTimelockCompoundStorage();
         uint256 proposalId = super._cancel(targets, values, calldatas, descriptionHash);
 
-        uint256 etaSeconds = proposalEta(proposalId);
-        if (etaSeconds > 0) {
+        uint256 eta = proposalEta(proposalId);
+        if (eta > 0) {
+            // update state first
+            delete _proposalTimelocks[proposalId];
             // do external call later
             for (uint256 i = 0; i < targets.length; ++i) {
-                $._timelock.cancelTransaction(targets[i], values[i], "", calldatas[i], etaSeconds);
+                _timelock.cancelTransaction(targets[i], values[i], "", calldatas[i], eta);
             }
         }
 
@@ -155,8 +160,7 @@ abstract contract GovernorTimelockCompoundUpgradeable is Initializable, Governor
      * @dev Address through which the governor executes action. In this case, the timelock.
      */
     function _executor() internal view virtual override returns (address) {
-        GovernorTimelockCompoundStorage storage $ = _getGovernorTimelockCompoundStorage();
-        return address($._timelock);
+        return address(_timelock);
     }
 
     /**
@@ -164,8 +168,7 @@ abstract contract GovernorTimelockCompoundUpgradeable is Initializable, Governor
      */
     // solhint-disable-next-line private-vars-leading-underscore
     function __acceptAdmin() public {
-        GovernorTimelockCompoundStorage storage $ = _getGovernorTimelockCompoundStorage();
-        $._timelock.acceptAdmin();
+        _timelock.acceptAdmin();
     }
 
     /**
@@ -181,13 +184,19 @@ abstract contract GovernorTimelockCompoundUpgradeable is Initializable, Governor
 
      * CAUTION: It is not recommended to change the timelock while there are other queued governance proposals.
      */
-    function updateTimelock(ICompoundTimelock newTimelock) external virtual onlyGovernance {
+    function updateTimelock(ICompoundTimelockUpgradeable newTimelock) external virtual onlyGovernance {
         _updateTimelock(newTimelock);
     }
 
-    function _updateTimelock(ICompoundTimelock newTimelock) private {
-        GovernorTimelockCompoundStorage storage $ = _getGovernorTimelockCompoundStorage();
-        emit TimelockChange(address($._timelock), address(newTimelock));
-        $._timelock = newTimelock;
+    function _updateTimelock(ICompoundTimelockUpgradeable newTimelock) private {
+        emit TimelockChange(address(_timelock), address(newTimelock));
+        _timelock = newTimelock;
     }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[48] private __gap;
 }

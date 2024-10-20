@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity ^0.8.19;
 
-/// @title Library DataTypes
+/**
+ * @title Helpers Methods
+ * @dev Errors for Vault Contract
+ * @custom:a Alfredo Lopez / Calculum
+ */
 library Errors {
     /// Errors
-    /**
-     * @title Helpers Methods
-     * @dev Errors for Vault Contract
-     * @custom:a Alfredo Lopez / Calculum
-     */
+    /// The Caller `_caller` is not whitelisted
+    error CallerIsNotWhitelisted(address _caller);
     /// The User `_claimer` is not allowed to claim this deposit
     error CalletIsNotClaimerToDeposit(address _claimer);
     /// The User `_claimer` is not allowed to redeem the Assets

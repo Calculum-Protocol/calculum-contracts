@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/extensions/ERC20Pausable.sol)
+// OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/extensions/ERC20Pausable.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
-import {ERC20Upgradeable} from "../ERC20Upgradeable.sol";
-import {PausableUpgradeable} from "../../../utils/PausableUpgradeable.sol";
+import "../ERC20Upgradeable.sol";
+import "../../../security/PausableUpgradeable.sol";
 import {Initializable} from "../../../proxy/utils/Initializable.sol";
 
 /**
@@ -18,7 +18,7 @@ import {Initializable} from "../../../proxy/utils/Initializable.sol";
  * addition to inheriting this contract, you must define both functions, invoking the
  * {Pausable-_pause} and {Pausable-_unpause} internal functions, with appropriate
  * access control, e.g. using {AccessControl} or {Ownable}. Not doing so will
- * make the contract pause mechanism of the contract unreachable, and thus unusable.
+ * make the contract unpausable.
  */
 abstract contract ERC20PausableUpgradeable is Initializable, ERC20Upgradeable, PausableUpgradeable {
     function __ERC20Pausable_init() internal onlyInitializing {
@@ -28,13 +28,22 @@ abstract contract ERC20PausableUpgradeable is Initializable, ERC20Upgradeable, P
     function __ERC20Pausable_init_unchained() internal onlyInitializing {
     }
     /**
-     * @dev See {ERC20-_update}.
+     * @dev See {ERC20-_beforeTokenTransfer}.
      *
      * Requirements:
      *
      * - the contract must not be paused.
      */
-    function _update(address from, address to, uint256 value) internal virtual override whenNotPaused {
-        super._update(from, to, value);
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
+        super._beforeTokenTransfer(from, to, amount);
+
+        require(!paused(), "ERC20Pausable: token transfer while paused");
     }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[50] private __gap;
 }

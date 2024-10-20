@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
-import {GovernorUpgradeable} from "../../governance/GovernorUpgradeable.sol";
-import {GovernorCountingSimpleUpgradeable} from "../../governance/extensions/GovernorCountingSimpleUpgradeable.sol";
-import {GovernorVotesUpgradeable} from "../../governance/extensions/GovernorVotesUpgradeable.sol";
+import "../../governance/extensions/GovernorCountingSimpleUpgradeable.sol";
+import "../../governance/extensions/GovernorVotesUpgradeable.sol";
 import {Initializable} from "../../proxy/utils/Initializable.sol";
 
 abstract contract GovernorWithParamsMockUpgradeable is Initializable, GovernorVotesUpgradeable, GovernorCountingSimpleUpgradeable {
@@ -54,4 +53,11 @@ abstract contract GovernorWithParamsMockUpgradeable is Initializable, GovernorVo
         }
         return super._countVote(proposalId, account, support, weight, params);
     }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[50] private __gap;
 }

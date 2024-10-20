@@ -2,9 +2,10 @@
 pragma solidity ^0.8.19;
 
 import "./Events.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/contracts/token/ERC721/IERC721Upgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/contracts/token/ERC1155/IERC1155Upgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
 
 // import "./Blacklistable.sol";
@@ -15,7 +16,7 @@ import "@openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.
  * @custom:a Alfredo Lopez / Calculum
  */
 abstract contract Claimable is OwnableUpgradeable, Events {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20MetadataUpgradeable;
 
     // Event when the Smart Contract receive Amount of Native or ERC20 tokens
 
@@ -86,7 +87,7 @@ abstract contract Claimable is OwnableUpgradeable, Events {
      * @param _to address of the tokens receiver.
      */
     function _claimErc20Tokens(address _token, address _to) private {
-        IERC20 token = IERC20(_token);
+        IERC20MetadataUpgradeable token = IERC20MetadataUpgradeable(_token);
         uint256 balance = token.balanceOf(address(this));
         token.safeTransfer(_to, balance);
     }
@@ -97,7 +98,7 @@ abstract contract Claimable is OwnableUpgradeable, Events {
      * @param _to address of the tokens receiver.
      */
     function _claimErc721Tokens(address _token, address _to) public validAddress(_to) onlyOwner {
-        IERC721 token = IERC721(_token);
+        IERC721Upgradeable token = IERC721Upgradeable(_token);
         uint256 balance = token.balanceOf(address(this));
         token.safeTransferFrom(address(this), _to, balance);
     }
@@ -112,7 +113,7 @@ abstract contract Claimable is OwnableUpgradeable, Events {
         validAddress(_to)
         onlyOwner
     {
-        IERC1155 token = IERC1155(_token);
+        IERC1155Upgradeable token = IERC1155Upgradeable(_token);
         uint256 balance = token.balanceOf(address(this), _id);
         bytes memory data = "0x00";
         token.safeTransferFrom(address(this), _to, _id, balance, data);

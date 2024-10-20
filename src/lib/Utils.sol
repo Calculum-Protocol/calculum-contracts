@@ -6,12 +6,12 @@ import "./DataTypes.sol";
 import "./Errors.sol";
 import "./IEndpoint.sol";
 import "./IFQuerier.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import {MathUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/utils/math/MathUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 library Utils {
-    using Math for uint256;
+    using MathUpgradeable for uint256;
 
     // address public constant OZW =
 
@@ -38,11 +38,11 @@ library Utils {
     ) public view returns (uint256) {
         ICalculumVault Calculum = ICalculumVault(calculum);
         uint256 calDecimals = 10 ** Calculum.decimals();
-        IERC20Metadata _asset = IERC20Metadata(asset);
+        IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(asset);
         uint256 currentEpoch = Calculum.CURRENT_EPOCH();
         if (currentEpoch == 0) return 0;
         uint256 targetBalance = Calculum
-            .TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC();
+            .TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT();
         uint256 currentBalance = _asset.balanceOf(OZW);
 
         // Calculate the missing USDC amount to reach the target balance
@@ -75,7 +75,7 @@ library Utils {
         address asset
     ) public view returns (bool) {
         ICalculumVault Calculum = ICalculumVault(calculum);
-        IERC20Metadata _asset = IERC20Metadata(asset);
+        IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(asset);
         uint256 assetDecimals = 10 ** _asset.decimals();
         uint256 currentEpoch = Calculum.CURRENT_EPOCH();
         if (
@@ -112,7 +112,7 @@ library Utils {
                         31556926
                     ), // 31556926 represents the number of seconds in a year (365.24 days)
                     10 ** Calculum.decimals(),
-                    Math.Rounding.Ceil
+                    MathUpgradeable.Rounding.Down
                 );
         }
     }
@@ -132,7 +132,7 @@ library Utils {
                 PnLPerVaultToken(calculum, asset).mulDiv(
                     Calculum.PERFORMANCE_FEE_PERCENTAGE(),
                     10 ** Calculum.decimals(),
-                    Math.Rounding.Ceil
+                    MathUpgradeable.Rounding.Down
                 );
         } else {
             return 0;
@@ -149,7 +149,7 @@ library Utils {
     ) public view returns (uint256) {
         ICalculumVault Calculum = ICalculumVault(calculum);
         uint256 CalDecimals = 10 ** Calculum.decimals();
-        IERC20Metadata _asset = IERC20Metadata(asset);
+        IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(asset);
         uint256 assetDecimals = 10 ** _asset.decimals();
         uint256 currentEpoch = Calculum.CURRENT_EPOCH();
         if (
@@ -335,13 +335,15 @@ library Utils {
         address asset,
         uint256 amount
     ) internal {
-        IERC20Metadata _asset = IERC20Metadata(asset);
-        SafeERC20.safeIncreaseAllowance(
+        IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(asset);
+        // Increase allowance from Vault to Vertex
+        SafeERC20Upgradeable.safeIncreaseAllowance(
             _asset,
             vertexEndpoint,
             amount + 10 ** _asset.decimals()
         );
-        SafeERC20.safeTransferFrom(
+        // Transfer fee from TraderBotWallet to Vault
+        SafeERC20Upgradeable.safeTransferFrom(
             _asset,
             address(OZW),
             address(this),

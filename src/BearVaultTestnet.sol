@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.27;
 
-import {IERC4626} from "./lib/IERC4626.sol";
-import {Events, SafeERC20, Claimable} from "./lib/Claimable.sol";
+import {IERC4626Upgradeable} from "@openzeppelin-contracts-upgradeable/contracts/interfaces/IERC4626Upgradeable.sol";
+import "./lib/Claimable.sol";
 import "./lib/DataTypes.sol";
 import "./lib/Errors.sol";
 import {IRouter} from "./lib/IRouter.sol";
 import "./lib/UniswapLibV3.sol";
 import "./lib/Utils.sol";
 import {ERC20Upgradeable} from "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @title Smart Contract Disclaimer
@@ -55,18 +55,18 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin-contracts-upgradeable/co
  */
 /// @custom:oz-upgrades-unsafe-allow external-library-linking
 contract BearVaultTestnet is
-    IERC4626,
+    IERC4626Upgradeable,
     ERC20Upgradeable,
     PausableUpgradeable,
     Claimable,
     AccessControlUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    using Math for uint256;
-    using SafeERC20 for IERC20;
+    using MathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20MetadataUpgradeable;
     // Principal private Variable of ERC4626
 
-    IERC20Metadata internal _asset;
+    IERC20MetadataUpgradeable internal _asset;
     // Decimals of the Share Token
     uint8 private _decimals;
     // Flag to Control Linksigner
@@ -110,11 +110,11 @@ contract BearVaultTestnet is
     // Max Total Assets
     uint256 public MAX_TOTAL_DEPOSIT;
     // Minimal Wallet Ballance USDC in Transfer Bot
-    uint256 public TRANSFER_BOT_MIN_WALLET_BALANCE_USDC;
+    uint256 public MIN_WALLET_BALANCE_USDC_TRANSFER_BOT;
     // Wallet Target Balance USDC in Transfer Bot
-    uint256 public TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC;
+    uint256 public TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT;
     // Minimal Wallet Balance of ETH in Transfer Bot
-    uint256 public TRANSFER_BOT_MIN_WALLET_BALANCE_ETH;
+    uint256 public MIN_WALLET_BALANCE_ETH_TRANSFER_BOT;
     // Factor Adjust for Decimals of the Share Token
     uint256 public DECIMAL_FACTOR; // 10^decimals()
     // Array of Wallet Addresses with Deposit
@@ -129,10 +129,10 @@ contract BearVaultTestnet is
     bytes32 private constant TRANSFER_BOT_ROLE = keccak256("TRANSFER_BOT_ROLE");
     // Constant for TraderBot Role
     bytes32 private constant TRADER_BOT_ROLE = keccak256("TRADER_BOT_ROLE");
-    // Mapping of Struct NetTransfer
-    mapping(uint256 => DataTypes.NetTransfer) public netTransfer; // Mapping of Struct NetTransfer based on EPOCH
-    // limitter
-    DataTypes.Limit public limit;
+    // Mapping of Struct NetTransfer based on EPOCH
+    mapping(uint256 => DataTypes.NetTransfer) public netTransfer; 
+    // Whitelisted Wallets
+    mapping(address => bool) public whitelistedWallets;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -171,7 +171,7 @@ contract BearVaultTestnet is
         ) {
             revert Errors.AddressIsNotContract();
         }
-        __Ownable_init(_msgSender());
+        __Ownable_init();
         __ReentrancyGuard_init();
         __AccessControl_init_unchained();
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -180,7 +180,7 @@ contract BearVaultTestnet is
         grantRole(TRADER_BOT_ROLE, _msgSender());
         grantRole(TRADER_BOT_ROLE, _initialAddress[0]);
         __ERC20_init(_name, _symbol);
-        _asset = IERC20Metadata(_initialAddress[3]);
+        _asset = IERC20MetadataUpgradeable(_initialAddress[3]);
         _decimals = decimals_;
         endpointVertex = _initialAddress[4];
         traderBotWallet = payable(_initialAddress[0]);
@@ -190,22 +190,16 @@ contract BearVaultTestnet is
         MIN_DEPOSIT = _initialValue[1];
         MAX_DEPOSIT = _initialValue[2];
         MAX_TOTAL_DEPOSIT = _initialValue[3];
-        TRANSFER_BOT_MIN_WALLET_BALANCE_USDC = _initialValue[4];
-        TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC = _initialValue[5];
-        TRANSFER_BOT_MIN_WALLET_BALANCE_ETH = _initialValue[6];
-        EPOCH_DURATION = 1 * 60 minutes; // 2 hours
+        MIN_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[4];
+        TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[5];
+        MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = _initialValue[6];
+        EPOCH_DURATION = 4 * 60 minutes; // 4 hours
         MAINTENANCE_PERIOD_PRE_START = 300 seconds; // 5 minutes
         MAINTENANCE_PERIOD_POST_START = 300 seconds; // 5 minutes
         CurrentEpoch();
         MANAGEMENT_FEE_PERCENTAGE = 1 ether / 100; // Represent 1%
         PERFORMANCE_FEE_PERCENTAGE = 15 ether / 100; // Represent 15%
         DECIMAL_FACTOR = 10 ** decimals();
-
-        // Set the Limitter
-        limit = DataTypes.Limit({
-            percentage: 30, // 30% of the total assets of the Vault can be withdrawn
-            timestamp: block.timestamp + (52 weeks * 5) // 5 years
-        });
     }
 
     /**
@@ -254,10 +248,10 @@ contract BearVaultTestnet is
         if (_assets < MIN_DEPOSIT) {
             revert Errors.DepositAmountTooLow(_receiver, _assets);
         }
-        if (
+        if ((
             _assets >
             (MAX_DEPOSIT - (depositor.finalAmount + depositor.amountAssets))
-        ) {
+        ) && !whitelistedWallets[_receiver]) {
             // Verify the maximun value per user
             revert Errors.DepositExceededMax(
                 _receiver,
@@ -282,7 +276,12 @@ contract BearVaultTestnet is
 
         // if _asset is ERC777, transferFrom can call reenter BEFORE the transfer happens through
         // the tokensToSend hook, so we need to transfer before we mint to keep the invariants.
-        SafeERC20.safeTransferFrom(_asset, _receiver, address(this), _assets);
+        SafeERC20Upgradeable.safeTransferFrom(
+            _asset,
+            _receiver,
+            address(this),
+            _assets
+        );
         addDeposit(_receiver, shares, _assets);
 
         // flag to control the transfer to Vertex
@@ -347,7 +346,6 @@ contract BearVaultTestnet is
         ) {
             revert Errors.WithdrawPendingClaim(_owner);
         }
-        _checkLimit(_assets);
         uint256 shares = previewWithdraw(_assets);
 
         // if _asset is ERC777, transfer can call reenter AFTER the transfer happens through
@@ -399,7 +397,6 @@ contract BearVaultTestnet is
         }
 
         uint256 assets = previewRedeem(_shares);
-        _checkLimit(assets);
 
         // if _asset is ERC777, transfer can call reenter AFTER the transfer happens through
         // the tokensReceived hook, so we need to transfer after we burn to keep the invariants.
@@ -466,7 +463,11 @@ contract BearVaultTestnet is
             );
         }
         _burn(_owner, withdrawer.amountShares);
-        SafeERC20.safeTransfer(_asset, _receiver, withdrawer.amountAssets);
+        SafeERC20Upgradeable.safeTransfer(
+            _asset,
+            _receiver,
+            withdrawer.amountAssets
+        );
         // flag to control the transfer to Vertex
         _tx = true;
         emit Withdraw(
@@ -491,7 +492,7 @@ contract BearVaultTestnet is
     function rescue() external whenPaused onlyOwner nonReentrant {
         uint256 assets = _asset.balanceOf(address(this));
         // Safe Transfer of the Assets to the Owner
-        SafeERC20.safeTransfer(_asset, _msgSender(), assets);
+        SafeERC20Upgradeable.safeTransfer(_asset, _msgSender(), assets);
         // Transfer all Eth to the Owner
         uint256 amount = address(this).balance;
         claimValues(address(0), _msgSender());
@@ -567,16 +568,37 @@ contract BearVaultTestnet is
          */
         _checkVaultOutMaintenance();
         DexWalletBalance();
-        // Partial fix if Finalize epoch fail in some point
-        unchecked {
-            if (CURRENT_EPOCH >= 1) {
-                if (VAULT_TOKEN_PRICE[CURRENT_EPOCH - 1] == 0) {
-                    VAULT_TOKEN_PRICE[CURRENT_EPOCH - 1] = convertToAssets(
-                        1 ether
-                    );
+        // Partial fix if Finalize epoch failed at some point
+        if (CURRENT_EPOCH >= 1) {
+            uint256 lastEpoch = CURRENT_EPOCH - 1;
+            if (VAULT_TOKEN_PRICE[lastEpoch] <= 10) {
+                bool found = false;
+                // Iterate backward to find the last non-zero token price
+                while (true) {
+                    if (VAULT_TOKEN_PRICE[lastEpoch] >= 10) {
+                        // Found a non-zero price
+                        VAULT_TOKEN_PRICE[
+                            CURRENT_EPOCH - 1
+                        ] = VAULT_TOKEN_PRICE[lastEpoch];
+                        found = true;
+                        break;
+                    }
+                    if (lastEpoch == 0) {
+                        // Reached the earliest epoch
+                        break;
+                    }
+                    lastEpoch--;
+                }
+                if (!found) {
+                    // All previous prices are zero; initialize the first epoch price
+                    uint256 initialPrice = convertToAssets(1 ether);
+                    VAULT_TOKEN_PRICE[0] = initialPrice;
+                    VAULT_TOKEN_PRICE[CURRENT_EPOCH - 1] = initialPrice;
                 }
             }
         }
+
+        // Update the Vault Token Price
         VAULT_TOKEN_PRICE[CURRENT_EPOCH] = convertToAssets(1 ether);
         // Update Value such Token Price Updated
         for (uint256 i; i < depositWallets.length; ) {
@@ -701,7 +723,7 @@ contract BearVaultTestnet is
             if (assetBalance < reserveGas) {
                 revert Errors.NotEnoughBalance(reserveGas, assetBalance);
             }
-            SafeERC20.safeTransfer(
+            SafeERC20Upgradeable.safeTransfer(
                 _asset,
                 openZeppelinDefenderWallet,
                 reserveGas
@@ -757,7 +779,11 @@ contract BearVaultTestnet is
         uint256 restEvent;
         if (rest > 0) {
             restEvent = rest;
-            SafeERC20.safeTransfer(_asset, treasuryWallet, restEvent);
+            SafeERC20Upgradeable.safeTransfer(
+                _asset,
+                treasuryWallet,
+                restEvent
+            );
         }
         _tx = false;
         emit FeesTransfer(CURRENT_EPOCH, restEvent, mgtFee, perfFee, totalFees);
@@ -805,17 +831,15 @@ contract BearVaultTestnet is
     }
 
     /**
-     * @dev Links the TraderBot wallet as a signer on the Vertex Endpoint
+     * @dev Sets the whitelisted status of a wallet
+     * @param _wallet The wallet address to set the status for
+     * @param _whitelisted The new whitelisted status
      * @notice Only callable by the contract owner
-     * @notice Utilizes Utils.linkVertexSigner to establish the link
-     * @notice Uses the current endpointVertex, asset address, and traderBotWallet
+     * @notice Emits a WhitelistedUpdated event
      */
-    function linkSigner() external onlyOwner {
-        Utils.linkVertexSigner(
-            endpointVertex,
-            address(_asset),
-            address(traderBotWallet)
-        );
+    function setWhitelisted(address _wallet, bool _whitelisted) external onlyOwner {
+        whitelistedWallets[_wallet] = _whitelisted;
+        emit WhitelistedUpdated(_wallet, _whitelisted);
     }
 
     /**
@@ -897,7 +921,7 @@ contract BearVaultTestnet is
             _assets = _shares.mulDiv(
                 Utils.UpdateVaultPriceToken(address(this), address(_asset)),
                 DECIMAL_FACTOR,
-                Math.Rounding.Ceil
+                MathUpgradeable.Rounding.Down
             );
         }
     }
@@ -923,7 +947,7 @@ contract BearVaultTestnet is
                 (_assets.mulDiv(
                     DECIMAL_FACTOR,
                     Utils.UpdateVaultPriceToken(address(this), address(_asset)),
-                    Math.Rounding.Ceil
+                    MathUpgradeable.Rounding.Down
                 ) / decimalsAdjust) *
                 decimalsAdjust; // last part is to fixed the rounding issue with stable coins
         }
@@ -1146,14 +1170,14 @@ contract BearVaultTestnet is
 
     /**
      * @dev Returns the number of decimals used for the vault's shares.
-     * @notice This function overrides both ERC20Upgradeable and IERC20Metadata.
+     * @notice This function overrides both ERC20Upgradeable and IERC20MetadataUpgradeable.
      * @return The number of decimals for the vault's shares, stored in _decimals.
      * @dev This value may differ from the underlying asset's decimals.
      */
     function decimals()
         public
         view
-        override(ERC20Upgradeable, IERC20Metadata)
+        override(ERC20Upgradeable, IERC20MetadataUpgradeable)
         returns (uint8)
     {
         return _decimals;
@@ -1435,27 +1459,4 @@ contract BearVaultTestnet is
         }
     }
 
-    /**
-     * @dev Checks if a withdrawal request exceeds the permitted limit
-     * @param assets Amount of assets to be withdrawn
-     * @notice Implements a time-based withdrawal limit to prevent large sudden outflows
-     * @notice Calculates permitted withdrawal based on total assets, current withdrawals, and limit percentage
-     * @notice Reverts if withdrawal amount exceeds the permitted amount during the limit period
-     * @dev Critical for maintaining vault stability and protecting against potential attacks
-     */
-    function _checkLimit(uint256 assets) private view {
-        uint256 amountBlock = totalAssets().mulDiv(
-            (100 - limit.percentage),
-            100,
-            Math.Rounding.Ceil
-        );
-        uint256 permitWithdraw = totalAssets() - newWithdrawals() > amountBlock
-            ? totalAssets() - newWithdrawals() - amountBlock
-            : 0;
-        if (block.timestamp <= limit.timestamp) {
-            if (assets > permitWithdraw) {
-                revert Errors.NotEnoughBalance(assets, permitWithdraw);
-            }
-        }
-    }
 }

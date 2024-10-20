@@ -118,7 +118,7 @@ async function main() {
     );
     console.log("Deploying MockUp Vertex Interaction...");
     const MockVertexInteraction = await upgrades.upgradeProxy(
-        "0x66Ea7D08B9A7dE9E0c5522659aC994Ae38C18E47",
+        "0xFcD882574D68C6b4Abfdb6C6f5F9B129d374d1fB",
         MockVertexInteractionFactory as any
     );
 

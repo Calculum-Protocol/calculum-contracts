@@ -5,14 +5,14 @@ import "./Errors.sol";
 import "./IRouter.sol";
 import "./TickMath.sol";
 import "./FullMath.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import {MathUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/utils/math/MathUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/contracts/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 /// @custom:oz-upgrades-unsafe-allow external-library-linking
 library UniswapLibV3 {
-    using Math for uint256;
-    using SafeERC20 for IERC20;
+    using MathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20MetadataUpgradeable;
 
     uint256 private constant TWAP_INTERVAL = 60 * 15; // 15 minutes twap;
     // address public constant OZW = address(0xB8df119948e3bb1cf2255EBAfc4b9CE35b11CA22); // OpenZeppelin Defender Wallet Arbitrum Mainnet
@@ -75,7 +75,7 @@ library UniswapLibV3 {
             tick--;
         }
 
-        uint256 baseAmount = 10 ** IERC20Metadata(tokenAddress).decimals();
+        uint256 baseAmount = 10 ** IERC20MetadataUpgradeable(tokenAddress).decimals();
 
         price = uint256(
             _getQuoteAtTick(
@@ -95,14 +95,14 @@ library UniswapLibV3 {
         address routerAddress
     ) public {
         IRouter router = IRouter(routerAddress);
-        IERC20Metadata _asset = IERC20Metadata(tokenAddress);
+        IERC20MetadataUpgradeable _asset = IERC20MetadataUpgradeable(tokenAddress);
         uint256 assetsDecimals = 10 ** _asset.decimals();
         uint256 tokenAmount = _asset.balanceOf(OZW) - assetsDecimals; // Deduct 1 USDc fee for Vertex Protocol
         uint256 expectedAmount = tokenAmount.mulDiv(
             getPriceInPaymentToken(address(_asset), address(router)),
             assetsDecimals
         );
-        SafeERC20.safeTransferFrom(
+        SafeERC20Upgradeable.safeTransferFrom(
             _asset,
             address(OZW),
             address(this),
@@ -113,8 +113,8 @@ library UniswapLibV3 {
             address(router)
         );
         if (currentAllowance <= tokenAmount) {
-            SafeERC20.safeIncreaseAllowance(
-                IERC20(tokenAddress),
+            SafeERC20Upgradeable.safeIncreaseAllowance(
+                IERC20MetadataUpgradeable(tokenAddress),
                 address(router),
                 tokenAmount - currentAllowance
             );
