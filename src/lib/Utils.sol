@@ -42,7 +42,7 @@ library Utils {
         uint256 currentEpoch = Calculum.CURRENT_EPOCH();
         if (currentEpoch == 0) return 0;
         uint256 targetBalance = Calculum
-            .TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT();
+            .TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC();
         uint256 currentBalance = _asset.balanceOf(OZW);
 
         // Calculate the missing USDC amount to reach the target balance
@@ -54,11 +54,11 @@ library Utils {
         uint256 totalFees = getPnLPerVaultToken(calculum, asset)
             ? (MgtFeePctVaultToken(calculum) +
                 PerfFeePctVaultToken(calculum, asset)).mulDiv(
-                    Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1),
+                    Calculum.VAULT_TOKEN_SUPPLY(currentEpoch - 1),
                     calDecimals
                 )
             : MgtFeePctVaultToken(calculum).mulDiv(
-                Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1),
+                Calculum.VAULT_TOKEN_SUPPLY(currentEpoch - 1),
                 calDecimals
             );
 
@@ -80,13 +80,13 @@ library Utils {
         uint256 currentEpoch = Calculum.CURRENT_EPOCH();
         if (
             (currentEpoch == 0) ||
-            (Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1) == 0)
+            (Calculum.VAULT_TOKEN_SUPPLY(currentEpoch - 1) == 0)
         ) {
             return false;
         }
         return (Calculum.DEX_WALLET_BALANCE().mulDiv(
             assetDecimals,
-            Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1).mulDiv(
+            Calculum.VAULT_TOKEN_SUPPLY(currentEpoch - 1).mulDiv(
                 assetDecimals,
                 10 ** Calculum.decimals()
             )
@@ -154,14 +154,14 @@ library Utils {
         uint256 currentEpoch = Calculum.CURRENT_EPOCH();
         if (
             (currentEpoch == 0) ||
-            (Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1) == 0)
+            (Calculum.VAULT_TOKEN_SUPPLY(currentEpoch - 1) == 0)
         ) {
             return 0;
         }
         if (getPnLPerVaultToken(calculum, asset)) {
             return (Calculum.DEX_WALLET_BALANCE().mulDiv(
                 assetDecimals,
-                Calculum.TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1).mulDiv(
+                Calculum.VAULT_TOKEN_SUPPLY(currentEpoch - 1).mulDiv(
                     assetDecimals,
                     CalDecimals
                 )
@@ -171,9 +171,10 @@ library Utils {
                 (
                     Calculum.DEX_WALLET_BALANCE().mulDiv(
                         assetDecimals,
-                        Calculum
-                            .TOTAL_VAULT_TOKEN_SUPPLY(currentEpoch - 1)
-                            .mulDiv(assetDecimals, CalDecimals)
+                        Calculum.VAULT_TOKEN_SUPPLY(currentEpoch - 1).mulDiv(
+                            assetDecimals,
+                            CalDecimals
+                        )
                     )
                 ));
         }

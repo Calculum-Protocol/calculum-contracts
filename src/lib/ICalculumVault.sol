@@ -11,9 +11,7 @@ interface ICalculumVault {
 
     function VAULT_TOKEN_PRICE(uint256 epoch) external view returns (uint256);
 
-    function TOTAL_VAULT_TOKEN_SUPPLY(
-        uint256 epoch
-    ) external view returns (uint256);
+    function VAULT_TOKEN_SUPPLY(uint256 epoch) external view returns (uint256);
 
     function DEX_WALLET_BALANCE() external view returns (uint256);
 
@@ -23,17 +21,17 @@ interface ICalculumVault {
 
     function MAX_TOTAL_DEPOSIT() external view returns (uint256);
 
-    function MIN_WALLET_BALANCE_USDC_TRANSFER_BOT()
+    function TRANSFER_BOT_MIN_WALLET_BALANCE_USDC()
         external
         view
         returns (uint256);
 
-    function TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT()
+    function TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC()
         external
         view
         returns (uint256);
 
-    function MIN_WALLET_BALANCE_ETH_TRANSFER_BOT()
+    function TRANSFER_BOT_MIN_WALLET_BALANCE_ETH()
         external
         view
         returns (uint256);

@@ -15,7 +15,6 @@ library DataTypes {
         Completed, // 3
         PendingRedeem, //4
         PendingWithdraw //5
-
     }
     /// Struct of Basics
 
@@ -27,7 +26,7 @@ library DataTypes {
     }
     /// Net Transfer Struct
 
-    struct NetTransfer {
+    struct netTransfer {
         bool pending;
         bool direction; // true = deposit, false = withdrawal
         uint256 amount;

@@ -90,7 +90,7 @@ contract CalculumVault is
     // Vault Token Price per EPOCH
     mapping(uint256 => uint256) public VAULT_TOKEN_PRICE;
     // Total Supply per EPOCH
-    mapping(uint256 => uint256) public TOTAL_VAULT_TOKEN_SUPPLY;
+    mapping(uint256 => uint256) public VAULT_TOKEN_SUPPLY;
     /// @dev Address of Uniswap v3 router to swap whitelisted ERC20 tokens to router.WETH()
     IRouter public router;
     // Period
@@ -110,11 +110,11 @@ contract CalculumVault is
     // Max Total Assets
     uint256 public MAX_TOTAL_DEPOSIT;
     // Minimal Wallet Ballance USDC in Transfer Bot
-    uint256 public MIN_WALLET_BALANCE_USDC_TRANSFER_BOT;
+    uint256 public TRANSFER_BOT_MIN_WALLET_BALANCE_USDC;
     // Wallet Target Balance USDC in Transfer Bot
-    uint256 public TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT;
+    uint256 public TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC;
     // Minimal Wallet Balance of ETH in Transfer Bot
-    uint256 public MIN_WALLET_BALANCE_ETH_TRANSFER_BOT;
+    uint256 public TRANSFER_BOT_MIN_WALLET_BALANCE_ETH;
     // Factor Adjust for Decimals of the Share Token
     uint256 public DECIMAL_FACTOR; // 10^decimals()
     // Array of Wallet Addresses with Deposit
@@ -129,8 +129,8 @@ contract CalculumVault is
     bytes32 private constant TRANSFER_BOT_ROLE = keccak256("TRANSFER_BOT_ROLE");
     // Constant for TraderBot Role
     bytes32 private constant TRADER_BOT_ROLE = keccak256("TRADER_BOT_ROLE");
-    // Mapping of Struct NetTransfer based on EPOCH
-    mapping(uint256 => DataTypes.NetTransfer) public netTransfer; 
+    // Mapping of Struct netTransferBalance based on EPOCH
+    mapping(uint256 => DataTypes.netTransfer) public netTransferBalance;
     // Mapping of Whitelisted Wallets for Deposit more then maxDeposit per user
     mapping(address => bool) public whitelistedWallets;
 
@@ -194,9 +194,9 @@ contract CalculumVault is
         MIN_DEPOSIT = _initialValue[1];
         MAX_DEPOSIT = _initialValue[2];
         MAX_TOTAL_DEPOSIT = _initialValue[3];
-        MIN_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[4];
-        TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[5];
-        MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = _initialValue[6];
+        TRANSFER_BOT_MIN_WALLET_BALANCE_USDC = _initialValue[4];
+        TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC = _initialValue[5];
+        TRANSFER_BOT_MIN_WALLET_BALANCE_ETH = _initialValue[6];
         EPOCH_DURATION = 2 * 60 minutes; // 4 hours
         MAINTENANCE_PERIOD_PRE_START = 300 seconds; // 5 minutes
         MAINTENANCE_PERIOD_POST_START = 300 seconds; // 5 minutes
@@ -254,13 +254,7 @@ contract CalculumVault is
     function deposit(
         uint256 _assets,
         address _receiver
-    )
-        external
-        override
-        whenNotPaused
-        nonReentrant
-        returns (uint256)
-    {
+    ) external override whenNotPaused nonReentrant returns (uint256) {
         _checkVaultInMaintenance();
         address caller = _msgSender();
         DataTypes.Basics storage depositor = DEPOSITS[_receiver];
@@ -274,15 +268,18 @@ contract CalculumVault is
         if (_assets < MIN_DEPOSIT) {
             revert Errors.DepositAmountTooLow(_receiver, _assets);
         }
-        if ((
-            _assets >
-            (MAX_DEPOSIT - (depositor.finalAmount + depositor.amountAssets))
-        ) && !whitelistedWallets[_receiver]) {
-            // Verify the maximun value per user
-            revert Errors.DepositExceededMax(
-                _receiver,
-                MAX_DEPOSIT - (depositor.finalAmount + depositor.amountAssets)
-            );
+        if (!whitelistedWallets[_receiver]) {
+            if (
+                _assets >
+                (MAX_DEPOSIT - (depositor.finalAmount + depositor.amountAssets))
+            ) {
+                // Verify the maximun value per user
+                revert Errors.DepositExceededMax(
+                    _receiver,
+                    MAX_DEPOSIT -
+                        (depositor.finalAmount + depositor.amountAssets)
+                );
+            }
         }
         if ((totalAssets() + _assets) > MAX_TOTAL_DEPOSIT) {
             revert Errors.DepositExceedTotalVaultMax(
@@ -375,13 +372,7 @@ contract CalculumVault is
         uint256 _assets,
         address _receiver,
         address _owner
-    )
-        external
-        override
-        whenNotPaused
-        nonReentrant
-        returns (uint256)
-    {
+    ) external override whenNotPaused nonReentrant returns (uint256) {
         _checkVaultInMaintenance();
         address caller = _msgSender();
         if ((_owner != caller) || (_receiver != caller)) {
@@ -440,13 +431,7 @@ contract CalculumVault is
         uint256 _shares,
         address _receiver,
         address _owner
-    )
-        external
-        override
-        whenNotPaused
-        nonReentrant
-        returns (uint256)
-    {
+    ) external override whenNotPaused nonReentrant returns (uint256) {
         _checkVaultInMaintenance();
         address caller = _msgSender();
         if ((_owner != caller) || (_receiver != caller)) {
@@ -488,9 +473,7 @@ contract CalculumVault is
      * @notice Updates the Vertex integration flag
      * @notice Emits a Deposit event upon successful minting
      */
-    function claimShares(
-        address _owner
-    ) external nonReentrant {
+    function claimShares(address _owner) external nonReentrant {
         _checkVaultInMaintenance();
         address caller = _msgSender();
         DataTypes.Basics storage depositor = DEPOSITS[_owner];
@@ -652,7 +635,7 @@ contract CalculumVault is
             }
         }
         updateTotalSupply();
-        netTransferBalance();
+        getNetTransferBalance();
         // Update State of Assest and Share pending to Claim
         for (uint256 i; i < depositWallets.length; ) {
             DataTypes.Basics storage depositor = DEPOSITS[depositWallets[i]];
@@ -708,7 +691,9 @@ contract CalculumVault is
     function dexTransfer(
         bool kind
     ) external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
-        DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
+        DataTypes.netTransfer storage actualTx = netTransferBalance[
+            CURRENT_EPOCH
+        ];
         _checkVaultOutMaintenance();
         if (actualTx.pending && kind && (actualTx.amount > 0)) {
             if (actualTx.direction) {
@@ -779,11 +764,11 @@ contract CalculumVault is
             address(_asset)
         )
             ? (mgtFeePct + perfFeePct).mulDiv(
-                TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
                 DECIMAL_FACTOR
             )
             : mgtFeePct.mulDiv(
-                TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
                 DECIMAL_FACTOR
             );
         uint256 rest = totalFees >
@@ -820,7 +805,6 @@ contract CalculumVault is
         DexWalletBalance();
         CurrentEpoch();
     }
-
 
     /**
      * @dev Updates the TraderBot wallet address and links it to Vertex
@@ -889,7 +873,10 @@ contract CalculumVault is
      * @notice Only callable by the contract owner
      * @notice Emits a WhitelistedUpdated event
      */
-    function setWhitelisted(address _wallet, bool _whitelisted) external onlyOwner {
+    function setWhitelisted(
+        address _wallet,
+        bool _whitelisted
+    ) external onlyOwner {
         whitelistedWallets[_wallet] = _whitelisted;
         emit WhitelistedUpdated(_wallet, _whitelisted);
     }
@@ -1020,7 +1007,7 @@ contract CalculumVault is
      */
     function isDexTxPending() public view returns (bool) {
         (bool isMant, ) = isMaintenance();
-        return isMant && (netTransfer[CURRENT_EPOCH].amount > 0 || _tx);
+        return isMant && (netTransferBalance[CURRENT_EPOCH].amount > 0 || _tx);
     }
 
     /**
@@ -1336,24 +1323,24 @@ contract CalculumVault is
             // Fix for potential finalize epoch failure
             unchecked {
                 if (CURRENT_EPOCH >= 2) {
-                    if (TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] == 0) {
-                        TOTAL_VAULT_TOKEN_SUPPLY[
+                    if (VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] == 0) {
+                        VAULT_TOKEN_SUPPLY[
                             CURRENT_EPOCH - 1
-                        ] = TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 2];
+                        ] = VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 2];
                     }
                 }
             }
             // Update total supply to avoid underflow errors
-            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = TOTAL_VAULT_TOKEN_SUPPLY[
+            VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = VAULT_TOKEN_SUPPLY[
                 CURRENT_EPOCH - 1
             ] +
                 newShares() >
                 newWithdrawalsShares()
-                ? (TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] + newShares()) -
+                ? (VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] + newShares()) -
                     newWithdrawalsShares()
                 : 0;
         } else {
-            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = newShares();
+            VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = newShares();
         }
     }
 
@@ -1365,9 +1352,9 @@ contract CalculumVault is
     function _swapDAforETH() private nonReentrant {
         if (
             (openZeppelinDefenderWallet.balance <
-                MIN_WALLET_BALANCE_ETH_TRANSFER_BOT) &&
+                TRANSFER_BOT_MIN_WALLET_BALANCE_ETH) &&
             (_asset.balanceOf(openZeppelinDefenderWallet) >
-                MIN_WALLET_BALANCE_USDC_TRANSFER_BOT)
+                TRANSFER_BOT_MIN_WALLET_BALANCE_USDC)
         ) {
             UniswapLibV3._swapTokensForETH(address(_asset), address(router));
         }
@@ -1379,8 +1366,10 @@ contract CalculumVault is
      * @notice Considers management and performance fees in the calculation.
      * @notice Sets the transaction direction and amount for the DEX transfer.
      */
-    function netTransferBalance() private {
-        DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
+    function getNetTransferBalance() private {
+        DataTypes.netTransfer storage actualTx = netTransferBalance[
+            CURRENT_EPOCH
+        ];
         actualTx.pending = true;
         if ((totalSupply() == 0) && (CURRENT_EPOCH == 0)) {
             actualTx.direction = true;
@@ -1399,7 +1388,7 @@ contract CalculumVault is
                 deposits >
                 withdrawals +
                     (mgtFee + perfFee).mulDiv(
-                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                        VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
                         DECIMAL_FACTOR
                     )
             ) {
@@ -1408,7 +1397,7 @@ contract CalculumVault is
                     deposits -
                     withdrawals -
                     (mgtFee + perfFee).mulDiv(
-                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                        VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
                         DECIMAL_FACTOR
                     );
             } else {
@@ -1416,7 +1405,7 @@ contract CalculumVault is
                 actualTx.amount =
                     withdrawals +
                     (mgtFee + perfFee).mulDiv(
-                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                        VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
                         DECIMAL_FACTOR
                     ) -
                     deposits;

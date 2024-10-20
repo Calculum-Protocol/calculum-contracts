@@ -144,7 +144,7 @@ async function main() {
     });
 
     const BearUpgradeable = await upgrades.upgradeProxy(
-        "0x5b891A3A056C5aE78f23f9464C2DED9a100cdfAC",
+        "0x9E09d335CAEdB4D76708854bFaCd5228946543E5",
         BearFactory as any
     );
 

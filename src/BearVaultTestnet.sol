@@ -90,7 +90,7 @@ contract BearVaultTestnet is
     // Vault Token Price per EPOCH
     mapping(uint256 => uint256) public VAULT_TOKEN_PRICE;
     // Total Supply per EPOCH
-    mapping(uint256 => uint256) public TOTAL_VAULT_TOKEN_SUPPLY;
+    mapping(uint256 => uint256) public VAULT_TOKEN_SUPPLY;
     /// @dev Address of Uniswap v3 router to swap whitelisted ERC20 tokens to router.WETH()
     IRouter public router;
     // Period
@@ -110,11 +110,11 @@ contract BearVaultTestnet is
     // Max Total Assets
     uint256 public MAX_TOTAL_DEPOSIT;
     // Minimal Wallet Ballance USDC in Transfer Bot
-    uint256 public MIN_WALLET_BALANCE_USDC_TRANSFER_BOT;
+    uint256 public TRANSFER_BOT_MIN_WALLET_BALANCE_USDC;
     // Wallet Target Balance USDC in Transfer Bot
-    uint256 public TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT;
+    uint256 public TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC;
     // Minimal Wallet Balance of ETH in Transfer Bot
-    uint256 public MIN_WALLET_BALANCE_ETH_TRANSFER_BOT;
+    uint256 public TRANSFER_BOT_MIN_WALLET_BALANCE_ETH;
     // Factor Adjust for Decimals of the Share Token
     uint256 public DECIMAL_FACTOR; // 10^decimals()
     // Array of Wallet Addresses with Deposit
@@ -129,8 +129,8 @@ contract BearVaultTestnet is
     bytes32 private constant TRANSFER_BOT_ROLE = keccak256("TRANSFER_BOT_ROLE");
     // Constant for TraderBot Role
     bytes32 private constant TRADER_BOT_ROLE = keccak256("TRADER_BOT_ROLE");
-    // Mapping of Struct NetTransfer based on EPOCH
-    mapping(uint256 => DataTypes.NetTransfer) public netTransfer; 
+    // Mapping of Struct netTransferBalance based on EPOCH
+    mapping(uint256 => DataTypes.netTransfer) public netTransferBalance;
     // Whitelisted Wallets
     mapping(address => bool) public whitelistedWallets;
 
@@ -190,9 +190,9 @@ contract BearVaultTestnet is
         MIN_DEPOSIT = _initialValue[1];
         MAX_DEPOSIT = _initialValue[2];
         MAX_TOTAL_DEPOSIT = _initialValue[3];
-        MIN_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[4];
-        TARGET_WALLET_BALANCE_USDC_TRANSFER_BOT = _initialValue[5];
-        MIN_WALLET_BALANCE_ETH_TRANSFER_BOT = _initialValue[6];
+        TRANSFER_BOT_MIN_WALLET_BALANCE_USDC = _initialValue[4];
+        TRANSFER_BOT_TARGET_WALLET_BALANCE_USDC = _initialValue[5];
+        TRANSFER_BOT_MIN_WALLET_BALANCE_ETH = _initialValue[6];
         EPOCH_DURATION = 4 * 60 minutes; // 4 hours
         MAINTENANCE_PERIOD_PRE_START = 300 seconds; // 5 minutes
         MAINTENANCE_PERIOD_POST_START = 300 seconds; // 5 minutes
@@ -248,16 +248,20 @@ contract BearVaultTestnet is
         if (_assets < MIN_DEPOSIT) {
             revert Errors.DepositAmountTooLow(_receiver, _assets);
         }
-        if ((
-            _assets >
-            (MAX_DEPOSIT - (depositor.finalAmount + depositor.amountAssets))
-        ) && !whitelistedWallets[_receiver]) {
-            // Verify the maximun value per user
-            revert Errors.DepositExceededMax(
-                _receiver,
-                MAX_DEPOSIT - (depositor.finalAmount + depositor.amountAssets)
-            );
+        if (!whitelistedWallets[_receiver]) {
+            if (
+                _assets >
+                (MAX_DEPOSIT - (depositor.finalAmount + depositor.amountAssets))
+            ) {
+                // Verify the maximun value per user
+                revert Errors.DepositExceededMax(
+                    _receiver,
+                    MAX_DEPOSIT -
+                        (depositor.finalAmount + depositor.amountAssets)
+                );
+            }
         }
+
         if ((totalAssets() + _assets) > MAX_TOTAL_DEPOSIT) {
             revert Errors.DepositExceedTotalVaultMax(
                 _receiver,
@@ -631,7 +635,7 @@ contract BearVaultTestnet is
             }
         }
         updateTotalSupply();
-        netTransferBalance();
+        getNetTransferBalance();
         // Update State of Assest and Share pending to Claim
         for (uint256 i; i < depositWallets.length; ) {
             DataTypes.Basics storage depositor = DEPOSITS[depositWallets[i]];
@@ -683,7 +687,9 @@ contract BearVaultTestnet is
     function dexTransfer(
         bool kind
     ) external onlyRole(TRANSFER_BOT_ROLE) nonReentrant {
-        DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
+        DataTypes.netTransfer storage actualTx = netTransferBalance[
+            CURRENT_EPOCH
+        ];
         _checkVaultOutMaintenance();
         if (actualTx.pending && kind && (actualTx.amount > 0)) {
             if (actualTx.direction) {
@@ -713,6 +719,7 @@ contract BearVaultTestnet is
                 );
             }
             actualTx.pending = false;
+            emit DexTransfer(CURRENT_EPOCH, actualTx.amount);
         }
         uint256 reserveGas = Utils.CalculateTransferBotGasReserveDA(
             address(this),
@@ -728,10 +735,7 @@ contract BearVaultTestnet is
                 openZeppelinDefenderWallet,
                 reserveGas
             );
-        }
-        if (!kind) {
-            // Avoid Duplicate Event
-            emit DexTransfer(CURRENT_EPOCH, actualTx.amount);
+            emit ReserveGasTransfer(CURRENT_EPOCH, reserveGas);
         }
     }
 
@@ -756,11 +760,11 @@ contract BearVaultTestnet is
             address(_asset)
         )
             ? (mgtFee + perfFee).mulDiv(
-                TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
                 DECIMAL_FACTOR
             )
             : mgtFee.mulDiv(
-                TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
                 DECIMAL_FACTOR
             );
         uint256 rest = totalFees >
@@ -837,7 +841,10 @@ contract BearVaultTestnet is
      * @notice Only callable by the contract owner
      * @notice Emits a WhitelistedUpdated event
      */
-    function setWhitelisted(address _wallet, bool _whitelisted) external onlyOwner {
+    function setWhitelisted(
+        address _wallet,
+        bool _whitelisted
+    ) external onlyOwner {
         whitelistedWallets[_wallet] = _whitelisted;
         emit WhitelistedUpdated(_wallet, _whitelisted);
     }
@@ -960,8 +967,7 @@ contract BearVaultTestnet is
      * @notice Combines maintenance status check with transaction amount and flag status
      */
     function isDexTxPending() public view returns (bool) {
-        (bool isMant, ) = isMaintenance();
-        return isMant && (netTransfer[CURRENT_EPOCH].amount > 0 || _tx);
+        return _tx;
     }
 
     /**
@@ -1309,24 +1315,22 @@ contract BearVaultTestnet is
             // Partial fix if Finalize epoch fail in some point
             unchecked {
                 if (CURRENT_EPOCH >= 1) {
-                    if (TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] == 0) {
-                        TOTAL_VAULT_TOKEN_SUPPLY[
-                            CURRENT_EPOCH - 1
-                        ] = totalSupply();
+                    if (VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] == 0) {
+                        VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] = totalSupply();
                     }
                 }
             }
             // rewrite the total supply of the vault token to avoid underflow errors
-            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = TOTAL_VAULT_TOKEN_SUPPLY[
+            VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = VAULT_TOKEN_SUPPLY[
                 CURRENT_EPOCH - 1
             ] +
                 newShares() >
                 newWithdrawalsShares()
-                ? (TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] + newShares()) -
+                ? (VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1] + newShares()) -
                     newWithdrawalsShares()
                 : 0;
         } else {
-            TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = newShares();
+            VAULT_TOKEN_SUPPLY[CURRENT_EPOCH] = newShares();
         }
     }
 
@@ -1337,8 +1341,10 @@ contract BearVaultTestnet is
      * @notice Critical for maintaining accurate asset allocation and fee distribution
      * @notice Sets the pending flag for transfer execution in dexTransfer function
      */
-    function netTransferBalance() private {
-        DataTypes.NetTransfer storage actualTx = netTransfer[CURRENT_EPOCH];
+    function getNetTransferBalance() private {
+        DataTypes.netTransfer storage actualTx = netTransferBalance[
+            CURRENT_EPOCH
+        ];
         actualTx.pending = true;
         if ((totalSupply() == 0) && (CURRENT_EPOCH == 0)) {
             actualTx.direction = true;
@@ -1357,7 +1363,7 @@ contract BearVaultTestnet is
                 deposits >
                 withdrawals +
                     (mgtFee + perfFee).mulDiv(
-                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                        VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
                         DECIMAL_FACTOR
                     )
             ) {
@@ -1366,7 +1372,7 @@ contract BearVaultTestnet is
                     deposits -
                     withdrawals -
                     (mgtFee + perfFee).mulDiv(
-                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                        VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
                         DECIMAL_FACTOR
                     );
             } else {
@@ -1374,7 +1380,7 @@ contract BearVaultTestnet is
                 actualTx.amount =
                     withdrawals +
                     (mgtFee + perfFee).mulDiv(
-                        TOTAL_VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
+                        VAULT_TOKEN_SUPPLY[CURRENT_EPOCH - 1],
                         DECIMAL_FACTOR
                     ) -
                     deposits;
@@ -1458,5 +1464,4 @@ contract BearVaultTestnet is
             revert Errors.VaultOutMaintenance();
         }
     }
-
 }
